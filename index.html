@@ -34,7 +34,6 @@
             border-radius: 20px;
             box-shadow: 0 0 80px rgba(0,255,255,0.4);
             background: rgba(0,20,40,0.9);
-            backdrop-filter: blur(15px);
             padding: 8px;
             border: 3px solid rgba(0,255,255,0.4);
             width: 100%;
@@ -133,6 +132,7 @@
             align-items: flex-start;
             justify-content: center;
             padding: 15px;
+            cursor: pointer;
         }
 
         .popup {
@@ -508,7 +508,7 @@
     </div>
 
     <!-- START -->
-    <div id="startOverlay" class="popup-overlay">
+    <div id="startOverlay" class="popup-overlay" ontouchstart="">
         <div class="popup">
             <h2>⚡DIGITAL BREAK V2.1⚡</h2>
             <p><strong>ULTIMATE EDITION</strong></p>
@@ -528,7 +528,7 @@
     </div>
 
     <!-- LOSE -->
-    <div id="loseOverlay" class="popup-overlay" style="display:none;">
+    <div id="loseOverlay" class="popup-overlay" style="display:none;" ontouchstart="">
         <div class="popup">
             <h2 class="access-denied">🔒 ACCESS DENIED</h2>
             <p id="loseMessage">Nice try though...</p>
@@ -539,7 +539,7 @@
     </div>
 
     <!-- WIN -->
-    <div id="winOverlay">
+    <div id="winOverlay" ontouchstart="">
         <div id="winBox">
             <div id="winTitle">🔥 SYSTEM BREACHED 🔥</div>
             <div id="roastText">Loading roast...</div>
