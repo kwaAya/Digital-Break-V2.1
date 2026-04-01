@@ -604,10 +604,22 @@
             <div id="leaderboardRows"></div>
         </div>
 
-        <button id="shareBtn"
-                onclick="shareScore()"
-                ontouchstart="shareScore()">📤 SHARE MY SCORE</button>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
+            <button id="shareBtn"
+                    onclick="shareScore()"
+                    ontouchstart="shareScore()">📤 SHARE SCORE</button>
+            <button onclick="saveScoreCard()" ontouchstart="saveScoreCard()"
+                    style="background:linear-gradient(45deg,#833ab4,#fd1d1d,#fcb045);
+                    color:#fff;border:none;padding:12px 20px;border-radius:30px;
+                    font-family:'Orbitron',monospace;font-weight:bold;font-size:12px;
+                    cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                    margin:5px;min-height:44px;letter-spacing:1px;
+                    box-shadow:0 4px 15px rgba(131,58,180,.4);transition:transform .15s;">
+                📸 SAVE FOR STORY
+            </button>
+        </div>
         <div id="shareConfirm"></div>
+        <div id="igConfirm" style="font-size:11px;color:#00ff00;margin:4px 0;min-height:16px;letter-spacing:1px;text-align:center;"></div>
 
         <button class="btn" style="margin-top:10px;"
                 onclick="restartGame()"
@@ -1623,6 +1635,151 @@ function fixScrolling(){
             isScrolling=false;
         },{passive:true});
     });
+}
+
+// ══════════════════════════════════════════
+//  INSTAGRAM SCORE CARD GENERATOR
+// ══════════════════════════════════════════
+function generateScoreCard(finalScore, streakVal, acc, diff, secretMsg){
+    const W=1080, H=1920;
+    const cv=document.createElement('canvas');
+    cv.width=W; cv.height=H;
+    const ctx=cv.getContext('2d');
+
+    // Background
+    const bg=ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,'#0a0014');
+    bg.addColorStop(.5,'#0d1b2a');
+    bg.addColorStop(1,'#1a0a2e');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+    // Grid
+    ctx.strokeStyle='rgba(0,255,255,0.07)'; ctx.lineWidth=1.5;
+    for(let x=0;x<W;x+=88){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=88){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+    // Corner glows
+    [[0,0],[W,0],[0,H],[W,H]].forEach(([cx,cy])=>{
+        const g=ctx.createRadialGradient(cx,cy,0,cx,cy,480);
+        g.addColorStop(0,'rgba(255,20,147,0.22)');
+        g.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    });
+
+    // Border
+    ctx.strokeStyle='rgba(255,20,147,0.75)';
+    ctx.lineWidth=8;
+    ctx.strokeRect(24,24,W-48,H-48);
+
+    // Bolt
+    ctx.font='bold 160px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('⚡',W/2,260);
+
+    // Game title
+    ctx.font='bold 52px monospace';
+    ctx.fillStyle='rgba(0,255,255,0.95)';
+    ctx.fillText('DIGITAL BREAK',W/2,340);
+    ctx.font='32px monospace';
+    ctx.fillStyle='rgba(0,255,255,0.4)';
+    ctx.fillText('V2.1 — ULTIMATE EDITION',W/2,396);
+
+    // Divider
+    ctx.strokeStyle='rgba(255,20,147,0.35)';
+    ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(120,430);ctx.lineTo(W-120,430);ctx.stroke();
+
+    // SYSTEM BREACHED
+    ctx.font='bold 56px monospace';
+    const tg=ctx.createLinearGradient(200,0,W-200,0);
+    tg.addColorStop(0,'#ff1493');tg.addColorStop(.5,'#ff6b00');tg.addColorStop(1,'#ffdd00');
+    ctx.fillStyle=tg;
+    ctx.fillText('🔥 SYSTEM BREACHED 🔥',W/2,526);
+
+    // Score badge
+    const sg=ctx.createLinearGradient(240,560,W-240,700);
+    sg.addColorStop(0,'#ff1493');sg.addColorStop(1,'#ff6b00');
+    ctx.fillStyle=sg;
+    ctx.beginPath();ctx.roundRect(240,560,W-480,170,48);ctx.fill();
+    ctx.font='bold 108px monospace';
+    ctx.fillStyle='#fff';
+    ctx.fillText(`${Number(finalScore).toLocaleString()} PTS`,W/2,672);
+
+    // Stats row
+    const stats=[['STREAK',`${streakVal} hits`],['ACCURACY',`${acc}%`],['MODE',diff.toUpperCase()]];
+    stats.forEach(([k,v],i)=>{
+        const sx=80+i*310, sy=760;
+        ctx.fillStyle='rgba(0,0,0,0.4)';
+        ctx.beginPath();ctx.roundRect(sx,sy,280,160,32);ctx.fill();
+        ctx.strokeStyle='rgba(0,255,255,0.22)';ctx.lineWidth=2;
+        ctx.beginPath();ctx.roundRect(sx,sy,280,160,32);ctx.stroke();
+        ctx.font='26px monospace';ctx.fillStyle='rgba(0,255,255,0.55)';
+        ctx.fillText(k,sx+140,sy+56);
+        ctx.font='bold 44px monospace';ctx.fillStyle='#ffffff';
+        ctx.fillText(v,sx+140,sy+116);
+    });
+
+    // Secret message box
+    ctx.fillStyle='rgba(0,255,100,0.08)';
+    ctx.beginPath();ctx.roundRect(80,960,W-160,200,40);ctx.fill();
+    ctx.strokeStyle='rgba(0,255,100,0.35)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(80,960,W-160,200,40);ctx.stroke();
+    ctx.font='28px monospace';ctx.fillStyle='rgba(0,255,100,0.7)';
+    ctx.fillText('🔓 CLASSIFIED MESSAGE',W/2,1010);
+    ctx.font='bold 32px monospace';ctx.fillStyle='#00ff00';
+    // Word wrap the secret message
+    const words=secretMsg.split(' ');
+    let line='', lines=[], maxW=W-200;
+    ctx.font='bold 32px monospace';
+    words.forEach(w=>{
+        const test=line+w+' ';
+        if(ctx.measureText(test).width>maxW&&line!==''){lines.push(line);line=w+' ';}
+        else line=test;
+    });
+    lines.push(line);
+    lines.slice(0,2).forEach((l,i)=>ctx.fillText(l.trim(),W/2,1068+i*44));
+
+    // Challenge text
+    ctx.font='bold 48px monospace';
+    const cg=ctx.createLinearGradient(160,0,W-160,0);
+    cg.addColorStop(0,'#00ffff');cg.addColorStop(1,'#ff1493');
+    ctx.fillStyle=cg;
+    ctx.fillText('CAN YOU BEAT ME? ⚡',W/2,1240);
+
+    // Game link pill
+    ctx.fillStyle='rgba(0,255,255,0.1)';
+    ctx.beginPath();ctx.roundRect(160,1270,W-320,110,55);ctx.fill();
+    ctx.strokeStyle='rgba(0,255,255,0.4)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(160,1270,W-320,110,55);ctx.stroke();
+    ctx.font='bold 36px monospace';ctx.fillStyle='rgba(0,255,255,0.9)';
+    ctx.fillText('🔗 digitalbreak.netlify.app',W/2,1338);
+
+    // Credits
+    ctx.font='32px monospace';ctx.fillStyle='rgba(255,100,180,0.55)';
+    ctx.fillText('made with 💜 by Ayabukwa',W/2,1440);
+
+    // Bottom accent line
+    const lb=ctx.createLinearGradient(0,0,W,0);
+    lb.addColorStop(0,'transparent');
+    lb.addColorStop(.5,'rgba(0,255,255,0.7)');
+    lb.addColorStop(1,'transparent');
+    ctx.strokeStyle=lb;ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(120,1500);ctx.lineTo(W-120,1500);ctx.stroke();
+
+    return cv;
+}
+
+function saveScoreCard(){
+    const secretMsg=document.getElementById('secretText').textContent||'You breached the system!';
+    const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
+    const cv=generateScoreCard(score,bestStreak,acc,difficulty,secretMsg);
+    const link=document.createElement('a');
+    link.download='digitalbreak-score.png';
+    link.href=cv.toDataURL('image/png');
+    link.click();
+    document.getElementById('igConfirm').innerHTML=
+        '✅ Saved! Open Instagram → Stories → add photo 📸';
+    setTimeout(()=>document.getElementById('igConfirm').textContent='',5000);
 }
 
 </script>
