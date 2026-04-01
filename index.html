@@ -130,9 +130,11 @@
             overflow-y: scroll;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior-y: contain;
+            touch-action: pan-y;
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
             display: none;
             padding: 20px 15px 60px;
-            cursor: pointer;
         }
 
         #winBox {
@@ -434,7 +436,7 @@
 </div>
 
 <!-- ══ WIN OVERLAY ══ -->
-<div id="winOverlay" ontouchstart="">
+<div id="winOverlay">
     <div id="winBox">
         <div id="winTitle">🔥 SYSTEM BREACHED 🔥</div>
         <div id="roastText"></div>
@@ -1087,7 +1089,7 @@ function startGame(){
 
     document.getElementById('startPopup').style.display='none';
     document.getElementById('losePopup').style.display='none';
-    document.getElementById('winOverlay').style.display='none';
+    const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
 
     if(p5Canvas)p5Canvas.style.pointerEvents='auto'; // enable canvas taps
 
@@ -1159,7 +1161,7 @@ function restartGame(){
     if(countdownInterval)clearInterval(countdownInterval);
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
 
-    document.getElementById('winOverlay').style.display='none';
+    const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
     document.getElementById('losePopup').style.display='none';
     document.getElementById('startPopup').style.display='block';
     document.getElementById('shareConfirm').textContent='';
