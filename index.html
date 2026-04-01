@@ -66,11 +66,18 @@
             z-index: 1000;
             width: 92vw;
             max-width: 480px;
-            max-height: calc(100vh - 20px);
-            overflow-y: auto;
+            height: calc(100vh - 20px);
+            overflow-y: scroll;
             -webkit-overflow-scrolling: touch;
-            cursor: pointer;
+            overscroll-behavior-y: contain;
+            touch-action: pan-y;
+            -webkit-transform: translateX(-50%) translateZ(0);
+            transform: translateX(-50%) translateZ(0);
         }
+        .popup::-webkit-scrollbar{width:4px}
+        .popup::-webkit-scrollbar-track{background:rgba(0,255,255,.05);border-radius:4px}
+        .popup::-webkit-scrollbar-thumb{background:rgba(0,255,255,.3);border-radius:4px}
+        .popup::-webkit-scrollbar-thumb:hover{background:rgba(0,255,255,.5)}
 
         .popup h2 {
             margin: 0 0 16px;
@@ -138,6 +145,10 @@
             display: none;
             padding: 20px 15px 60px;
         }
+        #winOverlay::-webkit-scrollbar{width:4px}
+        #winOverlay::-webkit-scrollbar-track{background:rgba(255,20,147,.05);border-radius:4px}
+        #winOverlay::-webkit-scrollbar-thumb{background:rgba(255,20,147,.35);border-radius:4px}
+        #winOverlay::-webkit-scrollbar-thumb:hover{background:rgba(255,20,147,.6)}
 
         #winBox {
             background: linear-gradient(160deg, #05050f, #0d1b2a, #1a0a2e);
@@ -469,7 +480,13 @@
         <strong>HACKER MODE:</strong> 60 seconds, moving obstacles, power-ups enabled
     </div>
 
-    <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:4px;letter-spacing:1px;">by Aya · tap targets · dodge hazards</div>
+    <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;">
+        <button id="musicToggleBtn" class="btn"
+                style="background:linear-gradient(45deg,#1a0a2e,#0d1b2a);border:1px solid rgba(0,255,255,.3);color:#00ffff;font-size:11px;padding:9px 18px;min-height:36px;box-shadow:none;"
+                onclick="toggleMusic()"
+                ontouchstart="toggleMusic()">🎵 MUSIC: OFF</button>
+    </div>
+    <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:10px;letter-spacing:1px;">by Aya · tap targets · dodge hazards</div>
 </div>
 
 <!-- ══ LOSE POPUP ══ -->
@@ -755,10 +772,59 @@ function selectDifficulty(diff){
     document.getElementById('difficultyDesc').innerHTML=`<strong>${diff.toUpperCase()} MODE:</strong> ${difficultySettings[diff].description}`;
 }
 
+// Audio context for iOS haptic-style feedback
+let audioCtx=null;
+function getAudioCtx(){
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    return audioCtx;
+}
+function iosHaptic(type){
+    try{
+        const ctx=getAudioCtx();
+        const patterns={
+            hit:[[80,0.3,0.04]],
+            bonus:[[100,0.4,0.04],[150,0.3,0.04]],
+            perfect:[[60,0.5,0.06]],
+            obstacle:[[50,0.6,0.1],[60,0.5,0.08]],
+            powerup:[[120,0.35,0.05]],
+            streak:[[80,0.4,0.04],[100,0.5,0.04],[120,0.4,0.04]],
+            boss:[[60,0.6,0.08],[80,0.4,0.05],[100,0.7,0.1]]
+        };
+        const steps=patterns[type]||patterns.hit;
+        let time=ctx.currentTime;
+        steps.forEach(([freq,gain,dur])=>{
+            const osc=ctx.createOscillator();
+            const g=ctx.createGain();
+            osc.connect(g);g.connect(ctx.destination);
+            osc.frequency.setValueAtTime(freq,time);
+            osc.type='sine';
+            g.gain.setValueAtTime(gain,time);
+            g.gain.exponentialRampToValueAtTime(0.001,time+dur);
+            osc.start(time);osc.stop(time+dur+0.01);
+            time+=dur+0.02;
+        });
+    }catch{}
+}
+function androidVibrate(type){
+    // Precise patterns: [vibrate,pause,vibrate,...] in ms
+    const p={
+        hit:[40],
+        bonus:[30,40,30,40,30],
+        perfect:[80],
+        obstacle:[180],
+        powerup:[60],
+        streak:[50,30,50],
+        boss:[80,40,160]
+    };
+    try{navigator.vibrate(p[type]||[40]);}catch{}
+}
 function triggerVibration(type='hit'){
-    if('vibrate'in navigator&&/Mobi|Android/i.test(navigator.userAgent)){
-        try{const p={hit:[50],bonus:[50,50,50],perfect:[100],obstacle:[200],powerup:[75],streak:[80,40,80],boss:[100,50,200]};navigator.vibrate(p[type]||[50]);}catch{}
-    }
+    const isAndroid=/Android/i.test(navigator.userAgent);
+    const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if(isAndroid&&'vibrate'in navigator)androidVibrate(type);
+    else if(isIOS)iosHaptic(type);
+    else if('vibrate'in navigator)androidVibrate(type);
 }
 
 // ══════════════════════════════════════════
@@ -1091,7 +1157,12 @@ function touchStarted(){
     if(gameState!=='playing')return false;
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);
-    return false;
+    return false;function touchStarted(){
+    if(gameState!=='playing')return; // no preventDefault — lets popups scroll freely
+    lastInputTS=performance.now();
+    handleInput(mouseX,mouseY);
+    return false; // only preventDefault during actual gameplay
+}
 }
 function handleInput(tx,ty){
     if(inputLock)return;
@@ -1152,6 +1223,11 @@ function updateDisplay(){
 // ══════════════════════════════════════════
 //  GAME FLOW
 // ══════════════════════════════════════════
+// Wire music button
+document.addEventListener('DOMContentLoaded',()=>{
+    musicBtn=document.getElementById('musicToggleBtn');
+});
+
 let startLock=false;
 function startGame(){
     if(startLock||gameState==='playing')return;
@@ -1254,6 +1330,126 @@ function restartGame(){
     document.getElementById('bossAlert').classList.remove('show');
     if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
 }
+
+// ══════════════════════════════════════════
+//  SYNTHWAVE MUSIC ENGINE
+// ══════════════════════════════════════════
+let musicCtx=null,musicNodes=[],musicPlaying=false,musicBtn=null;
+const NOTES={
+    C3:130.8,D3:146.8,Eb3:155.6,F3:174.6,G3:196,Ab3:207.7,Bb3:233.1,
+    C4:261.6,D4:293.7,Eb4:311.1,F4:349.2,G4:392,Ab4:415.3,Bb4:466.2,
+    C5:523.3,D5:587.3,Eb5:622.3,F5:698.5,G5:784,
+};
+// Cyberpunk minor arpeggio sequence
+const ARP_SEQ=[
+    NOTES.C4,NOTES.Eb4,NOTES.G4,NOTES.Bb4,
+    NOTES.C4,NOTES.Eb4,NOTES.G4,NOTES.C5,
+    NOTES.Bb3,NOTES.D4,NOTES.F4,NOTES.Ab4,
+    NOTES.Ab3,NOTES.C4,NOTES.Eb4,NOTES.G4,
+];
+const BASS_SEQ=[NOTES.C3,NOTES.C3,NOTES.Bb3,NOTES.Ab3];
+const BEAT_BPM=128;
+const STEP=60/BEAT_BPM/2; // 8th note duration
+
+function startMusic(){
+    if(musicPlaying)return;
+    try{
+        musicCtx=new(window.AudioContext||window.webkitAudioContext)();
+        if(musicCtx.state==='suspended')musicCtx.resume();
+        const master=musicCtx.createGain();
+        master.gain.setValueAtTime(0.18,musicCtx.currentTime);
+        master.connect(musicCtx.destination);
+        musicNodes=[master];
+
+        // Reverb convolver for depth
+        const rev=musicCtx.createConvolver();
+        const rl=musicCtx.sampleRate*1.5;
+        const rb=musicCtx.createBuffer(2,rl,musicCtx.sampleRate);
+        for(let c=0;c<2;c++){const d=rb.getChannelData(c);for(let i=0;i<rl;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/rl,2.5);}
+        rev.buffer=rb;
+        const revGain=musicCtx.createGain();revGain.gain.setValueAtTime(0.22,0);
+        rev.connect(revGain);revGain.connect(master);
+        musicNodes.push(rev,revGain);
+
+        let step=0;
+        function scheduleNote(){
+            if(!musicPlaying)return;
+            const t=musicCtx.currentTime;
+            const arpIdx=step%ARP_SEQ.length;
+            const bassIdx=Math.floor(step/4)%BASS_SEQ.length;
+
+            // Arp lead — saw wave
+            const osc=musicCtx.createOscillator();
+            const g=musicCtx.createGain();
+            osc.type='sawtooth';
+            osc.frequency.setValueAtTime(ARP_SEQ[arpIdx],t);
+            g.gain.setValueAtTime(0,t);
+            g.gain.linearRampToValueAtTime(0.12,t+0.01);
+            g.gain.exponentialRampToValueAtTime(0.001,t+STEP*0.7);
+            osc.connect(g);g.connect(master);g.connect(rev);
+            osc.start(t);osc.stop(t+STEP);
+            musicNodes.push(osc,g);
+
+            // Bass — square wave every 4 steps
+            if(step%4===0){
+                const bosc=musicCtx.createOscillator();
+                const bg=musicCtx.createGain();
+                bosc.type='square';
+                bosc.frequency.setValueAtTime(BASS_SEQ[bassIdx],t);
+                bg.gain.setValueAtTime(0,t);
+                bg.gain.linearRampToValueAtTime(0.09,t+0.02);
+                bg.gain.exponentialRampToValueAtTime(0.001,t+STEP*3.5);
+                bosc.connect(bg);bg.connect(master);
+                bosc.start(t);bosc.stop(t+STEP*4);
+                musicNodes.push(bosc,bg);
+            }
+
+            // Hi-hat every 2 steps
+            if(step%2===0){
+                const buf=musicCtx.createBuffer(1,musicCtx.sampleRate*.04,musicCtx.sampleRate);
+                const bd=buf.getChannelData(0);for(let i=0;i<bd.length;i++)bd[i]=Math.random()*2-1;
+                const hn=musicCtx.createBufferSource();
+                const hf=musicCtx.createBiquadFilter();hf.type='highpass';hf.frequency.value=8000;
+                const hg=musicCtx.createGain();
+                hg.gain.setValueAtTime(0.04,t);hg.gain.exponentialRampToValueAtTime(0.001,t+0.04);
+                hn.buffer=buf;hn.connect(hf);hf.connect(hg);hg.connect(master);
+                hn.start(t);musicNodes.push(hn,hf,hg);
+            }
+
+            // Kick on beat (every 8 steps)
+            if(step%8===0){
+                const kosc=musicCtx.createOscillator();
+                const kg=musicCtx.createGain();
+                kosc.frequency.setValueAtTime(140,t);
+                kosc.frequency.exponentialRampToValueAtTime(35,t+0.08);
+                kg.gain.setValueAtTime(0.5,t);kg.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+                kosc.connect(kg);kg.connect(master);
+                kosc.start(t);kosc.stop(t+0.15);
+                musicNodes.push(kosc,kg);
+            }
+
+            step++;
+            // Clean old nodes
+            if(musicNodes.length>200)musicNodes.splice(3,musicNodes.length-100);
+            setTimeout(scheduleNote,STEP*1000*.85);
+        }
+        musicPlaying=true;
+        scheduleNote();
+        if(musicBtn)musicBtn.textContent='🔊 MUSIC: ON';
+    }catch(e){console.log('Music error:',e);}
+}
+
+function stopMusic(){
+    musicPlaying=false;
+    try{musicNodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch{}});musicNodes=[];}catch{}
+    try{if(musicCtx){musicCtx.close();musicCtx=null;}}catch{}
+    if(musicBtn)musicBtn.textContent='🎵 MUSIC: OFF';
+}
+
+function toggleMusic(){
+    musicPlaying?stopMusic():startMusic();
+}
+
 </script>
 </body>
 </html>
