@@ -426,6 +426,11 @@
     <button class="btn"
             onclick="restartGame()"
             ontouchstart="restartGame()">🔄 Try Again</button>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,255,255,.12);font-size:10px;color:rgba(255,255,255,.3);line-height:2;letter-spacing:.5px;">
+        made with 💜 by <span style="color:rgba(0,255,255,.6);">uAya</span><br>
+        📱 <a href="tel:0845067825" style="color:rgba(0,255,255,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
+        ✉️ <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(0,255,255,.5);text-decoration:none;">unakomtumtum0@gmail.com</a>
+    </div>
 </div>
 
 <!-- ══ WIN OVERLAY ══ -->
@@ -463,6 +468,11 @@
         <button class="btn" style="margin-top:10px;"
                 onclick="restartGame()"
                 ontouchstart="restartGame()">🔄 Play Again</button>
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,20,147,.15);font-size:10px;color:rgba(255,255,255,.28);line-height:2;letter-spacing:.5px;">
+            made with 💜 by <span style="color:rgba(255,100,180,.7);">Ayabukwa</span><br>
+            📱 <a href="tel:0845067825" style="color:rgba(255,100,180,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
+            ✉️ <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(255,100,180,.5);text-decoration:none;">unakomtumtum0@gmail.com</a>
+        </div>
     </div>
 </div>
 
@@ -471,6 +481,36 @@
 //  LEADERBOARD
 // ══════════════════════════════════════════
 const LEADERBOARD_KEY = 'digitalBreakV21_lb';
+const SECRET_MESSAGES = [
+    "Why is 6 afraid of 7? Because 7, 8, 9. But why was 7 afraid tho? Because 7 knew that 6, 8, 9 too 💀",
+    "No cap this game actually ate fr fr. The simulation is shaking rn 🔥",
+    "You understood the assignment periodt. We don't make the rules, you just followed them perfectly.",
+    "POV: you just violated the algorithm and the algorithm is embarrassed 🤖",
+    "Respectfully... you ate and left absolutely no crumbs. The plate is clean. 🍽️",
+    "The audacity to WIN?? In THIS economy?? We love to see it bestie 😭",
+    "Main character behaviour fully detected. Stay built different 💅",
+    "IYKYK. And you clearly knew. The rest of them don't. Keep it that way 🤫",
+    "Not me actually impressed rn. This was NOT the expected outcome 💀",
+    "You're giving 'I don't miss' energy and honestly the game felt it 🎯",
+    "We move. But first screenshot this because nobody is going to believe you 📸",
+    "The devs are shaking. (hi it's Aya. I'm shaking. Congrats bestie 💋)",
+    "Girl math: spending 60 seconds on this game = certified that girl energy ✨",
+    "Lowkey ate. Highkey ate. Midkey absolutely demolished it 🔥",
+    "The haters said you couldn't. The haters were statistically incorrect 📊",
+    "Real ones finish. You? Certified real one. The simulation acknowledges you fr.",
+    "POV: it's 3am, your eyes hurt, your thumb is sore, and you WON. No notes. 🌙",
+    "This is your villain origin story except you're the hero actually. Or maybe both 😈",
+    "NPC behaviour? Not today. Main character only. Congrats on existing correctly 💅",
+    "Bro really said 'let me speedrun this' and then DID IT. Unhinged. Iconic. 🏃",
+    "The way you ate this game up... it's giving chosen one energy and I don't say that lightly.",
+    "Touch grass? Maybe. But first savour this W because you earned it bestie 🌿",
+    "Uthi utathuke kanjani? (How did you do it?) Because you hacked the system, that's how. The system is not happy about it ngl.",
+    "You just broke the matrix and the matrix is embarrassed. The glitch in the system is you. 🕶️",
+    "Not to flex but you just did a thing that was supposed to be hard and made it look easy. The audacity. The simulation is reeling. 🌀",
+    "Uthi utatakho ukushiyele ntoni nha??",
+    "The system was like 'you can't do that' and you were like 'watch me' and then you did. The system is now questioning its existence ngl.",
+    "I hope ungumntu oOn ebomini.",
+];
 const SEED_PLAYERS = [
     {name:"xX_H4ck3r_Xx",score:1820,diff:"normal"},
     {name:"umamakho_wifi",score:1650,diff:"normal"},
@@ -598,6 +638,7 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc){
     const lb=addToLeaderboard(finalScore,diff);
     renderLeaderboard(lb.map(e=>e.score===finalScore?{...e,isNew:true}:e),finalScore);
 
+    document.getElementById('secretText').textContent=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
     document.getElementById('countdownSection').style.display='block';
     document.getElementById('secretReveal').style.display='none';
 
@@ -625,7 +666,8 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc){
 //  GAME STATE
 // ══════════════════════════════════════════
 let gameState='start';
-let targets=[],obstacles=[],powerups=[],particles=[];
+let targets=[],obstacles=[],powerups=[],particles=[],stars=[];
+let shakeX=0,shakeY=0,shakeDuration=0,hitFlashAlpha=0;
 let score=0,timeLeft=60,combo=1,lives=3;
 let gameTimer,lastHitTime=0;
 let difficulty='normal',targetScore=1500;
@@ -636,6 +678,8 @@ let bossTarget=null,bossAlertTimer=null;
 let isPanic=false;
 let p5Canvas=null;
 let lastInputTS=0;
+let gameStartTime=0,gameDuration=0;
+let inputLock=false;
 
 const difficultySettings={
     easy:  {time:45,targetScore:900, obstacleCount:2,description:"ROOKIE MODE: 45 seconds, fewer obstacles, forgiving gameplay"},
@@ -686,7 +730,7 @@ function showStreakToast(msg){
 //  BOSS
 // ══════════════════════════════════════════
 function trySpawnBoss(){
-    if(bossTarget||Math.random()>=.012)return;
+    if(bossTarget||timeLeft<=15||Math.random()>=.012)return;
     document.getElementById('bossAlert').classList.add('show');
     triggerVibration('boss');
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
@@ -770,18 +814,57 @@ function setup(){
     let canvas=createCanvas(cw,ch);
     canvas.parent('gameContainer');
     p5Canvas=canvas.elt;
-    p5Canvas.style.touchAction='none';   // stop browser stealing scroll
-    p5Canvas.style.pointerEvents='none'; // start disabled; popups need taps first
+    p5Canvas.style.touchAction='none';
+    p5Canvas.style.pointerEvents='none';
+    for(let i=0;i<90;i++)stars.push({x:random(width),y:random(height),size:random(.4,2.2),speed:random(.04,.25),opacity:random(40,170),twinkle:random(TWO_PI)});
+}
+
+function windowResized(){
+    let cw=Math.min(windowWidth-40,520);
+    let ch=Math.min(windowHeight*.75,650);
+    resizeCanvas(cw,ch);
 }
 
 function draw(){
     background(5,5,15);
+    if(gameState!=='playing'){
+        noStroke();
+        for(let s of stars){s.y+=s.speed*.2;if(s.y>height)s.y=0;fill(80,120,160,25);ellipse(s.x,s.y,s.size);}
+        return;
+    }
+
+    // Drifting stars
+    noStroke();
+    for(let s of stars){
+        s.y+=s.speed; s.twinkle+=.035;
+        if(s.y>height)s.y=0;
+        let op=s.opacity+sin(s.twinkle)*28;
+        fill(isPanic?color(255,100,80,op*.55):color(160,210,255,op));
+        ellipse(s.x,s.y,s.size);
+    }
+
+    // Grid
     let ga=30+sin(frameCount*.02)*20;
     stroke(isPanic?color(80,20,20,ga+15):color(0,80,120,ga));
     strokeWeight(1);
     for(let x=0;x<width;x+=35)line(x,0,x,height);
     for(let y=0;y<height;y+=35)line(0,y,width,y);
     stroke(0,255,255,isPanic?8:20);line(0,(frameCount*3)%height,width,(frameCount*3)%height);
+
+    // Combo vignette glow
+    if(gameState==='playing'&&combo>=3){
+        let va=map(combo,3,8,12,50);
+        let vc=combo>=6?[255,100,0]:combo>=4?[255,20,147]:[0,255,255];
+        let g=drawingContext.createRadialGradient(width/2,height/2,height*.25,width/2,height/2,height*.82);
+        g.addColorStop(0,'rgba(0,0,0,0)');
+        g.addColorStop(1,`rgba(${vc[0]},${vc[1]},${vc[2]},${va/255})`);
+        drawingContext.fillStyle=g; noStroke(); drawingContext.fillRect(0,0,width,height);
+    }
+
+    // Screen shake
+    if(shakeDuration>0){shakeX=random(-shakeDuration,shakeDuration);shakeY=random(-shakeDuration,shakeDuration);shakeDuration*=.75;if(shakeDuration<.3)shakeDuration=0;}
+    else{shakeX=0;shakeY=0;}
+    translate(shakeX,shakeY);
 
     if(isPanic){
         let va=20+sin(frameCount*.15)*8;noStroke();
@@ -803,6 +886,7 @@ function draw(){
         trySpawnBoss();
         if(shieldTime>0){stroke(0,255,0,100);strokeWeight(8);noFill();rect(10,10,width-20,height-20,15);}
         if(slowTime>0){fill(0,100,255,30);noStroke();rect(0,0,width,height);}
+        if(hitFlashAlpha>0){noStroke();fill(0,255,255,hitFlashAlpha);rect(-10,-10,width+20,height+20);hitFlashAlpha=max(0,hitFlashAlpha-18);}
     }
 }
 
@@ -810,7 +894,14 @@ function draw(){
 //  TARGETS
 // ══════════════════════════════════════════
 function createTarget(){
-    targets.push({x:random(60,width-60),y:random(60,height-60),vx:random(-3,3),vy:random(-3,3),size:random(45,75),phase:0,active:false,activeTime:0,maxActiveTime:random(60,120),points:Math.floor(random(2,6)),type:Math.random()<.1?'bonus':'normal'});
+    let x,y,valid,attempts=0;
+    do{
+        x=random(60,width-60);y=random(60,height-60);valid=true;
+        for(let ob of obstacles){if(dist(x,y,ob.x,ob.y)<ob.size+50){valid=false;break;}}
+        for(let t of targets){if(dist(x,y,t.x,t.y)<70){valid=false;break;}}
+        attempts++;
+    }while(!valid&&attempts<30);
+    targets.push({x,y,vx:random(-3,3),vy:random(-3,3),size:random(45,75),phase:0,active:false,activeTime:0,maxActiveTime:random(60,120),points:Math.floor(random(2,6)),type:Math.random()<.1?'bonus':'normal'});
 }
 function updateAndDisplayTargets(){
     const sp=slowTime>0?.3:getSpeedMultiplier();
@@ -884,6 +975,7 @@ function updateAndDisplayPowerups(){
 //  PARTICLES
 // ══════════════════════════════════════════
 function updateAndDisplayParticles(){
+    if(particles.length>180)particles.splice(0,particles.length-180);
     for(let i=particles.length-1;i>=0;i--){
         let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;p.size*=.98;
         if(p.life<=0||p.size<1){particles.splice(i,1);continue;}
@@ -908,17 +1000,19 @@ function updatePowerUps(){
 // ══════════════════════════════════════════
 function mousePressed(){
     if(gameState!=='playing')return false;
-    if(performance.now()-lastInputTS<80)return false; // ignore synthetic mouse after touch
+    if(performance.now()-lastInputTS<150)return false;
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);return false;
 }
 function touchStarted(){
     if(gameState!=='playing')return false;
     lastInputTS=performance.now();
-    handleInput(mouseX,mouseY); // p5 maps first touch to mouseX/Y correctly
+    handleInput(mouseX,mouseY);
     return false;
 }
 function handleInput(tx,ty){
+    if(inputLock)return;
+    inputLock=true;setTimeout(()=>{inputLock=false;},150);
     totalClicks++;let hit=false;
     if(hitBoss(tx,ty)){hit=true;}
     if(!hit){
@@ -934,6 +1028,7 @@ function handleInput(tx,ty){
                 combo=(millis()-lastHitTime<1200)?Math.min(combo+1,8):1;
                 lastHitTime=millis();
                 createParticles(t.x,t.y,{r:0,g:255,b:255},15);
+                shakeDuration=2; hitFlashAlpha=40;
                 updateDisplay();targets.splice(i,1);createTarget();hit=true;break;
             }
         }
@@ -953,6 +1048,7 @@ function handleInput(tx,ty){
             if(dist(tx,ty,ob.x,ob.y)<ob.size/2){
                 lives--;combo=1;breakStreak();triggerVibration('obstacle');
                 createParticles(ob.x,ob.y,{r:255,g:0,b:100},20);
+                shakeDuration=7;
                 updateDisplay();if(lives<=0)endGame();hit=true;break;
             }
         }
@@ -1006,12 +1102,16 @@ function startGame(){
     document.getElementById('timeLeft').textContent=timeLeft;
 
     clearInterval(gameTimer);
+    gameStartTime=Date.now();
+    gameDuration=difficultySettings[difficulty].time*1000;
     gameTimer=setInterval(()=>{
-        timeLeft--;
+        if(gameState!=='playing')return;
+        const elapsed=Date.now()-gameStartTime;
+        timeLeft=Math.max(0,Math.ceil((gameDuration-elapsed)/1000));
         document.getElementById('timeLeft').textContent=timeLeft;
         updatePanicMode();
-        if(timeLeft<=0)endGame();
-    },1000);
+        if(elapsed>=gameDuration)endGame();
+    },250);
 }
 
 function endGame(){
