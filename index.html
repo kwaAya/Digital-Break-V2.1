@@ -2,32 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Break V2.1 - Ultimate Edition - by Aya</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Digital Break V2.1 - by Aya</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html, body {
-            margin: 0; padding: 0;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
+        html { overflow-y: scroll; }
 
         body {
-            padding: 10px;
             background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e, #0d1b2a);
             font-family: 'Orbitron', monospace;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
             color: #00ffff;
-            touch-action: manipulation;
             -webkit-user-select: none;
             user-select: none;
+            padding: 10px;
         }
 
         #gameContainer {
@@ -42,100 +37,22 @@
             max-height: 650px;
             position: relative;
             z-index: 1;
-            margin-top: 10px;
             transition: border-color 1s ease, box-shadow 1s ease;
         }
 
         #gameContainer.panic {
             border-color: rgba(255,40,40,0.7);
-            box-shadow: 0 0 60px rgba(255,0,0,0.35), 0 0 120px rgba(255,0,0,0.1);
+            box-shadow: 0 0 60px rgba(255,0,0,0.35);
         }
 
-        /* ── STREAK TOAST ── */
-        #streakToast {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.6);
-            background: linear-gradient(135deg, #ff1493, #ff6b00);
-            color: #fff;
-            font-size: 20px;
-            font-weight: 900;
-            padding: 12px 24px;
-            border-radius: 50px;
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: 200;
-            opacity: 0;
-            transition: opacity 0.2s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-            text-shadow: 0 2px 6px rgba(0,0,0,0.4);
-            letter-spacing: 1px;
-        }
-        #streakToast.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        /* ── BOSS ALERT BANNER ── */
-        #bossAlert {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.8);
-            background: rgba(255,215,0,0.12);
-            border: 2px solid #ffd700;
-            color: #ffd700;
-            font-size: 15px;
-            font-weight: 900;
-            padding: 10px 22px;
-            border-radius: 12px;
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: 200;
-            opacity: 0;
-            letter-spacing: 2px;
-            transition: opacity 0.3s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
-            text-shadow: 0 0 12px #ffd700;
-        }
-        #bossAlert.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        /* ── SPEED INDICATOR ── */
-        #speedIndicator {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            font-size: 10px;
-            color: rgba(0,255,255,0.5);
-            z-index: 100;
-            background: rgba(0,20,40,0.6);
-            padding: 5px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(0,255,255,0.15);
-            transition: color 0.5s, border-color 0.5s;
-        }
-        #speedIndicator.fast { color: rgba(255,100,0,0.85); border-color: rgba(255,100,0,0.4); }
-        #speedIndicator.panic { color: rgba(255,40,40,0.9); border-color: rgba(255,40,40,0.5); }
-
-        /* ── POPUPS ── */
-        .popup-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 999;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 15px;
-            cursor: pointer;
-        }
-
+        /* ══ KEY iOS FIX: popup is position:fixed directly, NO wrapper div.
+           This matches the working old version and avoids the iOS Safari
+           bug where fixed+overflow wrappers swallow touch events. ══ */
         .popup {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
             background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e);
             padding: 25px;
             border-radius: 20px;
@@ -144,14 +61,18 @@
             color: #00ffff;
             font-weight: bold;
             box-shadow: 0 0 50px rgba(0,255,255,0.6);
-            width: 100%;
+            z-index: 1000;
+            width: 92vw;
             max-width: 480px;
-            margin: auto;
+            max-height: calc(100vh - 20px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            cursor: pointer;
         }
 
         .popup h2 {
-            margin: 0 0 20px 0;
-            font-size: 28px;
+            margin: 0 0 16px;
+            font-size: 24px;
             font-weight: 900;
             background: linear-gradient(45deg, #00ffff, #ff1493);
             -webkit-background-clip: text;
@@ -160,8 +81,8 @@
         }
 
         .popup p {
-            margin: 15px 0;
-            font-size: 14px;
+            margin: 10px 0;
+            font-size: 13px;
             line-height: 1.5;
             opacity: 0.9;
         }
@@ -170,25 +91,36 @@
             background: linear-gradient(45deg, #00ffff, #ff1493, #00ff00);
             color: #000;
             border: none;
-            padding: 18px 35px;
+            padding: 16px 28px;
             border-radius: 30px;
-            font-weight: bold;
-            font-size: 18px;
+            font-weight: 900;
+            font-size: 15px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 12px;
+            transition: transform 0.15s;
+            margin: 7px;
             font-family: 'Orbitron', monospace;
             text-transform: uppercase;
-            min-height: 55px;
+            min-height: 50px;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
             box-shadow: 0 5px 15px rgba(0,255,255,0.3);
             display: inline-block;
         }
-        .btn:hover { transform: scale(1.08) translateY(-2px); box-shadow: 0 10px 25px rgba(0,255,255,0.8); }
-        .btn:active { transform: scale(0.97); }
+        .btn:active { transform: scale(0.95); }
 
-        /* ── WIN SCREEN ── */
+        .difficulty-btn {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            padding: 10px 18px;
+            font-size: 12px;
+            margin: 4px;
+            min-height: 42px;
+        }
+        .difficulty-btn.selected {
+            background: linear-gradient(45deg, #00ff00, #00ffff);
+            box-shadow: 0 0 20px rgba(0,255,0,0.5);
+        }
+
+        /* WIN overlay keeps its dark backdrop but gets ontouchstart + cursor:pointer */
         #winOverlay {
             position: fixed;
             top: 0; left: 0;
@@ -201,6 +133,7 @@
             align-items: flex-start;
             justify-content: center;
             padding: 15px;
+            cursor: pointer;
         }
 
         #winBox {
@@ -209,12 +142,13 @@
             border-radius: 22px;
             width: 100%;
             max-width: 480px;
-            padding: 28px 22px;
+            padding: 24px 20px;
             margin: auto;
             text-align: center;
-            box-shadow: 0 0 60px rgba(255,20,147,0.5), 0 0 120px rgba(0,255,255,0.15);
+            box-shadow: 0 0 60px rgba(255,20,147,0.5);
             position: relative;
             overflow: hidden;
+            cursor: default;
         }
 
         #winBox::before {
@@ -226,43 +160,30 @@
         }
 
         #winTitle {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 900;
             background: linear-gradient(45deg, #ff1493, #ff6b00, #ffdd00);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin: 0 0 6px 0;
+            margin: 0 0 6px;
             animation: flicker 2.5s infinite;
         }
-
         @keyframes flicker {
-            0%,95%,100% { opacity: 1; }
-            96% { opacity: 0.6; }
-            97% { opacity: 1; }
-            98% { opacity: 0.4; }
-            99% { opacity: 1; }
+            0%,95%,100%{opacity:1}96%{opacity:.6}97%{opacity:1}98%{opacity:.4}99%{opacity:1}
         }
 
         #roastText {
-            font-size: 13px;
-            color: #ff6b6b;
-            font-style: italic;
-            margin: 0 0 18px 0;
-            min-height: 20px;
-            letter-spacing: 0.5px;
-            opacity: 0.9;
+            font-size: 12px; color: #ff6b6b; font-style: italic;
+            margin: 0 0 12px; opacity: .9;
         }
 
         #winScoreBadge {
             display: inline-block;
             background: linear-gradient(135deg, #ff1493, #ff6b00);
-            color: #fff;
-            font-size: 32px;
-            font-weight: 900;
-            padding: 14px 30px;
-            border-radius: 16px;
-            margin: 10px 0 8px;
+            color: #fff; font-size: 28px; font-weight: 900;
+            padding: 12px 26px; border-radius: 16px;
+            margin: 8px 0 6px;
             box-shadow: 0 0 30px rgba(255,20,147,0.6);
             letter-spacing: 2px;
         }
@@ -270,1124 +191,874 @@
         #winStreakBadge {
             display: inline-block;
             background: linear-gradient(135deg, #ff6b00, #ffdd00);
-            color: #000;
-            font-size: 13px;
-            font-weight: 900;
-            padding: 6px 16px;
-            border-radius: 20px;
-            margin: 0 0 14px 0;
-            letter-spacing: 1px;
+            color: #000; font-size: 12px; font-weight: 900;
+            padding: 5px 14px; border-radius: 20px; margin: 0 0 10px;
         }
 
-        #winAccuracy {
-            font-size: 12px;
-            color: rgba(0,255,255,0.7);
-            margin: 0 0 20px 0;
-        }
+        #winAccuracy { font-size: 11px; color: rgba(0,255,255,.7); margin: 0 0 14px; }
 
         #countdownSection {
-            background: rgba(255,20,147,0.07);
-            border: 1px solid rgba(255,20,147,0.3);
-            border-radius: 14px;
-            padding: 16px;
-            margin: 0 0 18px 0;
+            background: rgba(255,20,147,.07);
+            border: 1px solid rgba(255,20,147,.3);
+            border-radius: 14px; padding: 14px; margin: 0 0 14px;
         }
-
-        #countdownLabel { font-size: 11px; color: rgba(255,20,147,0.8); margin: 0 0 8px 0; letter-spacing: 1.5px; }
-
+        #countdownLabel { font-size: 10px; color: rgba(255,20,147,.8); margin: 0 0 6px; letter-spacing: 1.5px; }
         #countdownNum {
-            font-size: 52px;
-            font-weight: 900;
-            color: #ff1493;
-            text-shadow: 0 0 30px #ff1493;
-            line-height: 1;
+            font-size: 46px; font-weight: 900; color: #ff1493;
+            text-shadow: 0 0 30px #ff1493; line-height: 1;
             animation: pulseAnim 1s ease-in-out infinite;
         }
-
-        @keyframes pulseAnim {
-            0%,100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
-        }
+        @keyframes pulseAnim { 0%,100%{transform:scale(1)}50%{transform:scale(1.08)} }
 
         #secretReveal {
             display: none;
-            background: rgba(0,255,0,0.08);
-            border: 2px solid #00ff00;
-            border-radius: 14px;
-            padding: 16px;
-            margin: 0 0 18px 0;
-            animation: revealPop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+            background: rgba(0,255,0,.08); border: 2px solid #00ff00;
+            border-radius: 14px; padding: 14px; margin: 0 0 14px;
+            animation: revealPop .5s cubic-bezier(.34,1.56,.64,1);
         }
-
-        @keyframes revealPop {
-            from { transform: scale(0.7); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        #secretReveal p { font-size: 11px; color: rgba(0,255,0,0.7); margin: 0 0 8px 0; letter-spacing: 1.5px; }
-
+        @keyframes revealPop { from{transform:scale(.7);opacity:0} to{transform:scale(1);opacity:1} }
+        #secretReveal p { font-size: 10px; color: rgba(0,255,0,.7); margin: 0 0 6px; letter-spacing: 1.5px; }
         #secretText {
-            font-size: 15px;
-            color: #00ff00;
-            text-shadow: 0 0 15px #00ff00;
-            letter-spacing: 1px;
-            word-break: break-word;
+            font-size: 14px; color: #00ff00; letter-spacing: 1px; word-break: break-word;
             animation: glow 2s ease-in-out infinite alternate;
         }
+        @keyframes glow { from{text-shadow:0 0 8px #00ff00} to{text-shadow:0 0 22px #00ff00,0 0 40px #00ff00} }
 
-        @keyframes glow {
-            from { text-shadow: 0 0 8px #00ff00; }
-            to { text-shadow: 0 0 22px #00ff00, 0 0 40px #00ff00; }
-        }
-
-        #leaderboardSection { margin: 0 0 18px 0; }
-
+        #leaderboardSection { margin: 0 0 14px; }
         #leaderboardTitle {
-            font-size: 13px;
-            color: #00ffff;
-            letter-spacing: 2px;
-            margin: 0 0 10px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            font-size: 12px; color: #00ffff; letter-spacing: 2px; margin: 0 0 8px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        #leaderboardTitle::before, #leaderboardTitle::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-        }
-        #leaderboardTitle::before { background: linear-gradient(90deg, transparent, rgba(0,255,255,0.4)); }
-        #leaderboardTitle::after  { background: linear-gradient(90deg, rgba(0,255,255,0.4), transparent); }
+        #leaderboardTitle::before,#leaderboardTitle::after{content:'';flex:1;height:1px}
+        #leaderboardTitle::before{background:linear-gradient(90deg,transparent,rgba(0,255,255,.4))}
+        #leaderboardTitle::after{background:linear-gradient(90deg,rgba(0,255,255,.4),transparent)}
 
         .lb-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 9px 12px;
-            border-radius: 10px;
-            margin-bottom: 6px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
-            font-size: 12px;
-            animation: slideIn 0.4s ease both;
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px; border-radius: 10px; margin-bottom: 5px;
+            background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
+            font-size: 11px; animation: slideIn .4s ease both;
         }
         .lb-row.new-entry {
-            background: rgba(255,20,147,0.12);
-            border-color: rgba(255,20,147,0.4);
-            box-shadow: 0 0 12px rgba(255,20,147,0.2);
+            background: rgba(255,20,147,.12); border-color: rgba(255,20,147,.4);
+            box-shadow: 0 0 12px rgba(255,20,147,.2);
         }
-
-        @keyframes slideIn {
-            from { transform: translateX(-20px); opacity: 0; }
-            to   { transform: translateX(0);     opacity: 1; }
-        }
-
-        .lb-rank { width: 28px; font-size: 16px; flex-shrink: 0; }
-        .lb-name { flex: 1; text-align: left; color: rgba(0,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lb-score { font-weight: 900; color: #ff1493; font-size: 13px; }
-        .lb-diff  { font-size: 10px; color: rgba(255,255,255,0.4); flex-shrink: 0; }
+        @keyframes slideIn{from{transform:translateX(-20px);opacity:0}to{transform:translateX(0);opacity:1}}
+        .lb-rank{width:26px;font-size:15px;flex-shrink:0}
+        .lb-name{flex:1;text-align:left;color:rgba(0,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .lb-score{font-weight:900;color:#ff1493;font-size:12px}
+        .lb-diff{font-size:10px;color:rgba(255,255,255,.4);flex-shrink:0}
 
         #shareBtn {
             background: linear-gradient(45deg, #1da1f2, #0d8fd4);
-            color: #fff;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 30px;
-            font-family: 'Orbitron', monospace;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            margin: 6px;
-            min-height: 48px;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(29,161,242,0.4);
-            transition: all 0.3s;
+            color: #fff; border: none; padding: 12px 24px; border-radius: 30px;
+            font-family: 'Orbitron', monospace; font-weight: bold; font-size: 12px;
+            cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+            margin: 5px; min-height: 44px; letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(29,161,242,.4); transition: transform .15s;
         }
-        #shareBtn:hover { transform: scale(1.05); }
-        #shareBtn:active { transform: scale(0.97); }
+        #shareBtn:active{transform:scale(.95)}
+        #shareConfirm{font-size:11px;color:#00ff00;margin:4px 0 0;min-height:16px;letter-spacing:1px}
 
-        #shareConfirm { font-size: 11px; color: #00ff00; margin: 4px 0 0 0; min-height: 16px; letter-spacing: 1px; }
-
-        /* ── CONFETTI ── */
         #confettiCanvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 1050;
-            display: none;
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            pointer-events: none; z-index: 1050; display: none;
         }
 
-        /* ── HUD ── */
+        /* HUD */
         #gameStats {
-            position: absolute;
-            top: 15px; left: 15px;
-            color: #00ffff;
-            font-weight: bold;
-            font-size: 15px;
-            z-index: 100;
-            background: rgba(0,20,40,0.8);
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(0,255,255,0.3);
-            transition: color 0.5s;
-            pointer-events: none; /* FIX: don't block canvas touches */
+            position: absolute; top:15px; left:15px;
+            color: #00ffff; font-weight: bold; font-size: 13px;
+            z-index: 100; background: rgba(0,20,40,.85);
+            padding: 10px 12px; border-radius: 10px;
+            border: 1px solid rgba(0,255,255,.3);
+            pointer-events: none; display: none;
         }
-        #gameStats.panic { border-color: rgba(255,60,60,0.5); }
-
-        #timeLeft { transition: color 0.5s; }
-        #timeLeft.panic { color: #ff4444 !important; }
+        #gameStats.panic{border-color:rgba(255,60,60,.5)}
+        #timeLeft.panic{color:#ff4444!important}
 
         #powerups {
-            position: absolute;
-            top: 15px; right: 15px;
-            color: #00ff00;
-            font-weight: bold;
-            font-size: 12px;
-            z-index: 100;
-            background: rgba(0,40,0,0.8);
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid rgba(0,255,0,0.3);
-            pointer-events: none; /* FIX: don't block canvas touches */
+            position: absolute; top:15px; right:15px;
+            color: #00ff00; font-weight: bold; font-size: 11px;
+            z-index: 100; background: rgba(0,40,0,.85);
+            padding: 10px; border-radius: 10px;
+            border: 1px solid rgba(0,255,0,.3);
+            pointer-events: none; display: none;
         }
 
         #instructions {
-            position: absolute;
-            bottom: 15px; left: 15px;
-            color: rgba(0,255,255,0.8);
-            font-size: 11px;
-            z-index: 100;
-            background: rgba(0,20,40,0.7);
-            padding: 8px;
-            border-radius: 8px;
-            pointer-events: none; /* FIX: don't block canvas touches */
+            position: absolute; bottom:15px; left:15px;
+            color: rgba(0,255,255,.8); font-size: 10px; line-height: 1.7;
+            z-index: 100; background: rgba(0,20,40,.75);
+            padding: 7px 9px; border-radius: 8px;
+            pointer-events: none; display: none;
         }
 
+        #speedIndicator {
+            position: absolute; bottom:15px; right:15px;
+            font-size: 10px; color: rgba(0,255,255,.5);
+            z-index: 100; background: rgba(0,20,40,.6);
+            padding: 5px 8px; border-radius: 6px;
+            border: 1px solid rgba(0,255,255,.15);
+            pointer-events: none; display: none;
+            transition: color .5s, border-color .5s;
+        }
+        #speedIndicator.fast{color:rgba(255,100,0,.85);border-color:rgba(255,100,0,.4)}
+        #speedIndicator.panic{color:rgba(255,40,40,.9);border-color:rgba(255,40,40,.5)}
+
+        #streakToast {
+            position: absolute; top:50%; left:50%;
+            transform: translate(-50%,-50%) scale(.6);
+            background: linear-gradient(135deg,#ff1493,#ff6b00);
+            color: #fff; font-size: 17px; font-weight: 900;
+            padding: 10px 22px; border-radius: 50px;
+            white-space: nowrap; pointer-events: none;
+            z-index: 200; opacity: 0;
+            transition: opacity .2s, transform .3s cubic-bezier(.34,1.56,.64,1);
+        }
+        #streakToast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+        #bossAlert {
+            position: absolute; top:50%; left:50%;
+            transform: translate(-50%,-50%) scale(.8);
+            background: rgba(255,215,0,.12); border: 2px solid #ffd700;
+            color: #ffd700; font-size: 13px; font-weight: 900;
+            padding: 10px 20px; border-radius: 12px;
+            white-space: nowrap; pointer-events: none;
+            z-index: 200; opacity: 0; letter-spacing: 2px;
+            transition: opacity .3s, transform .4s cubic-bezier(.34,1.56,.64,1);
+        }
+        #bossAlert.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
         .access-denied {
-            font-size: 24px;
-            font-weight: 900;
-            color: #ff0066 !important;
+            background: none !important;
             -webkit-text-fill-color: #ff0066 !important;
+            color: #ff0066 !important;
             text-shadow: 0 0 20px #ff0066;
         }
 
-        .difficulty-btn {
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
-            margin: 5px;
-            padding: 12px 25px;
-            font-size: 14px;
-            min-height: auto;
-        }
-        .difficulty-btn.selected {
-            background: linear-gradient(45deg, #00ff00, #00ffff);
-            transform: scale(1.1);
-        }
-
-        @media (max-width: 480px) {
-            .popup, #winBox { padding: 20px 15px; }
-            .popup h2 { font-size: 22px; margin: 0 0 12px 0; }
-            .popup p { font-size: 13px; margin: 10px 0; }
-            .btn { padding: 15px 20px; font-size: 16px; margin: 8px 5px; min-height: 50px; width: calc(100% - 10px); }
-            .difficulty-btn { padding: 10px 15px; font-size: 12px; margin: 4px 3px; width: auto; }
-            #winTitle { font-size: 21px; }
-            #winScoreBadge { font-size: 26px; padding: 12px 22px; }
-            #countdownNum { font-size: 42px; }
+        @media (max-width:480px) {
+            .popup{padding:16px 13px}
+            .popup h2{font-size:19px}
+            .btn{padding:13px 16px;font-size:14px;width:calc(100% - 14px);margin:5px 7px}
+            .difficulty-btn{width:auto;padding:9px 12px;font-size:11px;margin:3px}
+            #winScoreBadge{font-size:24px;padding:10px 18px}
+            #countdownNum{font-size:40px}
+            #winTitle{font-size:19px}
         }
     </style>
 </head>
 <body>
-    <canvas id="confettiCanvas"></canvas>
-    <div id="gameContainer">
-        <div id="streakToast"></div>
-        <div id="bossAlert">👑 BOSS TARGET INCOMING!</div>
-        <div id="speedIndicator">SPEED: NORMAL</div>
+
+<canvas id="confettiCanvas"></canvas>
+
+<div id="gameContainer">
+    <div id="streakToast"></div>
+    <div id="bossAlert">👑 BOSS TARGET INCOMING!</div>
+    <div id="speedIndicator">SPEED: NORMAL</div>
+</div>
+
+<!-- HUD sits outside canvas so it's always on top -->
+<div id="gameStats">
+    <div>SCORE: <span id="scoreCount">0</span></div>
+    <div>TIME:  <span id="timeLeft">60</span>s</div>
+    <div>COMBO: x<span id="comboCount">1</span></div>
+    <div>LIVES: <span id="livesCount">3</span>❤️</div>
+    <div style="font-size:10px;margin-top:4px;color:#ff6b00;">STREAK: <span id="streakCount">0</span></div>
+</div>
+<div id="powerups">
+    <div>SHIELD: <span id="shieldTime">0</span>s</div>
+    <div>SLOW-MO:<span id="slowTime">0</span>s</div>
+    <div>MULTI:  <span id="multiTime">0</span>s</div>
+</div>
+<div id="instructions">
+    <div>🎯 Hit CYAN targets</div>
+    <div>👑 Hit GOLD boss</div>
+    <div>❌ Avoid RED hazards</div>
+    <div>🔥 10 hits = streak bonus</div>
+</div>
+
+<!-- ══ START POPUP — position:fixed directly on this div ══ -->
+<div id="startPopup" class="popup">
+    <h2>⚡ DIGITAL BREAK V2.1 ⚡</h2>
+    <p><strong>ULTIMATE EDITION</strong></p>
+    <p>🎯 Power-ups · Obstacles · Multiple difficulties</p>
+    <p>👑 Boss targets · 🔥 Streak rewards · ⚡ Speed escalation</p>
+
+    <p><strong>Choose Difficulty:</strong></p>
+    <div>
+        <button class="btn difficulty-btn"
+                data-difficulty="easy"
+                onclick="selectDifficulty('easy')"
+                ontouchstart="selectDifficulty('easy')">ROOKIE<br><small style="font-size:10px;">900+ pts</small></button>
+        <button class="btn difficulty-btn selected"
+                data-difficulty="normal"
+                onclick="selectDifficulty('normal')"
+                ontouchstart="selectDifficulty('normal')">HACKER<br><small style="font-size:10px;">1500+ pts</small></button>
+        <button class="btn difficulty-btn"
+                data-difficulty="insane"
+                onclick="selectDifficulty('insane')"
+                ontouchstart="selectDifficulty('insane')">LEGEND<br><small style="font-size:10px;">2000+ pts</small></button>
     </div>
 
-    <!-- START -->
-    <div id="startOverlay" class="popup-overlay" ontouchstart="">
-        <div class="popup">
-            <h2>⚡DIGITAL BREAK V2.1⚡</h2>
-            <p><strong>ULTIMATE EDITION</strong></p>
-            <p>Face the most challenging digital test yet!</p>
-            <p>🎯 Power-ups · Obstacles · Multiple difficulties</p>
-            <p>🔥 Hit glowing targets · Avoid hazards · Collect power-ups</p>
-            <p>👑 Boss targets · 🔥 Streak rewards · ⚡ Speed escalation</p>
-            <div>
-                <p><strong>Choose Difficulty:</strong></p>
-                <button class="btn difficulty-btn" onclick="selectDifficulty('easy')"   data-difficulty="easy">ROOKIE (900+ pts)</button>
-                <button class="btn difficulty-btn selected" onclick="selectDifficulty('normal')" data-difficulty="normal">HACKER (1500+ pts)</button>
-                <button class="btn difficulty-btn" onclick="selectDifficulty('insane')" data-difficulty="insane">LEGEND (2000+ pts)</button>
-            </div>
-            <p id="difficultyDesc"><strong>HACKER MODE:</strong> 60 seconds, moving obstacles, power-ups enabled</p>
-            <button class="btn" onclick="startGame()">BREACH THE SYSTEM</button>
+    <p id="difficultyDesc" style="font-size:12px;color:rgba(0,255,255,.7);margin-top:8px;">
+        <strong>HACKER MODE:</strong> 60 seconds, moving obstacles, power-ups enabled
+    </p>
+
+    <button class="btn"
+            onclick="startGame()"
+            ontouchstart="startGame()">⚡ BREACH THE SYSTEM</button>
+</div>
+
+<!-- ══ LOSE POPUP ══ -->
+<div id="losePopup" class="popup" style="display:none;">
+    <h2 class="access-denied">🔒 ACCESS DENIED</h2>
+    <p id="loseMessage">Nice try though...</p>
+    <p id="loseScore"    style="font-size:15px;color:#fff;margin-top:10px;">Final Score: 0</p>
+    <p id="loseAccuracy" style="font-size:12px;color:rgba(0,255,255,.7);">Accuracy: 0%</p>
+    <button class="btn"
+            onclick="restartGame()"
+            ontouchstart="restartGame()">🔄 Try Again</button>
+</div>
+
+<!-- ══ WIN OVERLAY ══ -->
+<div id="winOverlay" ontouchstart="">
+    <div id="winBox">
+        <div id="winTitle">🔥 SYSTEM BREACHED 🔥</div>
+        <div id="roastText"></div>
+        <div id="winScoreBadge">0 PTS</div>
+        <div id="winStreakBadge">🔥 Best Streak: 0</div>
+        <div id="winAccuracy">Accuracy: 0%</div>
+
+        <div id="countdownSection">
+            <div id="countdownLabel">⚡ SECRET UNLOCKING IN...</div>
+            <div id="countdownNum">5</div>
         </div>
-    </div>
 
-    <!-- LOSE -->
-    <div id="loseOverlay" class="popup-overlay" style="display:none;" ontouchstart="">
-        <div class="popup">
-            <h2 class="access-denied">🔒 ACCESS DENIED</h2>
-            <p id="loseMessage">Nice try though...</p>
-            <p id="loseScore">Final Score: 0</p>
-            <p id="loseAccuracy">Accuracy: 0%</p>
-            <button class="btn" onclick="restartGame()">Try Again</button>
+        <div id="secretReveal">
+            <p>🔓 CLASSIFIED MESSAGE</p>
+            <div id="secretText">Anginalutho but please screenshot this and send me your score.💋</div>
         </div>
-    </div>
 
-    <!-- WIN -->
-    <div id="winOverlay" ontouchstart="">
-        <div id="winBox">
-            <div id="winTitle">🔥 SYSTEM BREACHED 🔥</div>
-            <div id="roastText">Loading roast...</div>
-            <div id="winScoreBadge">0 PTS</div>
-            <div id="winStreakBadge">🔥 Best Streak: 0</div>
-            <div id="winAccuracy">Accuracy: 0%</div>
-
-            <div id="countdownSection">
-                <div id="countdownLabel">⚡ SECRET UNLOCKING IN...</div>
-                <div id="countdownNum">5</div>
-            </div>
-
-            <div id="secretReveal">
-                <p>🔓 CLASSIFIED MESSAGE</p>
-                <div id="secretText">Anginalutho but please screenshot this and send me your score.💋</div>
-            </div>
-
-            <div id="leaderboardSection">
-                <div id="leaderboardTitle">HALL OF FAME</div>
-                <div id="leaderboardRows"></div>
-            </div>
-
-            <button id="shareBtn" onclick="shareScore()">📤 SHARE MY SCORE</button>
-            <div id="shareConfirm"></div>
-            <button class="btn" onclick="restartGame()" style="margin-top:10px;">Play Again</button>
+        <div id="leaderboardSection">
+            <div id="leaderboardTitle">HALL OF FAME</div>
+            <div id="leaderboardRows"></div>
         </div>
+
+        <button id="shareBtn"
+                onclick="shareScore()"
+                ontouchstart="shareScore()">📤 SHARE MY SCORE</button>
+        <div id="shareConfirm"></div>
+
+        <button class="btn" style="margin-top:10px;"
+                onclick="restartGame()"
+                ontouchstart="restartGame()">🔄 Play Again</button>
     </div>
+</div>
 
-    <!-- HUD (inside gameContainer via JS) -->
-    <div id="gameStats" style="display:none;">
-        <div>SCORE: <span id="scoreCount">0</span></div>
-        <div>TIME: <span id="timeLeft">60</span>s</div>
-        <div>COMBO: x<span id="comboCount">1</span></div>
-        <div>LIVES: <span id="livesCount">3</span>❤️</div>
-        <div style="font-size:11px;margin-top:4px;color:#ff6b00;">STREAK: <span id="streakCount">0</span></div>
-    </div>
-    <div id="powerups" style="display:none;">
-        <div>SHIELD: <span id="shieldTime">0</span>s</div>
-        <div>SLOW-MO: <span id="slowTime">0</span>s</div>
-        <div>MULTI: <span id="multiTime">0</span>s</div>
-    </div>
-    <div id="instructions" style="display:none;">
-        <div>🎯 Hit CYAN targets for points</div>
-        <div>👑 Hit GOLD boss for big points</div>
-        <div>❌ Avoid RED obstacles (-life)</div>
-        <div>🔥 10 hits in a row = streak bonus</div>
-    </div>
+<script>
+// ══════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════
+const LEADERBOARD_KEY = 'digitalBreakV21_lb';
+const SEED_PLAYERS = [
+    {name:"xX_H4ck3r_Xx",score:1820,diff:"normal"},
+    {name:"umamakho_wifi",score:1650,diff:"normal"},
+    {name:"404_Skillz",   score:1420,diff:"easy"},
+    {name:"TryHard99",    score:1280,diff:"easy"},
+];
+function getLeaderboard(){
+    try{const r=localStorage.getItem(LEADERBOARD_KEY);return r?JSON.parse(r):[...SEED_PLAYERS];}
+    catch{return[...SEED_PLAYERS];}
+}
+function saveLeaderboard(lb){try{localStorage.setItem(LEADERBOARD_KEY,JSON.stringify(lb));}catch{}}
+function addToLeaderboard(sc,diff){
+    const adjs=["Sweaty","Trembling","Lucky","Desperate","Average","Mid-tier","Shaking","Confused"];
+    const nouns=["Gamer","Clicker","Tryhard","Keyboard","Legend","Potato","NPC","Bot"];
+    const name=adjs[Math.floor(Math.random()*adjs.length)]+" "+nouns[Math.floor(Math.random()*nouns.length)];
+    let lb=getLeaderboard();
+    lb.push({name,score:sc,diff,isNew:true});
+    lb.sort((a,b)=>b.score-a.score);
+    lb=lb.slice(0,7);
+    saveLeaderboard(lb.map(e=>({...e,isNew:false})));
+    return lb;
+}
+function renderLeaderboard(lb,playerScore){
+    const c=document.getElementById('leaderboardRows');
+    c.innerHTML='';
+    const medals=['🥇','🥈','🥉'];
+    lb.forEach((e,i)=>{
+        const isMe=e.score===playerScore&&e.isNew;
+        const row=document.createElement('div');
+        row.className='lb-row'+(isMe?' new-entry':'');
+        row.style.animationDelay=`${i*.07}s`;
+        const dl={easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'}[e.diff]||'';
+        row.innerHTML=`<span class="lb-rank">${i<3?medals[i]:'#'+(i+1)}</span>
+            <span class="lb-name">${isMe?'⚡ YOU':e.name}</span>
+            <span class="lb-score">${e.score.toLocaleString()}</span>
+            <span class="lb-diff">${dl}</span>`;
+        c.appendChild(row);
+    });
+}
 
-    <script>
-    // ══════════════════════════════════════════
-    //  LEADERBOARD
-    // ══════════════════════════════════════════
-    const LEADERBOARD_KEY = 'digitalBreakV2_lb_v3';
-    const MAX_LB = 7;
-    const SEED_PLAYERS = [
-        { name:"xX_H4ck3r_Xx", score:1820, diff:"normal" },
-        { name:"umamakho_wifi",   score:1650, diff:"normal" },
-        { name:"404_Skillz",    score:1420, diff:"easy"   },
-        { name:"TryHard99",     score:1280, diff:"easy"   },
-    ];
+// ══════════════════════════════════════════
+//  ROASTS
+// ══════════════════════════════════════════
+const roasts=[
+    "Okay... you barely made it. My nan clicks faster.",
+    "Congrats. The bar was on the floor and you stepped over it. Barely.",
+    "You hacked the system. The system is embarrassed.",
+    "Took you long enough. Were you playing with your elbows?",
+    "System breached! Don't let it go to your head, it wasn't hard.",
+    "Wow. A win. Somebody tell your mum.",
+    "You did it! Now go touch some grass. Immediately.",
+    "The targets felt sorry for you and let you hit them. Just saying.",
+    "Congrats champ 🏆 The trophies are on aisle 'it doesn't matter'.",
+    "You passed! Aya is lowkey impressed. Don't screenshot this part.",
+];
+function getSavageRoast(sc,target){
+    if(sc>=target*1.5)return"Okay fine. That was actually kinda impressive. Don't tell anyone I said that.";
+    if(sc>=target*1.25)return"Not bad. Not good either. But... not bad.";
+    return roasts[Math.floor(Math.random()*roasts.length)];
+}
 
-    function getLeaderboard() {
-        try { const r=localStorage.getItem(LEADERBOARD_KEY); return r?JSON.parse(r):[...SEED_PLAYERS]; }
-        catch { return [...SEED_PLAYERS]; }
-    }
-    function saveLeaderboard(lb) {
-        try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(lb)); } catch {}
-    }
-    function addToLeaderboard(sc, diff) {
-        const adjs=["Sweaty","Trembling","Lucky","Desperate","Average","Mid-tier","Shaking","Confused"];
-        const nouns=["Gamer","Clicker","Tryhard","Keyboard","Legend","Potato","NPC","Bot"];
-        const name = adjs[Math.floor(Math.random()*adjs.length)]+" "+nouns[Math.floor(Math.random()*nouns.length)];
-        let lb = getLeaderboard();
-        lb.push({name, score:sc, diff, isNew:true});
-        lb.sort((a,b)=>b.score-a.score);
-        lb = lb.slice(0, MAX_LB);
-        saveLeaderboard(lb.map(e=>({...e, isNew:false})));
-        return { lb, playerName:name };
-    }
-    function renderLeaderboard(lb, playerScore) {
-        const container = document.getElementById('leaderboardRows');
-        container.innerHTML = '';
-        const medals = ['🥇','🥈','🥉'];
-        lb.forEach((entry, i) => {
-            const isMe = entry.score===playerScore && entry.isNew;
-            const row  = document.createElement('div');
-            row.className = 'lb-row'+(isMe?' new-entry':'');
-            row.style.animationDelay = `${i*0.07}s`;
-            const dl = {easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'}[entry.diff]||'';
-            row.innerHTML = `
-                <span class="lb-rank">${i<3?medals[i]:`#${i+1}`}</span>
-                <span class="lb-name">${isMe?'⚡ YOU':entry.name}</span>
-                <span class="lb-score">${entry.score.toLocaleString()}</span>
-                <span class="lb-diff">${dl}</span>`;
-            container.appendChild(row);
+// ══════════════════════════════════════════
+//  CONFETTI
+// ══════════════════════════════════════════
+let confettiPieces=[],confettiAnimId=null;
+function startConfetti(){
+    const canvas=document.getElementById('confettiCanvas');
+    canvas.style.display='block';
+    canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+    const ctx=canvas.getContext('2d');
+    const colors=['#ff1493','#00ffff','#ffdd00','#00ff00','#ff6b00','#ff69b4','#fff'];
+    confettiPieces=[];
+    for(let i=0;i<120;i++)confettiPieces.push({
+        x:Math.random()*canvas.width,y:-10-Math.random()*200,
+        w:6+Math.random()*8,h:3+Math.random()*5,
+        color:colors[Math.floor(Math.random()*colors.length)],
+        speed:1.5+Math.random()*3,angle:Math.random()*Math.PI*2,
+        spin:(Math.random()-.5)*.2,drift:(Math.random()-.5)*1.5,opacity:.9
+    });
+    function animate(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        let alive=false;
+        confettiPieces.forEach(p=>{
+            p.y+=p.speed;p.x+=p.drift;p.angle+=p.spin;p.opacity-=.003;
+            if(p.y<canvas.height+20&&p.opacity>0)alive=true;
+            ctx.save();ctx.globalAlpha=Math.max(0,p.opacity);
+            ctx.translate(p.x,p.y);ctx.rotate(p.angle);
+            ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+            ctx.restore();
         });
+        if(alive)confettiAnimId=requestAnimationFrame(animate);
+        else canvas.style.display='none';
     }
+    if(confettiAnimId)cancelAnimationFrame(confettiAnimId);
+    animate();
+}
 
-    // ══════════════════════════════════════════
-    //  ROASTS
-    // ══════════════════════════════════════════
-    const roasts = [
-        "Okay... you barely made it. My nan clicks faster.",
-        "Congrats. The bar was on the floor and you stepped over it. Barely.",
-        "You hacked the system. The system is embarrassed.",
-        "Took you long enough. Were you playing with your elbows?",
-        "System breached! Don't let it go to your head, it wasn't hard.",
-        "Wow. A win. Somebody tell your mum.",
-        "You did it! Now go touch some grass. Immediately.",
-        "The targets felt sorry for you and let you hit them. Just saying.",
-        "Congrats champ 🏆 The trophies are on aisle 'it doesn't matter'.",
-        "You passed! Aya is lowkey impressed. Don't screenshot this part.",
-    ];
-    function getSavageRoast(sc, target) {
-        if (sc >= target*1.5) return "Okay fine. That was actually kinda impressive. Don't tell anyone I said that.";
-        if (sc >= target*1.25) return "Not bad. Not good either. But... not bad.";
-        return roasts[Math.floor(Math.random()*roasts.length)];
-    }
+// ══════════════════════════════════════════
+//  SHARE
+// ══════════════════════════════════════════
+function shareScore(){
+    const text=`🔥 I just breached Digital Break V2.1 with ${score} points on ${difficulty.toUpperCase()} mode! Best streak: ${bestStreak} 🔥 Can you beat me? ⚡`;
+    if(navigator.share)navigator.share({title:'Digital Break V2.1',text}).catch(()=>copyFallback(text));
+    else copyFallback(text);
+}
+function copyFallback(text){
+    try{navigator.clipboard.writeText(text).then(()=>{
+        document.getElementById('shareConfirm').textContent='✅ Copied!';
+        setTimeout(()=>document.getElementById('shareConfirm').textContent='',3000);
+    });}catch{document.getElementById('shareConfirm').textContent='⚠️ Could not copy';}
+}
 
-    // ══════════════════════════════════════════
-    //  CONFETTI
-    // ══════════════════════════════════════════
-    let confettiPieces=[], confettiAnimId=null;
-    function startConfetti() {
-        const canvas = document.getElementById('confettiCanvas');
-        canvas.style.display='block';
-        canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-        const ctx=canvas.getContext('2d');
-        const colors=['#ff1493','#00ffff','#ffdd00','#00ff00','#ff6b00','#ff69b4','#fff'];
-        confettiPieces=[];
-        for(let i=0;i<120;i++) confettiPieces.push({
-            x:Math.random()*canvas.width, y:-10-Math.random()*200,
-            w:6+Math.random()*8, h:3+Math.random()*5,
-            color:colors[Math.floor(Math.random()*colors.length)],
-            speed:1.5+Math.random()*3, angle:Math.random()*Math.PI*2,
-            spin:(Math.random()-0.5)*0.2, drift:(Math.random()-0.5)*1.5,
-            opacity:0.8+Math.random()*0.2
-        });
-        function animate() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            let alive=false;
-            confettiPieces.forEach(p=>{
-                p.y+=p.speed; p.x+=p.drift; p.angle+=p.spin; p.opacity-=0.003;
-                if(p.y<canvas.height+20&&p.opacity>0) alive=true;
-                ctx.save();
-                ctx.globalAlpha=Math.max(0,p.opacity);
-                ctx.translate(p.x,p.y); ctx.rotate(p.angle);
-                ctx.fillStyle=p.color;
-                ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
-                ctx.restore();
-            });
-            if(alive) confettiAnimId=requestAnimationFrame(animate);
-            else canvas.style.display='none';
+// ══════════════════════════════════════════
+//  WIN SCREEN
+// ══════════════════════════════════════════
+let countdownInterval=null;
+function showWinScreen(finalScore,tc,sh,diff,targetSc){
+    document.getElementById('winScoreBadge').textContent=`${finalScore.toLocaleString()} PTS`;
+    document.getElementById('winStreakBadge').textContent=`🔥 Best Streak: ${bestStreak} hits`;
+    const acc=tc>0?Math.round((sh/tc)*100):0;
+    const accLine=acc>=80?"Precision mode, okay!":acc>=50?"Mediocre aim but the W is the W":"Literally a 50/50 clicker. Embarrassing.";
+    document.getElementById('winAccuracy').textContent=`Accuracy: ${acc}% — ${accLine}`;
+    document.getElementById('roastText').textContent=getSavageRoast(finalScore,targetSc);
+
+    const lb=addToLeaderboard(finalScore,diff);
+    renderLeaderboard(lb.map(e=>e.score===finalScore?{...e,isNew:true}:e),finalScore);
+
+    document.getElementById('countdownSection').style.display='block';
+    document.getElementById('secretReveal').style.display='none';
+
+    const overlay=document.getElementById('winOverlay');
+    overlay.style.display='flex';overlay.scrollTop=0;
+    startConfetti();
+
+    let count=5;
+    document.getElementById('countdownNum').textContent=count;
+    if(countdownInterval)clearInterval(countdownInterval);
+    countdownInterval=setInterval(()=>{
+        count--;
+        if(count<=0){
+            clearInterval(countdownInterval);
+            document.getElementById('countdownSection').style.display='none';
+            document.getElementById('secretReveal').style.display='block';
+            startConfetti();
+        }else{
+            document.getElementById('countdownNum').textContent=count;
         }
-        if(confettiAnimId) cancelAnimationFrame(confettiAnimId);
-        animate();
+    },1000);
+}
+
+// ══════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════
+let gameState='start';
+let targets=[],obstacles=[],powerups=[],particles=[];
+let score=0,timeLeft=60,combo=1,lives=3;
+let gameTimer,lastHitTime=0;
+let difficulty='normal',targetScore=1500;
+let totalClicks=0,successfulHits=0;
+let shieldTime=0,slowTime=0,multiTime=0;
+let currentStreak=0,bestStreak=0,streakToastTimer=null;
+let bossTarget=null,bossAlertTimer=null;
+let isPanic=false;
+let p5Canvas=null;
+let lastInputTS=0;
+
+const difficultySettings={
+    easy:  {time:45,targetScore:900, obstacleCount:2,description:"ROOKIE MODE: 45 seconds, fewer obstacles, forgiving gameplay"},
+    normal:{time:60,targetScore:1500,obstacleCount:4,description:"HACKER MODE: 60 seconds, moving obstacles, power-ups enabled"},
+    insane:{time:75,targetScore:2000,obstacleCount:6,description:"LEGEND MODE: 75 seconds, maximum chaos, expert-level challenge"}
+};
+
+// Lock prevents ontouchstart + onclick double-fire
+let diffLock=false;
+function selectDifficulty(diff){
+    if(diffLock)return;
+    diffLock=true;setTimeout(()=>{diffLock=false;},400);
+    difficulty=diff;
+    targetScore=difficultySettings[diff].targetScore;
+    document.querySelectorAll('.difficulty-btn').forEach(b=>b.classList.remove('selected'));
+    document.querySelector(`[data-difficulty="${diff}"]`).classList.add('selected');
+    document.getElementById('difficultyDesc').innerHTML=`<strong>${diff.toUpperCase()} MODE:</strong> ${difficultySettings[diff].description}`;
+}
+
+function triggerVibration(type='hit'){
+    if('vibrate'in navigator&&/Mobi|Android/i.test(navigator.userAgent)){
+        try{const p={hit:[50],bonus:[50,50,50],perfect:[100],obstacle:[200],powerup:[75],streak:[80,40,80],boss:[100,50,200]};navigator.vibrate(p[type]||[50]);}catch{}
     }
+}
 
-    // ══════════════════════════════════════════
-    //  SHARE
-    // ══════════════════════════════════════════
-    function shareScore() {
-        const text=`🔥 I just breached Digital Break V2 with ${score} points on ${difficulty.toUpperCase()} mode! Best streak: ${bestStreak} 🔥 Can you beat me? ⚡`;
-        if(navigator.share) navigator.share({title:'Digital Break V2',text}).catch(()=>copyFallback(text));
-        else copyFallback(text);
+// ══════════════════════════════════════════
+//  STREAK
+// ══════════════════════════════════════════
+function onSuccessfulHit(){
+    currentStreak++;
+    if(currentStreak>bestStreak)bestStreak=currentStreak;
+    document.getElementById('streakCount').textContent=currentStreak;
+    if(currentStreak>0&&currentStreak%10===0){
+        const bonus=currentStreak*5;score+=bonus;
+        triggerVibration('streak');
+        showStreakToast(`🔥 ${currentStreak} STREAK! +${bonus}pts`);
     }
-    function copyFallback(text) {
-        try {
-            navigator.clipboard.writeText(text).then(()=>{
-                document.getElementById('shareConfirm').textContent='✅ Copied to clipboard!';
-                setTimeout(()=>document.getElementById('shareConfirm').textContent='',3000);
-            });
-        } catch { document.getElementById('shareConfirm').textContent='⚠️ Could not copy automatically'; }
+}
+function breakStreak(){currentStreak=0;document.getElementById('streakCount').textContent=0;}
+function showStreakToast(msg){
+    const t=document.getElementById('streakToast');
+    t.textContent=msg;t.classList.add('show');
+    if(streakToastTimer)clearTimeout(streakToastTimer);
+    streakToastTimer=setTimeout(()=>t.classList.remove('show'),1600);
+}
+
+// ══════════════════════════════════════════
+//  BOSS
+// ══════════════════════════════════════════
+function trySpawnBoss(){
+    if(bossTarget||Math.random()>=.012)return;
+    document.getElementById('bossAlert').classList.add('show');
+    triggerVibration('boss');
+    if(bossAlertTimer)clearTimeout(bossAlertTimer);
+    bossAlertTimer=setTimeout(()=>{
+        document.getElementById('bossAlert').classList.remove('show');
+        bossTarget={x:width/2,y:height/2,vx:(Math.random()<.5?1:-1)*1.5,vy:(Math.random()<.5?1:-1)*1.5,size:90,phase:0,activeTime:0,maxActiveTime:300,points:50,armour:3,hitFlash:0};
+    },1200);
+}
+function updateAndDisplayBoss(){
+    if(!bossTarget)return;
+    let b=bossTarget;
+    b.x+=b.vx;b.y+=b.vy;
+    if(b.x<50||b.x>width-50)b.vx*=-1;
+    if(b.y<50||b.y>height-50)b.vy*=-1;
+    b.x=constrain(b.x,50,width-50);b.y=constrain(b.y,50,height-50);
+    b.phase+=.1;b.activeTime++;if(b.hitFlash>0)b.hitFlash--;
+    if(b.activeTime>b.maxActiveTime){bossTarget=null;return;}
+    push();translate(b.x,b.y);
+    for(let r=b.size*1.6;r>0;r-=15){let a=map(r,0,b.size*1.6,200,0);stroke(b.hitFlash>0?color(255,80,80,a):color(255,215,0,a));strokeWeight(2.5);noFill();ellipse(0,0,r);}
+    let pulse=b.size+sin(b.phase)*10;
+    b.hitFlash>0?(fill(255,80,80,200),stroke(255,50,50,255)):(fill(255,180,0,180),stroke(255,215,0,255));
+    strokeWeight(4);ellipse(0,0,pulse);
+    let barW=b.size*.9,hpF=b.armour/3;
+    noStroke();fill(60,0,0,180);rect(-barW/2,-b.size/2-14,barW,8,4);
+    fill(hpF>.6?color(0,255,80):hpF>.3?color(255,180,0):color(255,40,40));rect(-barW/2,-b.size/2-14,barW*hpF,8,4);
+    fill(0);textAlign(CENTER,CENTER);textSize(26);text("👑",0,-6);
+    textSize(12);fill(255,215,0);textStyle(BOLD);text(`${b.points*b.armour}pts`,0,18);
+    stroke(255,215,0,180);strokeWeight(3);noFill();arc(0,0,pulse+18,pulse+18,-HALF_PI,-HALF_PI+TWO_PI*(1-(b.activeTime/b.maxActiveTime)));
+    pop();
+}
+function hitBoss(tx,ty){
+    if(!bossTarget)return false;
+    let b=bossTarget;
+    if(dist(tx,ty,b.x,b.y)>=b.size/2)return false;
+    b.armour--;b.hitFlash=12;triggerVibration('boss');
+    createParticles(b.x,b.y,{r:255,g:215,b:0},20);
+    if(b.armour<=0){
+        let pts=b.points*(multiTime>0?2:1)*combo;score+=pts;successfulHits++;
+        onSuccessfulHit();showStreakToast(`👑 BOSS SLAIN! +${pts}pts`);
+        createParticles(b.x,b.y,{r:255,g:215,b:0},40);bossTarget=null;
     }
-
-    // ══════════════════════════════════════════
-    //  WIN SCREEN
-    // ══════════════════════════════════════════
-    let countdownInterval=null;
-    function showWinScreen(finalScore,tc,sh,diff,targetSc) {
-        document.getElementById('winScoreBadge').textContent=`${finalScore.toLocaleString()} PTS`;
-        document.getElementById('winStreakBadge').textContent=`🔥 Best Streak: ${bestStreak} hits`;
-        const accuracy=tc>0?Math.round((sh/tc)*100):0;
-        const accSavage=accuracy>=80?"Precision mode, okay!":accuracy>=50?"Mediocre aim but the W is the W":"Literally a 50/50 clicker. Embarrassing.";
-        document.getElementById('winAccuracy').textContent=`Accuracy: ${accuracy}% — ${accSavage}`;
-        document.getElementById('roastText').textContent=getSavageRoast(finalScore,targetSc);
-
-        const {lb}=addToLeaderboard(finalScore,diff);
-        renderLeaderboard(lb.map(e=>e.score===finalScore?{...e,isNew:true}:e), finalScore);
-
-        document.getElementById('countdownSection').style.display='block';
-        document.getElementById('secretReveal').style.display='none';
-
-        const overlay=document.getElementById('winOverlay');
-        overlay.style.display='flex'; overlay.scrollTop=0;
-        startConfetti();
-
-        let count=5;
-        document.getElementById('countdownNum').textContent=count;
-        if(countdownInterval) clearInterval(countdownInterval);
-        countdownInterval=setInterval(()=>{
-            count--;
-            if(count<=0){
-                clearInterval(countdownInterval);
-                document.getElementById('countdownSection').style.display='none';
-                document.getElementById('secretReveal').style.display='block';
-                startConfetti();
-            } else {
-                document.getElementById('countdownNum').textContent=count;
-            }
-        },1000);
-    }
-
-    // ══════════════════════════════════════════
-    //  GAME STATE
-    // ══════════════════════════════════════════
-    let gameState='start';
-    let targets=[], obstacles=[], powerups=[], particles=[];
-    let score=0, timeLeft=60, combo=1, lives=3;
-    let gameTimer, lastHitTime=0, difficulty='normal', targetScore=1500;
-    let totalClicks=0, successfulHits=0;
-    let shieldTime=0, slowTime=0, multiTime=0;
-
-    let currentStreak=0, bestStreak=0;
-    let streakToastTimer=null;
-
-    let bossTarget=null;
-    let bossAlertTimer=null;
-
-    let isPanic=false;
-
-    // FIX 1: Guard to prevent mousePressed + touchStarted double-firing on mobile
-    let lastInputTimestamp = 0;
-
-    const difficultySettings={
-        easy:   {time:45, targetScore:900,  obstacleCount:2, description:"ROOKIE MODE: 45 seconds, fewer obstacles, forgiving gameplay"},
-        normal: {time:60, targetScore:1500, obstacleCount:4, description:"HACKER MODE: 60 seconds, moving obstacles, power-ups enabled"},
-        insane: {time:75, targetScore:2000, obstacleCount:6, description:"LEGEND MODE: 75 seconds, maximum chaos, expert-level challenge"}
-    };
-
-    let difficultyLocked=false;
-    function selectDifficulty(diff){
-        if(difficultyLocked)return;
-        difficultyLocked=true;
-        setTimeout(()=>{difficultyLocked=false;},300);
-        difficulty=diff;
-        targetScore=difficultySettings[diff].targetScore;
-        document.querySelectorAll('.difficulty-btn').forEach(b=>b.classList.remove('selected'));
-        document.querySelector(`[data-difficulty="${diff}"]`).classList.add('selected');
-        document.getElementById('difficultyDesc').innerHTML=`<strong>${diff.toUpperCase()} MODE:</strong> ${difficultySettings[diff].description}`;
-    }
-
-    function triggerVibration(type='hit'){
-        if('vibrate' in navigator&&/Mobi|Android/i.test(navigator.userAgent)){
-            try{
-                const p={hit:[50],bonus:[50,50,50],perfect:[100],obstacle:[200],powerup:[75],streak:[80,40,80],boss:[100,50,200]};
-                navigator.vibrate(p[type]||[50]);
-            }catch{}
-        }
-    }
-
-    // ══════════════════════════════════════════
-    //  STREAK SYSTEM
-    // ══════════════════════════════════════════
-    function onSuccessfulHit(){
-        currentStreak++;
-        if(currentStreak>bestStreak) bestStreak=currentStreak;
-        document.getElementById('streakCount').textContent=currentStreak;
-
-        if(currentStreak>0 && currentStreak%10===0){
-            const bonus=currentStreak*5;
-            score+=bonus;
-            triggerVibration('streak');
-            showStreakToast(`🔥 ${currentStreak} STREAK! +${bonus}pts`);
-        }
-    }
-
-    function breakStreak(){
-        currentStreak=0;
-        document.getElementById('streakCount').textContent=0;
-    }
-
-    function showStreakToast(msg){
-        const toast=document.getElementById('streakToast');
-        toast.textContent=msg;
-        toast.classList.add('show');
-        if(streakToastTimer) clearTimeout(streakToastTimer);
-        streakToastTimer=setTimeout(()=>toast.classList.remove('show'),1600);
-    }
-
-    // ══════════════════════════════════════════
-    //  BOSS TARGET
-    // ══════════════════════════════════════════
-    function trySpawnBoss(){
-        if(bossTarget) return;
-        if(Math.random()<0.012){ spawnBoss(); }
-    }
-
-    function spawnBoss(){
-        const alert=document.getElementById('bossAlert');
-        alert.classList.add('show');
-        triggerVibration('boss');
-        if(bossAlertTimer) clearTimeout(bossAlertTimer);
-        bossAlertTimer=setTimeout(()=>{
-            alert.classList.remove('show');
-            bossTarget={
-                x:width/2, y:height/2,
-                vx:(Math.random()<0.5?1:-1)*1.5,
-                vy:(Math.random()<0.5?1:-1)*1.5,
-                size:90,
-                phase:0,
-                active:true,
-                activeTime:0,
-                maxActiveTime:300,
-                points:50,
-                type:'boss',
-                armour:3,
-                hitFlash:0
-            };
-        },1200);
-    }
-
-    function updateAndDisplayBoss(){
-        if(!bossTarget) return;
-        let b=bossTarget;
-
-        b.x+=b.vx;
-        b.y+=b.vy;
-        if(b.x<50||b.x>width-50) b.vx*=-1;
-        if(b.y<50||b.y>height-50) b.vy*=-1;
-        b.x=constrain(b.x,50,width-50);
-        b.y=constrain(b.y,50,height-50);
-        b.phase+=0.1;
-        b.activeTime++;
-        if(b.hitFlash>0) b.hitFlash--;
-
-        if(b.activeTime>b.maxActiveTime){
-            bossTarget=null;
-            return;
-        }
-
-        push();
-        translate(b.x,b.y);
-
-        let glowR=b.hitFlash>0?color(255,100,100,120):color(255,215,0,100);
-        for(let r=b.size*1.6;r>0;r-=15){
-            let a=map(r,0,b.size*1.6,200,0);
-            stroke(b.hitFlash>0?color(255,80,80,a):color(255,215,0,a));
-            strokeWeight(2.5); noFill(); ellipse(0,0,r);
-        }
-
-        let pulse=b.size+sin(b.phase)*10;
-        if(b.hitFlash>0){ fill(255,80,80,200); stroke(255,50,50,255); }
-        else { fill(255,180,0,180); stroke(255,215,0,255); }
-        strokeWeight(4);
-        ellipse(0,0,pulse);
-
-        let barW=b.size*0.9;
-        let hpFrac=b.armour/3;
-        noStroke();
-        fill(60,0,0,180);
-        rect(-barW/2,-b.size/2-14,barW,8,4);
-        fill(hpFrac>0.6?color(0,255,80):hpFrac>0.3?color(255,180,0):color(255,40,40));
-        rect(-barW/2,-b.size/2-14,barW*hpFrac,8,4);
-
-        fill(0);
-        textAlign(CENTER,CENTER);
-        textSize(26);
-        text("👑",0,-6);
-        textSize(12);
-        fill(255,215,0);
-        textStyle(BOLD);
-        text(`${b.points*b.armour}pts`,0,18);
-
-        let timeRatio=1-(b.activeTime/b.maxActiveTime);
-        stroke(255,215,0,180);
-        strokeWeight(3);
-        noFill();
-        arc(0,0,pulse+18,pulse+18,-HALF_PI,-HALF_PI+TWO_PI*timeRatio);
-
-        pop();
-    }
-
-    function hitBoss(tx,ty){
-        if(!bossTarget) return false;
-        let b=bossTarget;
-        if(dist(tx,ty,b.x,b.y)<b.size/2){
-            b.armour--;
-            b.hitFlash=12;
-            triggerVibration('boss');
-            createParticles(b.x,b.y,{r:255,g:215,b:0},20);
-            if(b.armour<=0){
-                let pts=b.points*(multiTime>0?2:1)*combo;
-                score+=pts;
-                successfulHits++;
-                onSuccessfulHit();
-                showStreakToast(`👑 BOSS SLAIN! +${pts}pts`);
-                createParticles(b.x,b.y,{r:255,g:215,b:0},40);
-                createParticles(b.x,b.y,{r:255,g:100,b:0},25);
-                bossTarget=null;
-            }
-            updateDisplay();
-            return true;
-        }
-        return false;
-    }
-
-    // ══════════════════════════════════════════
-    //  SPEED ESCALATION
-    // ══════════════════════════════════════════
-    function getSpeedMultiplier(){
-        const totalTime=difficultySettings[difficulty].time;
-        const elapsed=totalTime-timeLeft;
-        const progress=Math.min(elapsed/totalTime,1);
-        return 1 + progress * 1.2;
-    }
-
-    function updateSpeedIndicator(){
-        const sp=getSpeedMultiplier();
-        const el=document.getElementById('speedIndicator');
-        if(isPanic){ el.textContent='SPEED: MAX ⚡'; el.className='panic'; }
-        else if(sp>1.5){ el.textContent=`SPEED: FAST ↑`; el.className='fast'; }
-        else if(sp>1.2){ el.textContent=`SPEED: RISING ↑`; el.className=''; }
-        else { el.textContent='SPEED: NORMAL'; el.className=''; }
-    }
-
-    // ══════════════════════════════════════════
-    //  PANIC MODE (last 10 seconds)
-    // ══════════════════════════════════════════
-    function updatePanicMode(){
-        const shouldPanic = timeLeft<=10 && timeLeft>0;
-        if(shouldPanic && !isPanic){
-            isPanic=true;
-            document.getElementById('gameContainer').classList.add('panic');
-            document.getElementById('gameStats').classList.add('panic');
-            document.getElementById('timeLeft').classList.add('panic');
-        } else if(!shouldPanic && isPanic){
-            isPanic=false;
-            document.getElementById('gameContainer').classList.remove('panic');
-            document.getElementById('gameStats').classList.remove('panic');
-            document.getElementById('timeLeft').classList.remove('panic');
-        }
-    }
-
-    // ══════════════════════════════════════════
-    //  P5 SETUP & DRAW
-    // ══════════════════════════════════════════
-    let p5Canvas = null; // keep a reference so we can toggle pointer-events
-
-    function setup(){
-        let cw=Math.min(window.innerWidth-40,520);
-        let ch=Math.min(window.innerHeight*0.75,650);
-        let canvas=createCanvas(cw,ch);
-        canvas.parent('gameContainer');
-        p5Canvas = canvas.elt;
-
-        // Prevent browser scroll/zoom on touch during gameplay
-        p5Canvas.style.touchAction = 'none';
-
-        // KEY FIX for iPhone: canvas must NOT intercept taps when
-        // the start/win/lose overlays are showing. backdrop-filter on
-        // #gameContainer creates a WebKit stacking-context bug that
-        // routes overlay taps through the canvas instead of the buttons.
-        p5Canvas.style.pointerEvents = 'none';
-    }
-
-    function draw(){
-        background(5,5,15);
-
-        let gridAlpha=30+sin(frameCount*0.02)*20;
-        if(isPanic){
-            stroke(80,20,20,gridAlpha+15);
-        } else {
-            stroke(0,80,120,gridAlpha);
-        }
-        strokeWeight(1);
-        for(let x=0;x<width;x+=35) line(x,0,x,height);
-        for(let y=0;y<height;y+=35) line(0,y,width,y);
-
-        stroke(0,255,255,isPanic?8:20);
-        line(0,(frameCount*3)%height,width,(frameCount*3)%height);
-
-        if(isPanic){
-            let vigAlpha=20+sin(frameCount*0.15)*8;
-            noStroke();
-            for(let i=0;i<4;i++){
-                let cx=i%2===0?0:width;
-                let cy=i<2?0:height;
-                let g=drawingContext.createRadialGradient(cx,cy,0,cx,cy,200);
-                g.addColorStop(0,`rgba(255,30,30,${vigAlpha/255})`);
-                g.addColorStop(1,'rgba(0,0,0,0)');
-                drawingContext.fillStyle=g;
-                drawingContext.fillRect(0,0,width,height);
-            }
-        }
-
-        if(gameState==='playing'){
-            updatePowerUps();
-            updateAndDisplayTargets();
-            updateAndDisplayObstacles();
-            updateAndDisplayPowerups();
-            updateAndDisplayBoss();
-            updateAndDisplayParticles();
-            updateSpeedIndicator();
-
-            if(frameCount%70===0) createTarget();
-            if(frameCount%180===0&&obstacles.length<difficultySettings[difficulty].obstacleCount) createObstacle();
-            if(frameCount%240===0&&Math.random()<0.7) createPowerup();
-            trySpawnBoss();
-
-            if(shieldTime>0){stroke(0,255,0,100);strokeWeight(8);noFill();rect(10,10,width-20,height-20,15);}
-            if(slowTime>0){fill(0,100,255,30);noStroke();rect(0,0,width,height);}
-        }
-    }
-
-    // ══════════════════════════════════════════
-    //  TARGETS
-    // ══════════════════════════════════════════
-    function createTarget(){
-        targets.push({
-            x:random(60,width-60), y:random(60,height-60),
-            vx:random(-3,3), vy:random(-3,3),
-            size:random(45,75), phase:0,
-            active:false, activeTime:0, maxActiveTime:random(60,120),
-            points:Math.floor(random(2,6)),
-            type:Math.random()<0.1?'bonus':'normal'
-        });
-    }
-
-    function updateAndDisplayTargets(){
-        const sp = slowTime>0 ? 0.3 : getSpeedMultiplier();
-        for(let i=targets.length-1;i>=0;i--){
-            let t=targets[i];
-            t.x+=t.vx*sp; t.y+=t.vy*sp;
-            if(t.x<30||t.x>width-30) t.vx*=-1;
-            if(t.y<30||t.y>height-30) t.vy*=-1;
-            t.x=constrain(t.x,30,width-30); t.y=constrain(t.y,30,height-30);
-            t.phase+=0.08;
-            if(!t.active&&Math.random()<(difficulty==='insane'?0.012:0.008)){t.active=true;t.activeTime=0;}
-            if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
-
-            push(); translate(t.x,t.y);
-            if(t.active){
-                for(let r=t.size*1.5;r>0;r-=10){
-                    let a=map(r,0,t.size*1.5,255,0);
-                    stroke(t.type==='bonus'?color(255,215,0,a*0.5):color(0,255,255,a*0.5));
-                    strokeWeight(2);noFill();ellipse(0,0,r);
-                }
-                t.type==='bonus'?(fill(255,215,0,180),stroke(255,255,0,255)):(fill(0,255,255,150),stroke(0,255,255,255));
-                strokeWeight(3);ellipse(0,0,t.size+sin(t.phase)*8);
-                fill(255);textAlign(CENTER,CENTER);textSize(14);textStyle(BOLD);text(t.points,0,0);
-                if(t.activeTime>t.maxActiveTime*0.75){stroke(255,20,147,200);strokeWeight(4);noFill();ellipse(0,0,t.size*1.3);}
-            } else {
-                stroke(80,80,120,100);strokeWeight(2);fill(40,40,60,60);ellipse(0,0,t.size+sin(t.phase)*3);
-            }
-            pop();
-        }
-    }
-
-    // ══════════════════════════════════════════
-    //  OBSTACLES
-    // ══════════════════════════════════════════
-    function createObstacle(){
-        obstacles.push({
-            x:random(40,width-40),y:random(40,height-40),
-            vx:random(-2.5,2.5),vy:random(-2.5,2.5),
-            size:random(35,60),phase:0,
-            rotationSpeed:random(-0.1,0.1),rotation:0,pulsePhase:random(TWO_PI)
-        });
-    }
-
-    function updateAndDisplayObstacles(){
-        const sp=slowTime>0?0.3:getSpeedMultiplier();
-        for(let ob of obstacles){
-            ob.x+=ob.vx*sp;ob.y+=ob.vy*sp;
-            if(ob.x<25||ob.x>width-25)ob.vx*=-1;
-            if(ob.y<25||ob.y>height-25)ob.vy*=-1;
-            ob.x=constrain(ob.x,25,width-25);ob.y=constrain(ob.y,25,height-25);
-            ob.phase+=0.05;ob.rotation+=ob.rotationSpeed;ob.pulsePhase+=0.1;
-            push();translate(ob.x,ob.y);rotate(ob.rotation);
-            for(let r=ob.size*1.2;r>0;r-=8){stroke(255,0,100,map(r,0,ob.size*1.2,200,0)*0.6);strokeWeight(2);noFill();ellipse(0,0,r);}
-            fill(255,20,60,160);stroke(255,0,100,255);strokeWeight(3);
-            let ps=ob.size+sin(ob.pulsePhase)*6;
-            beginShape();
-            for(let i=0;i<8;i++){let a=(i*TWO_PI)/8,r=(i%2===0)?ps/2:ps/4;vertex(cos(a)*r,sin(a)*r);}
-            endShape(CLOSE);
-            fill(255);textAlign(CENTER,CENTER);textSize(16);text("⚠",0,0);
-            pop();
-        }
-    }
-
-    // ══════════════════════════════════════════
-    //  POWERUPS
-    // ══════════════════════════════════════════
-    function createPowerup(){
-        const types=['shield','slow','multi','points'];
-        powerups.push({
-            x:random(50,width-50),y:random(50,height-50),
-            vx:random(-1.5,1.5),vy:random(-1.5,1.5),
-            size:40,phase:0,
-            type:types[Math.floor(Math.random()*types.length)],
-            collected:false
-        });
-    }
-
-    function updateAndDisplayPowerups(){
-        for(let i=powerups.length-1;i>=0;i--){
-            let pw=powerups[i];
-            if(pw.collected){powerups.splice(i,1);continue;}
-            pw.x+=pw.vx;pw.y+=pw.vy;
-            if(pw.x<25||pw.x>width-25)pw.vx*=-1;
-            if(pw.y<25||pw.y>height-25)pw.vy*=-1;
-            pw.x=constrain(pw.x,25,width-25);pw.y=constrain(pw.y,25,height-25);
-            pw.phase+=0.12;
-            push();translate(pw.x,pw.y);
-            for(let r=pw.size*1.3;r>0;r-=6){stroke(0,255,0,map(r,0,pw.size*1.3,150,0)*0.7);strokeWeight(2);noFill();ellipse(0,0,r);}
-            fill(0,255,100,180);stroke(0,255,0,255);strokeWeight(3);
-            ellipse(0,0,pw.size+sin(pw.phase)*5);
-            fill(0);textAlign(CENTER,CENTER);textSize(14);textStyle(BOLD);
-            switch(pw.type){case'shield':text("🛡",0,0);break;case'slow':text("⏰",0,0);break;case'multi':text("✖",0,0);break;case'points':text("💎",0,0);break;}
-            pop();
-        }
-    }
-
-    // ══════════════════════════════════════════
-    //  PARTICLES
-    // ══════════════════════════════════════════
-    function updateAndDisplayParticles(){
-        for(let i=particles.length-1;i>=0;i--){
-            let p=particles[i];
-            p.x+=p.vx;p.y+=p.vy;p.life--;p.size*=0.98;
-            if(p.life<=0||p.size<1){particles.splice(i,1);continue;}
-            push();fill(p.r,p.g,p.b,map(p.life,0,p.maxLife,0,255));noStroke();ellipse(p.x,p.y,p.size);pop();
-        }
-    }
-
-    function createParticles(x,y,c,count=10){
-        for(let i=0;i<count;i++) particles.push({
-            x,y,vx:random(-5,5),vy:random(-5,5),
-            size:random(3,8),life:30,maxLife:30,
-            r:c.r,g:c.g,b:c.b
-        });
-    }
-
-    // ══════════════════════════════════════════
-    //  POWER-UP TIMERS
-    // ══════════════════════════════════════════
-    function updatePowerUps(){
-        if(shieldTime>0){shieldTime--;document.getElementById('shieldTime').textContent=Math.ceil(shieldTime/60);}
-        if(slowTime>0){slowTime--;document.getElementById('slowTime').textContent=Math.ceil(slowTime/60);}
-        if(multiTime>0){multiTime--;document.getElementById('multiTime').textContent=Math.ceil(multiTime/60);}
-    }
-
-    // ══════════════════════════════════════════
-    //  INPUT — FIXED FOR MOBILE
-    // ══════════════════════════════════════════
-    function mousePressed(){
-        if(gameState!=='playing') return false;
-        // FIX 3: Skip if a touch event just fired (prevents double-fire on mobile)
-        if(performance.now() - lastInputTimestamp < 80) return false;
-        lastInputTimestamp = performance.now();
-        handleInput(mouseX, mouseY);
-        return false;
-    }
-
-    function touchStarted(){
-        if(gameState!=='playing') return false;
-        lastInputTimestamp = performance.now();
-        // FIX 4: Use mouseX/mouseY — p5.js correctly maps the first touch point
-        // to these variables and correctly accounts for canvas offset,
-        // unlike touches[0].x/y which has a longstanding offset bug in p5.js v1.x
-        handleInput(mouseX, mouseY);
-        return false;
-    }
-
-    function handleInput(tx,ty){
-        totalClicks++;
-        let hit=false;
-
-        if(!hit && hitBoss(tx,ty)){
-            hit=true;
-            updateDisplay();
-        }
-
-        if(!hit){
-            for(let i=targets.length-1;i>=0;i--){
-                let t=targets[i];
-                if(dist(tx,ty,t.x,t.y)<t.size/2&&t.active){
-                    let pts=t.points;
-                    if(t.activeTime>t.maxActiveTime*0.75){pts*=2;triggerVibration('perfect');}
-                    else if(t.type==='bonus'){pts*=3;triggerVibration('bonus');}
-                    else triggerVibration('hit');
-                    if(multiTime>0)pts*=2;
-                    score+=pts*combo;
-                    successfulHits++;
-                    onSuccessfulHit();
-                    combo=(millis()-lastHitTime<1200)?Math.min(combo+1,8):1;
-                    lastHitTime=millis();
-                    createParticles(t.x,t.y,{r:0,g:255,b:255},15);
-                    updateDisplay();targets.splice(i,1);createTarget();
-                    hit=true;break;
-                }
-            }
-        }
-
-        if(!hit){
-            for(let i=powerups.length-1;i>=0;i--){
-                let pw=powerups[i];
-                if(dist(tx,ty,pw.x,pw.y)<pw.size/2){
-                    activatePowerup(pw.type);triggerVibration('powerup');
-                    createParticles(pw.x,pw.y,{r:0,g:255,b:0},12);
-                    powerups.splice(i,1);hit=true;break;
-                }
-            }
-        }
-
-        if(!hit&&shieldTime<=0){
-            for(let ob of obstacles){
-                if(dist(tx,ty,ob.x,ob.y)<ob.size/2){
-                    lives--;combo=1;breakStreak();triggerVibration('obstacle');
-                    createParticles(ob.x,ob.y,{r:255,g:0,b:100},20);
-                    updateDisplay();
-                    if(lives<=0)endGame();
-                    hit=true;break;
-                }
-            }
-        }
-
-        if(!hit){
-            combo=1;
-            breakStreak();
-            updateDisplay();
-        }
-    }
-
-    function activatePowerup(type){
-        switch(type){
-            case'shield':shieldTime=360;break;
-            case'slow':slowTime=300;break;
-            case'multi':multiTime=240;break;
-            case'points':score+=10;break;
-        }
-        updateDisplay();
-    }
-
-    function updateDisplay(){
-        document.getElementById('scoreCount').textContent=score;
-        document.getElementById('comboCount').textContent=combo;
-        document.getElementById('livesCount').textContent=lives;
-        document.getElementById('streakCount').textContent=currentStreak;
-    }
-
-    // ══════════════════════════════════════════
-    //  GAME FLOW
-    // ══════════════════════════════════════════
-    let gameStartLock=false;
-    function startGame(){
-        if(gameStartLock||gameState==='playing')return;
-        gameStartLock=true;
-        setTimeout(()=>{gameStartLock=false;},500);
-
-        gameState='playing';
-        score=0;timeLeft=difficultySettings[difficulty].time;
-        combo=1;lives=3;totalClicks=0;successfulHits=0;
-        shieldTime=0;slowTime=0;multiTime=0;
-        currentStreak=0;bestStreak=0;
-        bossTarget=null;isPanic=false;
-
-        targets=[];obstacles=[];powerups=[];particles=[];
-        for(let i=0;i<5;i++) createTarget();
-        for(let i=0;i<difficultySettings[difficulty].obstacleCount;i++) createObstacle();
-
-        document.getElementById('startOverlay').style.display='none';
-        document.getElementById('loseOverlay').style.display='none';
-        document.getElementById('winOverlay').style.display='none';
-        // Let canvas receive taps now that overlays are hidden
-        if(p5Canvas) p5Canvas.style.pointerEvents = 'auto';
-        document.getElementById('gameStats').style.display='block';
-        document.getElementById('powerups').style.display='block';
-        document.getElementById('instructions').style.display='block';
-        document.getElementById('speedIndicator').style.display='block';
-        document.getElementById('gameContainer').classList.remove('panic');
-        document.getElementById('timeLeft').classList.remove('panic');
-
-        updateDisplay();
-        document.getElementById('timeLeft').textContent=timeLeft;
-
-        clearInterval(gameTimer);
-        gameTimer=setInterval(()=>{
-            timeLeft--;
-            document.getElementById('timeLeft').textContent=timeLeft;
-            updatePanicMode();
-            if(timeLeft<=0) endGame();
-        },1000);
-    }
-
-    function endGame(){
-        gameState='end';
-        clearInterval(gameTimer);
-        if(countdownInterval) clearInterval(countdownInterval);
-        if(bossAlertTimer) clearTimeout(bossAlertTimer);
-
+    updateDisplay();return true;
+}
+
+// ══════════════════════════════════════════
+//  SPEED & PANIC
+// ══════════════════════════════════════════
+function getSpeedMultiplier(){
+    const total=difficultySettings[difficulty].time;
+    return 1+Math.min((total-timeLeft)/total,1)*1.2;
+}
+function updateSpeedIndicator(){
+    const sp=getSpeedMultiplier();
+    const el=document.getElementById('speedIndicator');
+    if(isPanic){el.textContent='SPEED: MAX ⚡';el.className='panic';}
+    else if(sp>1.5){el.textContent='SPEED: FAST ↑';el.className='fast';}
+    else if(sp>1.2){el.textContent='SPEED: RISING ↑';el.className='';}
+    else{el.textContent='SPEED: NORMAL';el.className='';}
+}
+function updatePanicMode(){
+    const should=timeLeft<=10&&timeLeft>0;
+    if(should&&!isPanic){
+        isPanic=true;
+        document.getElementById('gameContainer').classList.add('panic');
+        document.getElementById('gameStats').classList.add('panic');
+        document.getElementById('timeLeft').classList.add('panic');
+    }else if(!should&&isPanic){
         isPanic=false;
         document.getElementById('gameContainer').classList.remove('panic');
-        document.getElementById('gameStats').style.display='none';
-        document.getElementById('powerups').style.display='none';
-        document.getElementById('instructions').style.display='none';
-        document.getElementById('speedIndicator').style.display='none';
+        document.getElementById('gameStats').classList.remove('panic');
         document.getElementById('timeLeft').classList.remove('panic');
-        // Overlays are about to show — stop canvas eating their button taps
-        if(p5Canvas) p5Canvas.style.pointerEvents = 'none';
+    }
+}
 
-        const accuracy=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
+// ══════════════════════════════════════════
+//  P5 SETUP & DRAW
+// ══════════════════════════════════════════
+function setup(){
+    let cw=Math.min(window.innerWidth-40,520);
+    let ch=Math.min(window.innerHeight*.75,650);
+    let canvas=createCanvas(cw,ch);
+    canvas.parent('gameContainer');
+    p5Canvas=canvas.elt;
+    p5Canvas.style.touchAction='none';   // stop browser stealing scroll
+    p5Canvas.style.pointerEvents='none'; // start disabled; popups need taps first
+}
 
-        if(score>=targetScore){
-            showWinScreen(score,totalClicks,successfulHits,difficulty,targetScore);
-        } else {
-            const loseMsgs=[
-                `You needed ${targetScore-score} more points. Rough.`,
-                `${targetScore-score} points away. The system laughed at you.`,
-                `LOL. ${targetScore-score} points short. Back to the lobby.`,
-                `Try harder? Maybe? ${targetScore-score} points needed.`,
-            ];
-            document.getElementById('loseMessage').textContent=loseMsgs[Math.floor(Math.random()*loseMsgs.length)];
-            document.getElementById('loseScore').textContent=`Final Score: ${score.toLocaleString()} | Best Streak: ${bestStreak}`;
-            document.getElementById('loseAccuracy').textContent=`Accuracy: ${accuracy}% (${successfulHits}/${totalClicks} hits)`;
-            const lo=document.getElementById('loseOverlay');
-            lo.style.display='flex';lo.scrollTop=0;
+function draw(){
+    background(5,5,15);
+    let ga=30+sin(frameCount*.02)*20;
+    stroke(isPanic?color(80,20,20,ga+15):color(0,80,120,ga));
+    strokeWeight(1);
+    for(let x=0;x<width;x+=35)line(x,0,x,height);
+    for(let y=0;y<height;y+=35)line(0,y,width,y);
+    stroke(0,255,255,isPanic?8:20);line(0,(frameCount*3)%height,width,(frameCount*3)%height);
+
+    if(isPanic){
+        let va=20+sin(frameCount*.15)*8;noStroke();
+        [[0,0],[width,0],[0,height],[width,height]].forEach(([cx,cy])=>{
+            let g=drawingContext.createRadialGradient(cx,cy,0,cx,cy,200);
+            g.addColorStop(0,`rgba(255,30,30,${va/255})`);g.addColorStop(1,'rgba(0,0,0,0)');
+            drawingContext.fillStyle=g;drawingContext.fillRect(0,0,width,height);
+        });
+    }
+
+    if(gameState==='playing'){
+        updatePowerUps();
+        updateAndDisplayTargets();updateAndDisplayObstacles();
+        updateAndDisplayPowerups();updateAndDisplayBoss();
+        updateAndDisplayParticles();updateSpeedIndicator();
+        if(frameCount%70===0)createTarget();
+        if(frameCount%180===0&&obstacles.length<difficultySettings[difficulty].obstacleCount)createObstacle();
+        if(frameCount%240===0&&Math.random()<.7)createPowerup();
+        trySpawnBoss();
+        if(shieldTime>0){stroke(0,255,0,100);strokeWeight(8);noFill();rect(10,10,width-20,height-20,15);}
+        if(slowTime>0){fill(0,100,255,30);noStroke();rect(0,0,width,height);}
+    }
+}
+
+// ══════════════════════════════════════════
+//  TARGETS
+// ══════════════════════════════════════════
+function createTarget(){
+    targets.push({x:random(60,width-60),y:random(60,height-60),vx:random(-3,3),vy:random(-3,3),size:random(45,75),phase:0,active:false,activeTime:0,maxActiveTime:random(60,120),points:Math.floor(random(2,6)),type:Math.random()<.1?'bonus':'normal'});
+}
+function updateAndDisplayTargets(){
+    const sp=slowTime>0?.3:getSpeedMultiplier();
+    for(let i=targets.length-1;i>=0;i--){
+        let t=targets[i];
+        t.x+=t.vx*sp;t.y+=t.vy*sp;
+        if(t.x<30||t.x>width-30)t.vx*=-1;if(t.y<30||t.y>height-30)t.vy*=-1;
+        t.x=constrain(t.x,30,width-30);t.y=constrain(t.y,30,height-30);
+        t.phase+=.08;
+        if(!t.active&&Math.random()<(difficulty==='insane'?.012:.008)){t.active=true;t.activeTime=0;}
+        if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
+        push();translate(t.x,t.y);
+        if(t.active){
+            for(let r=t.size*1.5;r>0;r-=10){let a=map(r,0,t.size*1.5,255,0);stroke(t.type==='bonus'?color(255,215,0,a*.5):color(0,255,255,a*.5));strokeWeight(2);noFill();ellipse(0,0,r);}
+            t.type==='bonus'?(fill(255,215,0,180),stroke(255,255,0,255)):(fill(0,255,255,150),stroke(0,255,255,255));
+            strokeWeight(3);ellipse(0,0,t.size+sin(t.phase)*8);
+            fill(255);textAlign(CENTER,CENTER);textSize(14);textStyle(BOLD);text(t.points,0,0);
+            if(t.activeTime>t.maxActiveTime*.75){stroke(255,20,147,200);strokeWeight(4);noFill();ellipse(0,0,t.size*1.3);}
+        }else{stroke(80,80,120,100);strokeWeight(2);fill(40,40,60,60);ellipse(0,0,t.size+sin(t.phase)*3);}
+        pop();
+    }
+}
+
+// ══════════════════════════════════════════
+//  OBSTACLES
+// ══════════════════════════════════════════
+function createObstacle(){
+    obstacles.push({x:random(40,width-40),y:random(40,height-40),vx:random(-2.5,2.5),vy:random(-2.5,2.5),size:random(35,60),phase:0,rotationSpeed:random(-.1,.1),rotation:0,pulsePhase:random(TWO_PI)});
+}
+function updateAndDisplayObstacles(){
+    const sp=slowTime>0?.3:getSpeedMultiplier();
+    for(let ob of obstacles){
+        ob.x+=ob.vx*sp;ob.y+=ob.vy*sp;
+        if(ob.x<25||ob.x>width-25)ob.vx*=-1;if(ob.y<25||ob.y>height-25)ob.vy*=-1;
+        ob.x=constrain(ob.x,25,width-25);ob.y=constrain(ob.y,25,height-25);
+        ob.phase+=.05;ob.rotation+=ob.rotationSpeed;ob.pulsePhase+=.1;
+        push();translate(ob.x,ob.y);rotate(ob.rotation);
+        for(let r=ob.size*1.2;r>0;r-=8){stroke(255,0,100,map(r,0,ob.size*1.2,200,0)*.6);strokeWeight(2);noFill();ellipse(0,0,r);}
+        fill(255,20,60,160);stroke(255,0,100,255);strokeWeight(3);
+        let ps=ob.size+sin(ob.pulsePhase)*6;
+        beginShape();for(let i=0;i<8;i++){let a=(i*TWO_PI)/8,r=(i%2===0)?ps/2:ps/4;vertex(cos(a)*r,sin(a)*r);}endShape(CLOSE);
+        fill(255);textAlign(CENTER,CENTER);textSize(16);text("⚠",0,0);
+        pop();
+    }
+}
+
+// ══════════════════════════════════════════
+//  POWERUPS
+// ══════════════════════════════════════════
+function createPowerup(){
+    const types=['shield','slow','multi','points'];
+    powerups.push({x:random(50,width-50),y:random(50,height-50),vx:random(-1.5,1.5),vy:random(-1.5,1.5),size:40,phase:0,type:types[Math.floor(Math.random()*types.length)],collected:false});
+}
+function updateAndDisplayPowerups(){
+    for(let i=powerups.length-1;i>=0;i--){
+        let pw=powerups[i];if(pw.collected){powerups.splice(i,1);continue;}
+        pw.x+=pw.vx;pw.y+=pw.vy;
+        if(pw.x<25||pw.x>width-25)pw.vx*=-1;if(pw.y<25||pw.y>height-25)pw.vy*=-1;
+        pw.x=constrain(pw.x,25,width-25);pw.y=constrain(pw.y,25,height-25);
+        pw.phase+=.12;
+        push();translate(pw.x,pw.y);
+        for(let r=pw.size*1.3;r>0;r-=6){stroke(0,255,0,map(r,0,pw.size*1.3,150,0)*.7);strokeWeight(2);noFill();ellipse(0,0,r);}
+        fill(0,255,100,180);stroke(0,255,0,255);strokeWeight(3);ellipse(0,0,pw.size+sin(pw.phase)*5);
+        fill(0);textAlign(CENTER,CENTER);textSize(14);textStyle(BOLD);
+        text({shield:"🛡",slow:"⏰",multi:"✖",points:"💎"}[pw.type]||"?",0,0);
+        pop();
+    }
+}
+
+// ══════════════════════════════════════════
+//  PARTICLES
+// ══════════════════════════════════════════
+function updateAndDisplayParticles(){
+    for(let i=particles.length-1;i>=0;i--){
+        let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;p.size*=.98;
+        if(p.life<=0||p.size<1){particles.splice(i,1);continue;}
+        push();fill(p.r,p.g,p.b,map(p.life,0,p.maxLife,0,255));noStroke();ellipse(p.x,p.y,p.size);pop();
+    }
+}
+function createParticles(x,y,c,count=10){
+    for(let i=0;i<count;i++)particles.push({x,y,vx:random(-5,5),vy:random(-5,5),size:random(3,8),life:30,maxLife:30,r:c.r,g:c.g,b:c.b});
+}
+
+// ══════════════════════════════════════════
+//  POWER-UP TIMERS
+// ══════════════════════════════════════════
+function updatePowerUps(){
+    if(shieldTime>0){shieldTime--;document.getElementById('shieldTime').textContent=Math.ceil(shieldTime/60);}
+    if(slowTime>0){slowTime--;document.getElementById('slowTime').textContent=Math.ceil(slowTime/60);}
+    if(multiTime>0){multiTime--;document.getElementById('multiTime').textContent=Math.ceil(multiTime/60);}
+}
+
+// ══════════════════════════════════════════
+//  INPUT
+// ══════════════════════════════════════════
+function mousePressed(){
+    if(gameState!=='playing')return false;
+    if(performance.now()-lastInputTS<80)return false; // ignore synthetic mouse after touch
+    lastInputTS=performance.now();
+    handleInput(mouseX,mouseY);return false;
+}
+function touchStarted(){
+    if(gameState!=='playing')return false;
+    lastInputTS=performance.now();
+    handleInput(mouseX,mouseY); // p5 maps first touch to mouseX/Y correctly
+    return false;
+}
+function handleInput(tx,ty){
+    totalClicks++;let hit=false;
+    if(hitBoss(tx,ty)){hit=true;}
+    if(!hit){
+        for(let i=targets.length-1;i>=0;i--){
+            let t=targets[i];
+            if(dist(tx,ty,t.x,t.y)<t.size/2&&t.active){
+                let pts=t.points;
+                if(t.activeTime>t.maxActiveTime*.75){pts*=2;triggerVibration('perfect');}
+                else if(t.type==='bonus'){pts*=3;triggerVibration('bonus');}
+                else triggerVibration('hit');
+                if(multiTime>0)pts*=2;
+                score+=pts*combo;successfulHits++;onSuccessfulHit();
+                combo=(millis()-lastHitTime<1200)?Math.min(combo+1,8):1;
+                lastHitTime=millis();
+                createParticles(t.x,t.y,{r:0,g:255,b:255},15);
+                updateDisplay();targets.splice(i,1);createTarget();hit=true;break;
+            }
         }
     }
-
-    function restartGame(){
-        gameState='start';
-        targets=[];obstacles=[];powerups=[];particles=[];
-        bossTarget=null;isPanic=false;
-        currentStreak=0;bestStreak=0;
-        if(countdownInterval) clearInterval(countdownInterval);
-        if(bossAlertTimer) clearTimeout(bossAlertTimer);
-        document.getElementById('winOverlay').style.display='none';
-        document.getElementById('loseOverlay').style.display='none';
-        document.getElementById('startOverlay').style.display='flex';
-        document.getElementById('shareConfirm').textContent='';
-        document.getElementById('confettiCanvas').style.display='none';
-        document.getElementById('gameContainer').classList.remove('panic');
-        document.getElementById('streakToast').classList.remove('show');
-        document.getElementById('bossAlert').classList.remove('show');
-        if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
+    if(!hit){
+        for(let i=powerups.length-1;i>=0;i--){
+            let pw=powerups[i];
+            if(dist(tx,ty,pw.x,pw.y)<pw.size/2){
+                activatePowerup(pw.type);triggerVibration('powerup');
+                createParticles(pw.x,pw.y,{r:0,g:255,b:0},12);
+                powerups.splice(i,1);hit=true;break;
+            }
+        }
     }
-    </script>
+    if(!hit&&shieldTime<=0){
+        for(let ob of obstacles){
+            if(dist(tx,ty,ob.x,ob.y)<ob.size/2){
+                lives--;combo=1;breakStreak();triggerVibration('obstacle');
+                createParticles(ob.x,ob.y,{r:255,g:0,b:100},20);
+                updateDisplay();if(lives<=0)endGame();hit=true;break;
+            }
+        }
+    }
+    if(!hit){combo=1;breakStreak();updateDisplay();}
+}
+function activatePowerup(type){
+    ({shield:()=>shieldTime=360,slow:()=>slowTime=300,multi:()=>multiTime=240,points:()=>score+=10}[type]||(() =>{}))();
+    updateDisplay();
+}
+function updateDisplay(){
+    document.getElementById('scoreCount').textContent=score;
+    document.getElementById('comboCount').textContent=combo;
+    document.getElementById('livesCount').textContent=lives;
+    document.getElementById('streakCount').textContent=currentStreak;
+}
+
+// ══════════════════════════════════════════
+//  GAME FLOW
+// ══════════════════════════════════════════
+let startLock=false;
+function startGame(){
+    if(startLock||gameState==='playing')return;
+    startLock=true;setTimeout(()=>{startLock=false;},600);
+
+    gameState='playing';
+    score=0;timeLeft=difficultySettings[difficulty].time;
+    combo=1;lives=3;totalClicks=0;successfulHits=0;
+    shieldTime=0;slowTime=0;multiTime=0;
+    currentStreak=0;bestStreak=0;
+    bossTarget=null;isPanic=false;
+    targets=[];obstacles=[];powerups=[];particles=[];
+
+    for(let i=0;i<5;i++)createTarget();
+    for(let i=0;i<difficultySettings[difficulty].obstacleCount;i++)createObstacle();
+
+    document.getElementById('startPopup').style.display='none';
+    document.getElementById('losePopup').style.display='none';
+    document.getElementById('winOverlay').style.display='none';
+
+    if(p5Canvas)p5Canvas.style.pointerEvents='auto'; // enable canvas taps
+
+    document.getElementById('gameStats').style.display='block';
+    document.getElementById('powerups').style.display='block';
+    document.getElementById('instructions').style.display='block';
+    document.getElementById('speedIndicator').style.display='block';
+    document.getElementById('gameContainer').classList.remove('panic');
+    document.getElementById('timeLeft').classList.remove('panic');
+
+    updateDisplay();
+    document.getElementById('timeLeft').textContent=timeLeft;
+
+    clearInterval(gameTimer);
+    gameTimer=setInterval(()=>{
+        timeLeft--;
+        document.getElementById('timeLeft').textContent=timeLeft;
+        updatePanicMode();
+        if(timeLeft<=0)endGame();
+    },1000);
+}
+
+function endGame(){
+    gameState='end';
+    clearInterval(gameTimer);
+    if(countdownInterval)clearInterval(countdownInterval);
+    if(bossAlertTimer)clearTimeout(bossAlertTimer);
+
+    isPanic=false;
+    document.getElementById('gameContainer').classList.remove('panic');
+    document.getElementById('timeLeft').classList.remove('panic');
+    document.getElementById('gameStats').style.display='none';
+    document.getElementById('powerups').style.display='none';
+    document.getElementById('instructions').style.display='none';
+    document.getElementById('speedIndicator').style.display='none';
+
+    if(p5Canvas)p5Canvas.style.pointerEvents='none'; // disable canvas, popups need taps
+
+    const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
+
+    if(score>=targetScore){
+        showWinScreen(score,totalClicks,successfulHits,difficulty,targetScore);
+    }else{
+        const msgs=[
+            `You needed ${targetScore-score} more points. Rough.`,
+            `${targetScore-score} points away. The system laughed at you.`,
+            `LOL. ${targetScore-score} points short. Back to the lobby.`,
+            `Try harder? Maybe? ${targetScore-score} points needed.`,
+        ];
+        document.getElementById('loseMessage').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+        document.getElementById('loseScore').textContent=`Final Score: ${score.toLocaleString()} | Best Streak: ${bestStreak}`;
+        document.getElementById('loseAccuracy').textContent=`Accuracy: ${acc}% (${successfulHits}/${totalClicks} hits)`;
+        document.getElementById('losePopup').style.display='block';
+    }
+}
+
+let restartLock=false;
+function restartGame(){
+    if(restartLock)return;
+    restartLock=true;setTimeout(()=>{restartLock=false;},600);
+
+    gameState='start';
+    targets=[];obstacles=[];powerups=[];particles=[];
+    bossTarget=null;isPanic=false;currentStreak=0;bestStreak=0;
+    if(countdownInterval)clearInterval(countdownInterval);
+    if(bossAlertTimer)clearTimeout(bossAlertTimer);
+
+    document.getElementById('winOverlay').style.display='none';
+    document.getElementById('losePopup').style.display='none';
+    document.getElementById('startPopup').style.display='block';
+    document.getElementById('shareConfirm').textContent='';
+    document.getElementById('confettiCanvas').style.display='none';
+    document.getElementById('gameContainer').classList.remove('panic');
+    document.getElementById('streakToast').classList.remove('show');
+    document.getElementById('bossAlert').classList.remove('show');
+    if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
+}
+</script>
 </body>
 </html>
