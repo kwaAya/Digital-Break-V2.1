@@ -596,7 +596,7 @@
     const MAX_LB = 7;
     const SEED_PLAYERS = [
         { name:"xX_H4ck3r_Xx", score:1820, diff:"normal" },
-        { name:"ur_mom_wifi",   score:1650, diff:"normal" },
+        { name:"umamakho_wifi",   score:1650, diff:"normal" },
         { name:"404_Skillz",    score:1420, diff:"easy"   },
         { name:"TryHard99",     score:1280, diff:"easy"   },
     ];
@@ -987,15 +987,23 @@
     // ══════════════════════════════════════════
     //  P5 SETUP & DRAW
     // ══════════════════════════════════════════
+    let p5Canvas = null; // keep a reference so we can toggle pointer-events
+
     function setup(){
         let cw=Math.min(window.innerWidth-40,520);
         let ch=Math.min(window.innerHeight*0.75,650);
         let canvas=createCanvas(cw,ch);
         canvas.parent('gameContainer');
+        p5Canvas = canvas.elt;
 
-        // FIX 2: Disable browser touch handling on the canvas so taps
-        // reach p5.js instead of triggering scroll/zoom
-        canvas.elt.style.touchAction = 'none';
+        // Prevent browser scroll/zoom on touch during gameplay
+        p5Canvas.style.touchAction = 'none';
+
+        // KEY FIX for iPhone: canvas must NOT intercept taps when
+        // the start/win/lose overlays are showing. backdrop-filter on
+        // #gameContainer creates a WebKit stacking-context bug that
+        // routes overlay taps through the canvas instead of the buttons.
+        p5Canvas.style.pointerEvents = 'none';
     }
 
     function draw(){
@@ -1307,6 +1315,8 @@
         document.getElementById('startOverlay').style.display='none';
         document.getElementById('loseOverlay').style.display='none';
         document.getElementById('winOverlay').style.display='none';
+        // Let canvas receive taps now that overlays are hidden
+        if(p5Canvas) p5Canvas.style.pointerEvents = 'auto';
         document.getElementById('gameStats').style.display='block';
         document.getElementById('powerups').style.display='block';
         document.getElementById('instructions').style.display='block';
@@ -1339,6 +1349,8 @@
         document.getElementById('instructions').style.display='none';
         document.getElementById('speedIndicator').style.display='none';
         document.getElementById('timeLeft').classList.remove('panic');
+        // Overlays are about to show — stop canvas eating their button taps
+        if(p5Canvas) p5Canvas.style.pointerEvents = 'none';
 
         const accuracy=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
 
