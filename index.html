@@ -26,18 +26,17 @@
         }
 
         #gameContainer {
-            border-radius: 20px;
+            border-radius: 16px;
             box-shadow: 0 0 80px rgba(0,255,255,0.4);
-            background: rgba(0,20,40,0.9);
-            padding: 8px;
+            background: transparent;
+            padding: 0;
             border: 3px solid rgba(0,255,255,0.4);
-            width: 100%;
-            max-width: 520px;
-            height: 75vh;
-            max-height: 650px;
+            width: fit-content;
             position: relative;
             z-index: 1;
             transition: border-color 1s ease, box-shadow 1s ease;
+            line-height: 0;
+            overflow: hidden;
         }
 
         #gameContainer.panic {
@@ -390,6 +389,79 @@
             border-radius:19px;width:100%;height:100%;
         }
 
+        #hackLoader {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.96);
+            z-index: 1100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #hackLoader.active { display: flex; }
+        #hackTerminal {
+            width: 92vw;
+            max-width: 360px;
+            background: #02020c;
+            border: 1px solid rgba(0,255,255,.35);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,255,255,.15);
+        }
+        #hackScanline {
+            position: absolute;
+            top: -4px; left: 0;
+            width: 100%; height: 3px;
+            background: rgba(0,255,255,.65);
+            animation: hackScan 1.2s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes hackScan {
+            0%{top:-4px} 100%{top:100%}
+        }
+        #hackInner {
+            padding: 20px 18px 18px;
+            min-height: 140px;
+        }
+        .hack-line {
+            font-size: 12px;
+            font-family: 'Orbitron', monospace;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 0;
+            margin-bottom: 10px;
+            letter-spacing: .5px;
+        }
+        .hack-line.cyan  { color: rgba(0,255,255,.85); }
+        .hack-line.pink  { color: rgba(255,20,147,.85); }
+        .hack-line.green { color: rgba(0,255,100,.85); }
+        .hack-line.white { color: rgba(255,255,255,.9); }
+        .hack-cursor {
+            display: inline-block;
+            width: 7px; height: 13px;
+            background: rgba(0,255,255,.85);
+            animation: hackBlink .55s steps(1) infinite;
+            vertical-align: bottom;
+            margin-left: 2px;
+        }
+        @keyframes hackBlink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+        #hackBolt {
+            font-size: 42px;
+            opacity: 0;
+            transition: opacity .4s ease;
+            filter: drop-shadow(0 0 16px #00ffff);
+            animation: hackBoltFloat 1.8s ease-in-out infinite;
+        }
+        @keyframes hackBoltFloat {
+            0%,100%{transform:translateY(0) scale(1)}
+            50%{transform:translateY(-6px) scale(1.1)}
+        }
+
         @media (max-width:480px) {
             .popup{padding:16px 13px}
             .popup h2{font-size:19px}
@@ -445,9 +517,11 @@
         Can you <span style="color:#00ffff;font-weight:900;">breach the system</span> in 60 seconds?
     </div>
 
-    <button class="btn" style="width:100%;font-size:17px;letter-spacing:3px;padding:20px;margin-bottom:18px;animation:btnPulse 2s ease-in-out infinite;"
-            onclick="startGame()"
-            ontouchstart="startGame()">⚡ BREACH THE SYSTEM</button>
+    <div style="display:flex;justify-content:center;align-items:center;margin-bottom:18px;">
+        <button class="btn" style="width:100%;max-width:340px;font-size:17px;letter-spacing:3px;padding:20px;margin:0 auto;display:block;animation:btnPulse 2s ease-in-out infinite;"
+                onclick="startGame()"
+                ontouchstart="startGame()">⚡ BREACH THE SYSTEM</button>
+    </div>
 
     <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.25);margin-bottom:12px;">— OR CHOOSE DIFFICULTY FIRST —</div>
 
@@ -544,6 +618,19 @@
             ✉️ <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(255,100,180,.5);text-decoration:none;">unakomtumtum0@gmail.com</a>
         </div>
     </div>
+</div>
+
+<div id="hackLoader">
+    <div id="hackTerminal">
+        <div id="hackScanline"></div>
+        <div id="hackInner">
+            <div class="hack-line cyan"  id="hline1">&gt; ANALYSING SESSION DATA...</div>
+            <div class="hack-line pink"  id="hline2">&gt; CALCULATING FINAL SCORE...</div>
+            <div class="hack-line green" id="hline3">&gt; BREACH CONFIRMED ✓</div>
+            <div class="hack-line white" id="hline4">&gt; LOADING RESULTS<span class="hack-cursor"></span></div>
+        </div>
+    </div>
+    <div id="hackBolt">⚡</div>
 </div>
 
 <script>
@@ -697,6 +784,42 @@ function copyFallback(text){
 //  WIN SCREEN
 // ══════════════════════════════════════════
 let countdownInterval=null;
+
+function runHackLoader(callback){
+    const loader=document.getElementById('hackLoader');
+    const bolt=document.getElementById('hackBolt');
+    const lines=[
+        document.getElementById('hline1'),
+        document.getElementById('hline2'),
+        document.getElementById('hline3'),
+        document.getElementById('hline4'),
+    ];
+    // Reset all lines
+    lines.forEach(l=>{l.style.width='0';l.style.transition='none';});
+    bolt.style.opacity='0';
+    loader.classList.add('active');
+
+    // Stagger each line typing in
+    const delays=[0, 700, 1400, 2000];
+    const durations=[600, 600, 500, 500];
+    lines.forEach((l,i)=>{
+        setTimeout(()=>{
+            l.style.transition=`width ${durations[i]}ms steps(28)`;
+            l.style.width='100%';
+        },delays[i]);
+    });
+
+    // Bolt fades in after lines
+    setTimeout(()=>{ bolt.style.opacity='1'; },2200);
+
+    // Done — hide loader and fire callback
+    setTimeout(()=>{
+        loader.classList.remove('active');
+        bolt.style.opacity='0';
+        callback();
+    },3200);
+}
+
 function showWinScreen(finalScore,tc,sh,diff,targetSc){
     document.getElementById('winScoreBadge').textContent=`${finalScore.toLocaleString()} PTS`;
     document.getElementById('winStreakBadge').textContent=`🔥 Best Streak: ${bestStreak} hits`;
@@ -936,6 +1059,8 @@ function setup(){
     p5Canvas=canvas.elt;
     p5Canvas.style.touchAction='none';
     p5Canvas.style.pointerEvents='none';
+    p5Canvas.style.borderRadius='13px';
+    p5Canvas.style.display='block';
     for(let i=0;i<90;i++)stars.push({x:random(width),y:random(height),size:random(.4,2.2),speed:random(.04,.25),opacity:random(40,170),twinkle:random(TWO_PI)});
     fixScrolling();
 }
@@ -944,6 +1069,7 @@ function windowResized(){
     let cw=Math.min(windowWidth-40,520);
     let ch=Math.min(windowHeight*.75,650);
     resizeCanvas(cw,ch);
+    if(p5Canvas)p5Canvas.style.borderRadius='13px';
 }
 
 function draw(){
@@ -1294,7 +1420,7 @@ function endGame(){
     const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
 
     if(score>=targetScore){
-        showWinScreen(score,totalClicks,successfulHits,difficulty,targetScore);
+        runHackLoader(()=>showWinScreen(score,totalClicks,successfulHits,difficulty,targetScore));
     }else{
         const msgs=[
             `You needed ${targetScore-score} more points. Rough.`,
