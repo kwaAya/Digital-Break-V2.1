@@ -44,7 +44,6 @@
             position: relative;
             z-index: 1;
             margin-top: 10px;
-            /* PANIC MODE: border transitions to red in last 10s */
             transition: border-color 1s ease, box-shadow 1s ease;
         }
 
@@ -268,7 +267,6 @@
             letter-spacing: 2px;
         }
 
-        /* best streak badge on win screen */
         #winStreakBadge {
             display: inline-block;
             background: linear-gradient(135deg, #ff6b00, #ffdd00);
@@ -436,6 +434,7 @@
             border-radius: 10px;
             border: 1px solid rgba(0,255,255,0.3);
             transition: color 0.5s;
+            pointer-events: none; /* FIX: don't block canvas touches */
         }
         #gameStats.panic { border-color: rgba(255,60,60,0.5); }
 
@@ -453,6 +452,7 @@
             padding: 10px;
             border-radius: 10px;
             border: 1px solid rgba(0,255,0,0.3);
+            pointer-events: none; /* FIX: don't block canvas touches */
         }
 
         #instructions {
@@ -464,6 +464,7 @@
             background: rgba(0,20,40,0.7);
             padding: 8px;
             border-radius: 8px;
+            pointer-events: none; /* FIX: don't block canvas touches */
         }
 
         .access-denied {
@@ -762,20 +763,16 @@
     let totalClicks=0, successfulHits=0;
     let shieldTime=0, slowTime=0, multiTime=0;
 
-    // ── NEW: streak tracking ──
     let currentStreak=0, bestStreak=0;
     let streakToastTimer=null;
 
-    // ── NEW: boss target ──
     let bossTarget=null;
     let bossAlertTimer=null;
 
-    // ── NEW: speed escalation ──
-    let speedMultiplierBase=1; // grows over time
-
-    // ── NEW: panic mode ──
     let isPanic=false;
-    let panicFlashInterval=null;
+
+    // FIX 1: Guard to prevent mousePressed + touchStarted double-firing on mobile
+    let lastInputTimestamp = 0;
 
     const difficultySettings={
         easy:   {time:45, targetScore:900,  obstacleCount:2, description:"ROOKIE MODE: 45 seconds, fewer obstacles, forgiving gameplay"},
@@ -812,7 +809,6 @@
         if(currentStreak>bestStreak) bestStreak=currentStreak;
         document.getElementById('streakCount').textContent=currentStreak;
 
-        // Every 10 hits in a row = streak bonus
         if(currentStreak>0 && currentStreak%10===0){
             const bonus=currentStreak*5;
             score+=bonus;
@@ -838,22 +834,17 @@
     //  BOSS TARGET
     // ══════════════════════════════════════════
     function trySpawnBoss(){
-        // Spawn boss roughly every 20s, only if no boss active
         if(bossTarget) return;
-        if(Math.random()<0.012){ // checked each frame, ~0.7 per second at 60fps → triggers ~every 20-30s
-            spawnBoss();
-        }
+        if(Math.random()<0.012){ spawnBoss(); }
     }
 
     function spawnBoss(){
-        // Brief alert first
         const alert=document.getElementById('bossAlert');
         alert.classList.add('show');
         triggerVibration('boss');
         if(bossAlertTimer) clearTimeout(bossAlertTimer);
         bossAlertTimer=setTimeout(()=>{
             alert.classList.remove('show');
-            // Actually create the boss
             bossTarget={
                 x:width/2, y:height/2,
                 vx:(Math.random()<0.5?1:-1)*1.5,
@@ -862,10 +853,10 @@
                 phase:0,
                 active:true,
                 activeTime:0,
-                maxActiveTime:300, // 5 seconds at 60fps
+                maxActiveTime:300,
                 points:50,
                 type:'boss',
-                armour:3, // takes 3 hits
+                armour:3,
                 hitFlash:0
             };
         },1200);
@@ -875,7 +866,6 @@
         if(!bossTarget) return;
         let b=bossTarget;
 
-        // Move (not slowed by slow-mo — that's the gimmick)
         b.x+=b.vx;
         b.y+=b.vy;
         if(b.x<50||b.x>width-50) b.vx*=-1;
@@ -886,7 +876,6 @@
         b.activeTime++;
         if(b.hitFlash>0) b.hitFlash--;
 
-        // Expires
         if(b.activeTime>b.maxActiveTime){
             bossTarget=null;
             return;
@@ -895,7 +884,6 @@
         push();
         translate(b.x,b.y);
 
-        // Crown glow rings
         let glowR=b.hitFlash>0?color(255,100,100,120):color(255,215,0,100);
         for(let r=b.size*1.6;r>0;r-=15){
             let a=map(r,0,b.size*1.6,200,0);
@@ -903,14 +891,12 @@
             strokeWeight(2.5); noFill(); ellipse(0,0,r);
         }
 
-        // Main body
         let pulse=b.size+sin(b.phase)*10;
         if(b.hitFlash>0){ fill(255,80,80,200); stroke(255,50,50,255); }
         else { fill(255,180,0,180); stroke(255,215,0,255); }
         strokeWeight(4);
         ellipse(0,0,pulse);
 
-        // HP bar
         let barW=b.size*0.9;
         let hpFrac=b.armour/3;
         noStroke();
@@ -919,7 +905,6 @@
         fill(hpFrac>0.6?color(0,255,80):hpFrac>0.3?color(255,180,0):color(255,40,40));
         rect(-barW/2,-b.size/2-14,barW*hpFrac,8,4);
 
-        // Crown icon + points text
         fill(0);
         textAlign(CENTER,CENTER);
         textSize(26);
@@ -929,7 +914,6 @@
         textStyle(BOLD);
         text(`${b.points*b.armour}pts`,0,18);
 
-        // Timer ring
         let timeRatio=1-(b.activeTime/b.maxActiveTime);
         stroke(255,215,0,180);
         strokeWeight(3);
@@ -948,7 +932,6 @@
             triggerVibration('boss');
             createParticles(b.x,b.y,{r:255,g:215,b:0},20);
             if(b.armour<=0){
-                // Killed!
                 let pts=b.points*(multiTime>0?2:1)*combo;
                 score+=pts;
                 successfulHits++;
@@ -968,12 +951,9 @@
     //  SPEED ESCALATION
     // ══════════════════════════════════════════
     function getSpeedMultiplier(){
-        // Linearly ramps from 1.0 at game start to 2.0 in final 10 seconds
-        // Based on how much time has passed, not remaining
         const totalTime=difficultySettings[difficulty].time;
         const elapsed=totalTime-timeLeft;
         const progress=Math.min(elapsed/totalTime,1);
-        // Gentle curve: starts slow, accelerates
         return 1 + progress * 1.2;
     }
 
@@ -996,8 +976,6 @@
             document.getElementById('gameContainer').classList.add('panic');
             document.getElementById('gameStats').classList.add('panic');
             document.getElementById('timeLeft').classList.add('panic');
-            // Very gentle pulse on the border — no screen shake, no flashing overlay
-            // Just the CSS transition does the work quietly
         } else if(!shouldPanic && isPanic){
             isPanic=false;
             document.getElementById('gameContainer').classList.remove('panic');
@@ -1014,15 +992,18 @@
         let ch=Math.min(window.innerHeight*0.75,650);
         let canvas=createCanvas(cw,ch);
         canvas.parent('gameContainer');
+
+        // FIX 2: Disable browser touch handling on the canvas so taps
+        // reach p5.js instead of triggering scroll/zoom
+        canvas.elt.style.touchAction = 'none';
     }
 
     function draw(){
         background(5,5,15);
 
-        // Animated grid — slightly redder in panic
         let gridAlpha=30+sin(frameCount*0.02)*20;
         if(isPanic){
-            stroke(80,20,20,gridAlpha+15); // subtle red tint on grid
+            stroke(80,20,20,gridAlpha+15);
         } else {
             stroke(0,80,120,gridAlpha);
         }
@@ -1030,15 +1011,12 @@
         for(let x=0;x<width;x+=35) line(x,0,x,height);
         for(let y=0;y<height;y+=35) line(0,y,width,y);
 
-        // Scanline
         stroke(0,255,255,isPanic?8:20);
         line(0,(frameCount*3)%height,width,(frameCount*3)%height);
 
-        // Very subtle red vignette in panic — just a soft edge glow, not a flash
         if(isPanic){
-            let vigAlpha=20+sin(frameCount*0.15)*8; // slow, gentle pulse
+            let vigAlpha=20+sin(frameCount*0.15)*8;
             noStroke();
-            // four soft corner glows
             for(let i=0;i<4;i++){
                 let cx=i%2===0?0:width;
                 let cy=i<2?0:height;
@@ -1055,14 +1033,14 @@
             updateAndDisplayTargets();
             updateAndDisplayObstacles();
             updateAndDisplayPowerups();
-            updateAndDisplayBoss();        // NEW
+            updateAndDisplayBoss();
             updateAndDisplayParticles();
-            updateSpeedIndicator();        // NEW
+            updateSpeedIndicator();
 
             if(frameCount%70===0) createTarget();
             if(frameCount%180===0&&obstacles.length<difficultySettings[difficulty].obstacleCount) createObstacle();
             if(frameCount%240===0&&Math.random()<0.7) createPowerup();
-            trySpawnBoss();                // NEW
+            trySpawnBoss();
 
             if(shieldTime>0){stroke(0,255,0,100);strokeWeight(8);noFill();rect(10,10,width-20,height-20,15);}
             if(slowTime>0){fill(0,100,255,30);noStroke();rect(0,0,width,height);}
@@ -1084,7 +1062,7 @@
     }
 
     function updateAndDisplayTargets(){
-        const sp = slowTime>0 ? 0.3 : getSpeedMultiplier(); // speed escalation applied here
+        const sp = slowTime>0 ? 0.3 : getSpeedMultiplier();
         for(let i=targets.length-1;i>=0;i--){
             let t=targets[i];
             t.x+=t.vx*sp; t.y+=t.vy*sp;
@@ -1208,16 +1186,24 @@
     }
 
     // ══════════════════════════════════════════
-    //  INPUT
+    //  INPUT — FIXED FOR MOBILE
     // ══════════════════════════════════════════
     function mousePressed(){
-        if(gameState!=='playing')return false;
-        handleInput(mouseX,mouseY);
+        if(gameState!=='playing') return false;
+        // FIX 3: Skip if a touch event just fired (prevents double-fire on mobile)
+        if(performance.now() - lastInputTimestamp < 80) return false;
+        lastInputTimestamp = performance.now();
+        handleInput(mouseX, mouseY);
         return false;
     }
+
     function touchStarted(){
-        if(gameState!=='playing')return false;
-        if(touches.length>0) handleInput(touches[0].x,touches[0].y);
+        if(gameState!=='playing') return false;
+        lastInputTimestamp = performance.now();
+        // FIX 4: Use mouseX/mouseY — p5.js correctly maps the first touch point
+        // to these variables and correctly accounts for canvas offset,
+        // unlike touches[0].x/y which has a longstanding offset bug in p5.js v1.x
+        handleInput(mouseX, mouseY);
         return false;
     }
 
@@ -1225,13 +1211,11 @@
         totalClicks++;
         let hit=false;
 
-        // Boss first (priority target)
         if(!hit && hitBoss(tx,ty)){
             hit=true;
             updateDisplay();
         }
 
-        // Targets
         if(!hit){
             for(let i=targets.length-1;i>=0;i--){
                 let t=targets[i];
@@ -1243,7 +1227,7 @@
                     if(multiTime>0)pts*=2;
                     score+=pts*combo;
                     successfulHits++;
-                    onSuccessfulHit();   // streak
+                    onSuccessfulHit();
                     combo=(millis()-lastHitTime<1200)?Math.min(combo+1,8):1;
                     lastHitTime=millis();
                     createParticles(t.x,t.y,{r:0,g:255,b:255},15);
@@ -1253,7 +1237,6 @@
             }
         }
 
-        // Powerups
         if(!hit){
             for(let i=powerups.length-1;i>=0;i--){
                 let pw=powerups[i];
@@ -1265,7 +1248,6 @@
             }
         }
 
-        // Obstacles
         if(!hit&&shieldTime<=0){
             for(let ob of obstacles){
                 if(dist(tx,ty,ob.x,ob.y)<ob.size/2){
@@ -1278,7 +1260,6 @@
             }
         }
 
-        // Miss
         if(!hit){
             combo=1;
             breakStreak();
@@ -1340,7 +1321,7 @@
         gameTimer=setInterval(()=>{
             timeLeft--;
             document.getElementById('timeLeft').textContent=timeLeft;
-            updatePanicMode(); // check panic each second
+            updatePanicMode();
             if(timeLeft<=0) endGame();
         },1000);
     }
