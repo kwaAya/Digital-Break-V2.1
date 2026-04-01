@@ -156,13 +156,11 @@
             border-radius: 22px;
             width: 100%;
             max-width: 480px;
-            padding: 24px 20px;
-            margin: 0 auto 30px;
-            min-height: 85vh;
+            padding: 24px 20px 40px;
+            margin: 10px auto 40px;
             text-align: center;
             box-shadow: 0 0 60px rgba(255,20,147,0.5);
             position: relative;
-            overflow: hidden;
             cursor: default;
         }
 
@@ -939,6 +937,7 @@ function setup(){
     p5Canvas.style.touchAction='none';
     p5Canvas.style.pointerEvents='none';
     for(let i=0;i<90;i++)stars.push({x:random(width),y:random(height),size:random(.4,2.2),speed:random(.04,.25),opacity:random(40,170),twinkle:random(TWO_PI)});
+    fixScrolling();
 }
 
 function windowResized(){
@@ -1158,10 +1157,12 @@ function touchStarted(){
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);
     return false;function touchStarted(){
-    if(gameState!=='playing')return; // no preventDefault — lets popups scroll freely
+    // Only intercept touches on the actual canvas during gameplay
+    if(gameState!=='playing')return;
+    if(!p5Canvas)return;
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);
-    return false; // only preventDefault during actual gameplay
+    return false;
 }
 }
 function handleInput(tx,ty){
@@ -1448,6 +1449,54 @@ function stopMusic(){
 
 function toggleMusic(){
     musicPlaying?stopMusic():startMusic();
+}
+
+// ══════════════════════════════════════════
+//  SCROLL FIX — overrides p5.js touch blocking
+// ══════════════════════════════════════════
+function fixScrolling(){
+    const scrollables=[
+        document.getElementById('winOverlay'),
+        document.getElementById('startPopup'),
+        document.getElementById('losePopup'),
+    ];
+
+    scrollables.forEach(el=>{
+        if(!el)return;
+        let touchStartY=0;
+        let touchStartScroll=0;
+        let isScrolling=false;
+
+        el.addEventListener('touchstart',(e)=>{
+            touchStartY=e.touches[0].clientY;
+            touchStartScroll=el.scrollTop;
+            isScrolling=false;
+        },{passive:true});
+
+        el.addEventListener('touchmove',(e)=>{
+            const deltaY=touchStartY-e.touches[0].clientY;
+            const absDelta=Math.abs(deltaY);
+
+            // Only intercept vertical scrolling
+            if(!isScrolling&&absDelta>5)isScrolling=true;
+            if(!isScrolling)return;
+
+            // Stop p5.js from getting this event
+            e.stopPropagation();
+
+            // Check if element actually needs to scroll
+            const canScrollDown=el.scrollTop<(el.scrollHeight-el.clientHeight);
+            const canScrollUp=el.scrollTop>0;
+            if((deltaY>0&&canScrollDown)||(deltaY<0&&canScrollUp)){
+                e.preventDefault();
+                el.scrollTop=touchStartScroll+deltaY;
+            }
+        },{passive:false});
+
+        el.addEventListener('touchend',()=>{
+            isScrolling=false;
+        },{passive:true});
+    });
 }
 
 </script>
