@@ -339,6 +339,46 @@
             text-shadow: 0 0 20px #ff0066;
         }
 
+        @keyframes glitch {
+            0%,94%,100%{transform:translateX(0);filter:none}
+            95%{transform:translateX(-3px);filter:drop-shadow(3px 0 #ff1493)}
+            97%{transform:translateX(3px);filter:drop-shadow(-3px 0 #00ffff)}
+            99%{transform:translateX(-1px);filter:drop-shadow(2px 0 #ff1493)}
+        }
+        @keyframes borderSpin {
+            0%{background-position:0% 50%}
+            50%{background-position:100% 50%}
+            100%{background-position:0% 50%}
+        }
+        @keyframes scanline {
+            0%{top:-10%}100%{top:110%}
+        }
+        @keyframes cardEntrance {
+            from{opacity:0;transform:translateY(12px)}
+            to{opacity:1;transform:translateY(0)}
+        }
+        @keyframes btnPulse {
+            0%,100%{box-shadow:0 5px 20px rgba(0,255,255,.35),0 0 40px rgba(255,20,147,.2)}
+            50%{box-shadow:0 5px 35px rgba(0,255,255,.7),0 0 60px rgba(255,20,147,.5)}
+        }
+        @keyframes floatIcon {
+            0%,100%{transform:translateY(0) scale(1)}
+            50%{transform:translateY(-6px) scale(1.08)}
+        }
+        .popup-border-wrap {
+            position:fixed;top:8px;left:50%;transform:translateX(-50%);
+            width:calc(92vw + 6px);max-width:486px;
+            border-radius:22px;z-index:999;
+            background:linear-gradient(270deg,#00ffff,#ff1493,#00ff00,#ff6b00,#00ffff);
+            background-size:400% 400%;
+            animation:borderSpin 4s ease infinite;
+            padding:3px;
+        }
+        .popup-border-inner {
+            background:linear-gradient(135deg,#0a0a0a,#1a1a2e,#16213e);
+            border-radius:19px;width:100%;height:100%;
+        }
+
         @media (max-width:480px) {
             .popup{padding:16px 13px}
             .popup h2{font-size:19px}
@@ -381,16 +421,20 @@
 </div>
 
 <!-- ══ START POPUP — position:fixed directly on this div ══ -->
+<div id="startBorderWrap" class="popup-border-wrap">
+    <div class="popup-border-inner"></div>
+</div>
 <div id="startPopup" class="popup">
-    <div style="font-size:48px;margin-bottom:4px;filter:drop-shadow(0 0 18px #00ffff);">⚡</div>
-    <h2 style="font-size:20px;letter-spacing:3px;">DIGITAL BREAK</h2>
+    <div style="position:absolute;left:0;top:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,255,.6),transparent);animation:scanline 3s linear infinite;pointer-events:none;border-radius:20px;"></div>
+    <div style="font-size:48px;margin-bottom:4px;filter:drop-shadow(0 0 18px #00ffff);animation:floatIcon 2.5s ease-in-out infinite;">⚡</div>
+    <h2 style="font-size:20px;letter-spacing:3px;animation:glitch 4s infinite;">DIGITAL BREAK</h2>
     <div style="font-size:10px;letter-spacing:4px;color:rgba(0,255,255,.5);margin:-10px 0 16px;">V2.1 — ULTIMATE EDITION</div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
-        <div style="background:rgba(0,255,255,.07);border:1px solid rgba(0,255,255,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(0,255,255,.8);">🎯<br><span style="font-size:10px;opacity:.7;">Power-ups</span></div>
-        <div style="background:rgba(255,20,147,.07);border:1px solid rgba(255,20,147,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(255,100,180,.9);">👑<br><span style="font-size:10px;opacity:.7;">Boss Targets</span></div>
-        <div style="background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(255,180,80,.9);">🔥<br><span style="font-size:10px;opacity:.7;">Streak Bonuses</span></div>
-        <div style="background:rgba(0,255,0,.07);border:1px solid rgba(0,255,0,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(0,255,120,.9);">⚡<br><span style="font-size:10px;opacity:.7;">Speed Escalation</span></div>
+        <div style="background:rgba(0,255,255,.07);border:1px solid rgba(0,255,255,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(0,255,255,.8);animation:cardEntrance .5s ease .1s both;">🎯<br><span style="font-size:10px;opacity:.7;">Power-ups</span></div>
+        <div style="background:rgba(255,20,147,.07);border:1px solid rgba(255,20,147,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(255,100,180,.9);animation:cardEntrance .5s ease .2s both;">👑<br><span style="font-size:10px;opacity:.7;">Boss Targets</span></div>
+        <div style="background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(255,180,80,.9);animation:cardEntrance .5s ease .3s both;">🔥<br><span style="font-size:10px;opacity:.7;">Streak Bonuses</span></div>
+        <div style="background:rgba(0,255,0,.07);border:1px solid rgba(0,255,0,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(0,255,120,.9);animation:cardEntrance .5s ease .4s both;">⚡<br><span style="font-size:10px;opacity:.7;">Speed Escalation</span></div>
     </div>
 
     <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.4);margin-bottom:10px;">— SELECT DIFFICULTY —</div>
@@ -413,7 +457,7 @@
         <strong>HACKER MODE:</strong> 60 seconds, moving obstacles, power-ups enabled
     </div>
 
-    <button class="btn" style="width:100%;font-size:16px;letter-spacing:3px;padding:18px;"
+    <button class="btn" style="width:100%;font-size:16px;letter-spacing:3px;padding:18px;animation:btnPulse 2s ease-in-out infinite;"
             onclick="startGame()"
             ontouchstart="startGame()">⚡ BREACH THE SYSTEM</button>
     <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:12px;letter-spacing:1px;">by Aya · tap targets · dodge hazards</div>
@@ -1088,6 +1132,7 @@ function startGame(){
     for(let i=0;i<difficultySettings[difficulty].obstacleCount;i++)createObstacle();
 
     document.getElementById('startPopup').style.display='none';
+    document.getElementById('startBorderWrap').style.display='none';
     document.getElementById('losePopup').style.display='none';
     const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
 
@@ -1164,6 +1209,7 @@ function restartGame(){
     const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
     document.getElementById('losePopup').style.display='none';
     document.getElementById('startPopup').style.display='block';
+    document.getElementById('startBorderWrap').style.display='block';
     document.getElementById('shareConfirm').textContent='';
     document.getElementById('confettiCanvas').style.display='none';
     document.getElementById('gameContainer').classList.remove('panic');
