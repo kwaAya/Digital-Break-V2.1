@@ -888,10 +888,9 @@ const SECRET_MESSAGES = [
     "Bro really said 'let me speedrun this' and then DID IT. Unhinged. Iconic. 🏃",
     "The way you ate this game up... it's giving chosen one energy and I don't say that lightly.",
     "Touch grass? Maybe. But first savour this W because you earned it bestie 🌿",
-    "Uthi utathuke kanjani? (How did you do it?) Because you hacked the system, that's how. The system is not happy about it ngl.",
     "You just broke the matrix and the matrix is embarrassed. The glitch in the system is you. 🕶️",
     "Not to flex but you just did a thing that was supposed to be hard and made it look easy. The audacity. The simulation is reeling. 🌀",
-    "Uthi utatakho ukushiyele ntoni nha??",
+    "Uthi utatakho ukushiyele ntoni nha?? Dlarrr😛",
     "The system was like 'you can't do that' and you were like 'watch me' and then you did. The system is now questioning its existence ngl.",
     "I hope ungumntu oOn ebomini.",
 ];
@@ -922,11 +921,12 @@ function checkNewPersonalBest(sc){
     }
     return false;
 }
+//xX_H4ck3r_Xx
 
 const SEED_PLAYERS = [
-    {name:"xX_H4ck3r_Xx",score:1820,diff:"normal"},
+    {name:"ndinguBeyonce",score:1820,diff:"normal"},
     {name:"umamakho_wifi",score:1650,diff:"normal"},
-    {name:"404_Skillz",   score:1420,diff:"easy"},
+    {name:"404_Skillz_Azikho",   score:1420,diff:"easy"},
     {name:"TryHard99",    score:1280,diff:"easy"},
 ];
 function getLeaderboard(){
@@ -936,7 +936,7 @@ function getLeaderboard(){
 function saveLeaderboard(lb){try{localStorage.setItem(LEADERBOARD_KEY,JSON.stringify(lb));}catch{}}
 function addToLeaderboard(sc,diff){
     const adjs=["Sweaty","Trembling","Lucky","Desperate","Average","Mid-tier","Shaking","Confused"];
-    const nouns=["Gamer","Clicker","Tryhard","Keyboard","Legend","Potato","NPC","Bot"];
+    const nouns=["Gamer","Clicker","Tryhard","Keyboard","Legend","Potato","NPC","Bot", "Big Boss", "President General among amazwe"];
     const name=adjs[Math.floor(Math.random()*adjs.length)]+" "+nouns[Math.floor(Math.random()*nouns.length)];
     let lb=getLeaderboard();
     lb.push({name,score:sc,diff,isNew:true});
