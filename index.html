@@ -1,10 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LN6SZCHYTC"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-LN6SZCHYTC');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Digital Break V2.1 - by Aya</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <meta property="og:title" content="Digital Break V2.1 — Can you breach the system?">
+    <meta property="og:description" content="Hit targets, dodge hazards, unlock secrets. Made by Ayabukwa.">
+    <meta property="og:url" content="https://digitalbreak.netlify.app">
+    <meta property="og:type" content="website">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
@@ -13,7 +28,7 @@
         html { overflow-y: scroll; }
 
         body {
-            background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e, #0d1b2a);
+            background: linear-gradient(160deg, #07000f, #0d0820, #0a0512);
             font-family: 'Orbitron', monospace;
             display: flex;
             justify-content: center;
@@ -51,17 +66,16 @@
             position: fixed;
             top: 10px;
             left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, rgba(10,10,10,.82), rgba(26,26,46,.88), rgba(22,33,62,.85));
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 25px;
-            border-radius: 20px;
-            border: 3px solid #00ffff;
+            background: rgba(8,4,18,0.75);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            padding: 28px 22px;
+            border-radius: 22px;
+            border: 1px solid rgba(255,215,0,0.2);
             text-align: center;
-            color: #00ffff;
+            color: #fff;
             font-weight: bold;
-            box-shadow: 0 0 50px rgba(0,255,255,0.6);
+            box-shadow: 0 0 60px rgba(255,160,0,0.1), inset 0 1px 0 rgba(255,215,0,0.15);
             z-index: 1000;
             width: 92vw;
             max-width: 480px;
@@ -73,10 +87,11 @@
             -webkit-transform: translateX(-50%) translateZ(0);
             transform: translateX(-50%) translateZ(0);
         }
-        .popup::-webkit-scrollbar{width:4px}
-        .popup::-webkit-scrollbar-track{background:rgba(0,255,255,.05);border-radius:4px}
-        .popup::-webkit-scrollbar-thumb{background:rgba(0,255,255,.3);border-radius:4px}
-        .popup::-webkit-scrollbar-thumb:hover{background:rgba(0,255,255,.5)}
+
+        .popup::-webkit-scrollbar{width:3px}
+        .popup::-webkit-scrollbar-track{background:rgba(255,215,0,.04);border-radius:4px}
+        .popup::-webkit-scrollbar-thumb{background:rgba(255,215,0,.25);border-radius:4px}
+        .popup::-webkit-scrollbar-thumb:hover{background:rgba(255,215,0,.45)}
 
         .popup h2 {
             margin: 0 0 16px;
@@ -378,15 +393,16 @@
         .popup-border-wrap {
             position:fixed;top:8px;left:50%;transform:translateX(-50%);
             width:calc(92vw + 6px);max-width:486px;
-            border-radius:22px;z-index:999;
-            background:linear-gradient(270deg,#00ffff,#ff1493,#00ff00,#ff6b00,#00ffff);
+            border-radius:24px;z-index:999;
+            background:linear-gradient(270deg,rgba(255,215,0,0.8),rgba(255,140,0,0.6),rgba(255,20,147,0.5),rgba(255,215,0,0.8));
             background-size:400% 400%;
-            animation:borderSpin 4s ease infinite;
-            padding:3px;
+            animation:borderSpin 5s ease infinite;
+            padding:2px;
+            pointer-events:none;
         }
         .popup-border-inner {
-            background:linear-gradient(135deg,#0a0a0a,#1a1a2e,#16213e);
-            border-radius:19px;width:100%;height:100%;
+            background:linear-gradient(160deg,#07000f,#0d0820,#0a0512);
+            border-radius:22px;width:100%;height:100%;
         }
 
         #hackLoader {
@@ -462,6 +478,174 @@
             50%{transform:translateY(-6px) scale(1.1)}
         }
 
+        #personalBest {
+            display:inline-block;
+            background: rgba(255,215,0,.08);
+            border: 1px solid rgba(255,215,0,.3);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 10px;
+            color: rgba(255,215,0,.8);
+            letter-spacing: 1px;
+            margin-top: 6px;
+        }
+        #newBestToast {
+            position: absolute; top:50%; left:50%;
+            transform: translate(-50%,-50%) scale(.6);
+            background: linear-gradient(135deg,#ffd700,#ff6b00);
+            color: #000; font-size: 15px; font-weight: 900;
+            padding: 10px 22px; border-radius: 50px;
+            white-space: nowrap; pointer-events: none;
+            z-index: 200; opacity: 0;
+            transition: opacity .2s, transform .3s cubic-bezier(.34,1.56,.64,1);
+        }
+        #newBestToast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+        /* Orbs */
+        .orb {
+            position:fixed;border-radius:50%;pointer-events:none;z-index:998;
+        }
+        .orb1 {
+            width:280px;height:280px;
+            background:radial-gradient(circle,rgba(255,160,0,0.2),transparent 70%);
+            top:-80px;left:-80px;
+            animation:orbFloat 7s ease-in-out infinite;
+        }
+        .orb2 {
+            width:220px;height:220px;
+            background:radial-gradient(circle,rgba(255,20,147,0.16),transparent 70%);
+            bottom:-60px;right:-40px;
+            animation:orbFloat 9s ease-in-out infinite reverse;
+        }
+        .orb3 {
+            width:160px;height:160px;
+            background:radial-gradient(circle,rgba(120,0,200,0.14),transparent 70%);
+            top:45%;left:-30px;
+            animation:orbFloat 11s ease-in-out infinite;
+        }
+        @keyframes orbFloat {
+            0%,100%{transform:translate(0,0)}
+            33%{transform:translate(14px,-20px)}
+            66%{transform:translate(-8px,10px)}
+        }
+
+        /* Gold top line on card */
+        .card-topline {
+            position:absolute;top:0;left:20px;right:20px;height:1px;
+            background:linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent);
+            border-radius:1px;pointer-events:none;
+        }
+
+        /* Gold rule */
+        .gold-rule {
+            width:40px;height:1px;
+            background:linear-gradient(90deg,transparent,rgba(255,215,0,0.6),transparent);
+            margin:10px auto 12px;
+        }
+
+        /* Eyebrow text */
+        .eyebrow {
+            font-size:8px;letter-spacing:5px;
+            color:rgba(255,215,0,0.45);margin-bottom:4px;
+        }
+
+        /* New difficulty cards */
+        .diff-grid {
+            display:grid;grid-template-columns:1fr 1fr 1fr;
+            gap:7px;margin-bottom:16px;
+        }
+        .diff-card {
+            padding:10px 6px;
+            border:1px solid rgba(255,215,0,0.12);
+            border-radius:12px;
+            background:rgba(255,215,0,0.03);
+            text-align:center;cursor:pointer;
+            transition:all 0.25s ease;
+            touch-action:manipulation;
+            -webkit-tap-highlight-color:transparent;
+        }
+        .diff-card.selected {
+            border-color:rgba(255,215,0,0.55);
+            background:rgba(255,215,0,0.09);
+            box-shadow:0 0 18px rgba(255,215,0,0.15);
+        }
+        .diff-card-name {
+            font-size:8px;font-weight:900;
+            letter-spacing:1.5px;
+            color:rgba(255,215,0,0.5);
+            margin-bottom:4px;
+        }
+        .diff-card.selected .diff-card-name {color:rgba(255,215,0,0.95);}
+        .diff-card-score {
+            font-size:9px;
+            color:rgba(255,255,255,0.25);
+        }
+        .diff-card.selected .diff-card-score {color:rgba(255,255,255,0.55);}
+        .diff-card-desc {
+            font-size:8px;color:rgba(255,215,0,0.35);
+            margin-top:4px;line-height:1.4;
+        }
+
+        /* Gold breach button */
+        .breach-btn {
+            width:100%;padding:16px;
+            background:linear-gradient(135deg,rgba(255,215,0,0.14),rgba(255,140,0,0.07));
+            border:1px solid rgba(255,215,0,0.5);
+            color:rgba(255,215,0,0.96);
+            font-size:13px;font-weight:900;
+            letter-spacing:4px;font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:14px;
+            margin-bottom:16px;
+            position:relative;overflow:hidden;
+            touch-action:manipulation;
+            -webkit-tap-highlight-color:transparent;
+            animation:breachGlow 2.5s ease-in-out infinite;
+        }
+        .breach-btn:active{transform:scale(0.98);}
+        @keyframes breachGlow {
+            0%,100%{box-shadow:0 0 14px rgba(255,215,0,0.15),inset 0 0 14px rgba(255,215,0,0.04)}
+            50%{box-shadow:0 0 32px rgba(255,215,0,0.4),inset 0 0 22px rgba(255,215,0,0.1)}
+        }
+        .breach-btn::after {
+            content:'';position:absolute;top:0;left:-100%;
+            width:50%;height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,215,0,0.14),transparent);
+            transform:skewX(-20deg);
+            animation:breachSheen 3.5s ease-in-out infinite;
+        }
+        @keyframes breachSheen{0%{left:-100%}35%,100%{left:160%}}
+
+        /* Feature pills */
+        .feature-row {
+            display:flex;justify-content:center;
+            gap:6px;flex-wrap:wrap;
+            margin-bottom:16px;
+        }
+        .feature-pill {
+            padding:5px 11px;border-radius:20px;
+            font-size:8px;letter-spacing:1px;
+            border:1px solid rgba(255,215,0,0.15);
+            color:rgba(255,215,0,0.45);
+            background:rgba(255,215,0,0.04);
+        }
+
+        /* Diff desc box */
+        #difficultyDesc {
+            font-size:10px;color:rgba(255,215,0,0.55);
+            margin-bottom:14px;
+            background:rgba(255,215,0,0.04);
+            border:1px solid rgba(255,215,0,0.12);
+            border-radius:10px;padding:9px 12px;line-height:1.6;
+            min-height:36px;transition:all 0.3s ease;
+        }
+
+        /* Music btn gold */
+        #musicToggleBtn {
+            background:rgba(255,215,0,0.05) !important;
+            border:1px solid rgba(255,215,0,0.2) !important;
+            color:rgba(255,215,0,0.7) !important;
+        }
+
         @media (max-width:480px) {
             .popup{padding:16px 13px}
             .popup h2{font-size:19px}
@@ -479,6 +663,7 @@
 
 <div id="gameContainer">
     <div id="streakToast"></div>
+    <div id="newBestToast">🏆 NEW PERSONAL BEST!</div>
     <div id="bossAlert">👑 BOSS TARGET INCOMING!</div>
     <div id="speedIndicator">SPEED: NORMAL</div>
 </div>
@@ -490,6 +675,7 @@
     <div>COMBO: x<span id="comboCount">1</span></div>
     <div>LIVES: <span id="livesCount">3</span>❤️</div>
     <div style="font-size:10px;margin-top:4px;color:#ff6b00;">STREAK: <span id="streakCount">0</span></div>
+    <div style="font-size:10px;margin-top:4px;color:rgba(255,215,0,.7);">BEST: <span id="personalBestHUD">0</span></div>
 </div>
 <div id="powerups">
     <div>SHIELD: <span id="shieldTime">0</span>s</div>
@@ -504,61 +690,90 @@
 </div>
 
 <!-- ══ START POPUP — position:fixed directly on this div ══ -->
+<!-- Floating orbs behind everything -->
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
 <div id="startBorderWrap" class="popup-border-wrap">
     <div class="popup-border-inner"></div>
 </div>
 <div id="startPopup" class="popup">
-    <div style="position:absolute;left:0;top:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,255,.6),transparent);animation:scanline 3s linear infinite;pointer-events:none;border-radius:20px;"></div>
-    <div style="font-size:48px;margin-bottom:4px;filter:drop-shadow(0 0 18px #00ffff);animation:floatIcon 2.5s ease-in-out infinite;">⚡</div>
-    <h2 style="font-size:20px;letter-spacing:3px;animation:glitch 4s infinite;">DIGITAL BREAK</h2>
-    <div style="font-size:10px;letter-spacing:4px;color:rgba(0,255,255,.5);margin:-10px 0 12px;">V2.1 — ULTIMATE EDITION</div>
+    <div class="card-topline"></div>
 
-    <div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:16px;line-height:1.6;letter-spacing:.5px;">
-        Can you <span style="color:#00ffff;font-weight:900;">breach the system</span> in 60 seconds?
+    <!-- Logo + title -->
+    <div style="font-size:46px;margin-bottom:6px;filter:drop-shadow(0 0 20px rgba(255,215,0,0.5));animation:floatIcon 3s ease-in-out infinite;">⚡</div>
+    <div class="eyebrow">BY AYABUKWA</div>
+    <h2 style="font-size:22px;letter-spacing:4px;background:linear-gradient(135deg,#fff,rgba(255,215,0,0.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0;animation:glitch 5s infinite;">DIGITAL BREAK</h2>
+    <div style="font-size:8px;letter-spacing:4px;color:rgba(255,215,0,0.35);margin:4px 0 8px;">V2.1 — ULTIMATE EDITION</div>
+    <div class="gold-rule"></div>
+
+    <!-- Personal best -->
+    <div style="margin-bottom:14px;">
+        <div id="personalBest">🏆 BEST: <span id="pbDisplay">0</span> PTS</div>
     </div>
 
-    <div style="display:flex;justify-content:center;align-items:center;margin-bottom:18px;">
-        <button class="btn" style="width:100%;max-width:340px;font-size:17px;letter-spacing:3px;padding:20px;margin:0 auto;display:block;animation:btnPulse 2s ease-in-out infinite;"
-                onclick="startGame()"
-                ontouchstart="startGame()">⚡ BREACH THE SYSTEM</button>
+    <!-- Challenge line -->
+    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:16px;letter-spacing:1px;line-height:1.6;">
+        Can you <span style="color:rgba(255,215,0,0.85);font-weight:900;">breach the system</span> in 60 seconds?
     </div>
 
-    <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.25);margin-bottom:12px;">— OR CHOOSE DIFFICULTY FIRST —</div>
+    <!-- BREACH BUTTON — top priority -->
+    <button class="breach-btn"
+            onclick="startGame()"
+            ontouchstart="startGame()">⚡ BREACH THE SYSTEM</button>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
-        <div style="background:rgba(0,255,255,.07);border:1px solid rgba(0,255,255,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(0,255,255,.8);animation:cardEntrance .5s ease .1s both;">🎯<br><span style="font-size:10px;opacity:.7;">Power-ups</span></div>
-        <div style="background:rgba(255,20,147,.07);border:1px solid rgba(255,20,147,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(255,100,180,.9);animation:cardEntrance .5s ease .2s both;">👑<br><span style="font-size:10px;opacity:.7;">Boss Targets</span></div>
-        <div style="background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(255,180,80,.9);animation:cardEntrance .5s ease .3s both;">🔥<br><span style="font-size:10px;opacity:.7;">Streak Bonuses</span></div>
-        <div style="background:rgba(0,255,0,.07);border:1px solid rgba(0,255,0,.2);border-radius:12px;padding:10px 8px;font-size:11px;color:rgba(0,255,120,.9);animation:cardEntrance .5s ease .4s both;">⚡<br><span style="font-size:10px;opacity:.7;">Speed Escalation</span></div>
+    <!-- Feature pills -->
+    <div class="feature-row">
+        <div class="feature-pill">🎯 Power-ups</div>
+        <div class="feature-pill">👑 Bosses</div>
+        <div class="feature-pill">🔥 Streaks</div>
+        <div class="feature-pill">⚡ Speed</div>
     </div>
 
-    <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.4);margin-bottom:10px;">— SELECT DIFFICULTY —</div>
-    <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-        <button class="btn difficulty-btn"
-                data-difficulty="easy"
-                onclick="selectDifficulty('easy')"
-                ontouchstart="selectDifficulty('easy')">ROOKIE<br><small style="font-size:10px;opacity:.8;">900+ pts</small></button>
-        <button class="btn difficulty-btn selected"
-                data-difficulty="normal"
-                onclick="selectDifficulty('normal')"
-                ontouchstart="selectDifficulty('normal')">HACKER<br><small style="font-size:10px;opacity:.8;">1500+ pts</small></button>
-        <button class="btn difficulty-btn"
-                data-difficulty="insane"
-                onclick="selectDifficulty('insane')"
-                ontouchstart="selectDifficulty('insane')">LEGEND<br><small style="font-size:10px;opacity:.8;">2000+ pts</small></button>
+    <!-- Difficulty selector -->
+    <div style="font-size:8px;letter-spacing:3px;color:rgba(255,215,0,0.3);margin-bottom:10px;">— SELECT DIFFICULTY —</div>
+    <div class="diff-grid">
+        <div class="diff-card" data-difficulty="easy"
+             onclick="selectDiffCard('easy')"
+             ontouchstart="selectDiffCard('easy')">
+            <div class="diff-card-name">ROOKIE</div>
+            <div class="diff-card-score">600+ pts</div>
+        </div>
+        <div class="diff-card selected" data-difficulty="normal"
+             onclick="selectDiffCard('normal')"
+             ontouchstart="selectDiffCard('normal')">
+            <div class="diff-card-name">HACKER</div>
+            <div class="diff-card-score">1200+ pts</div>
+        </div>
+        <div class="diff-card" data-difficulty="insane"
+             onclick="selectDiffCard('insane')"
+             ontouchstart="selectDiffCard('insane')">
+            <div class="diff-card-name">LEGEND</div>
+            <div class="diff-card-score">1800+ pts</div>
+        </div>
     </div>
 
-    <div id="difficultyDesc" style="font-size:11px;color:rgba(0,255,255,.6);margin-bottom:16px;background:rgba(0,255,255,.05);border:1px solid rgba(0,255,255,.15);border-radius:10px;padding:9px 12px;line-height:1.6;">
-        <strong>HACKER MODE:</strong> 60 seconds, moving obstacles, power-ups enabled
+    <!-- Difficulty description -->
+    <div id="difficultyDesc">
+        <strong style="color:rgba(255,215,0,0.8);">HACKER MODE:</strong> 60 seconds, moving obstacles, power-ups enabled
     </div>
 
-    <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;">
+    <!-- Music toggle -->
+    <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;">
         <button id="musicToggleBtn" class="btn"
-                style="background:linear-gradient(45deg,#1a0a2e,#0d1b2a);border:1px solid rgba(0,255,255,.3);color:#00ffff;font-size:11px;padding:9px 18px;min-height:36px;box-shadow:none;"
+                style="font-size:10px;padding:9px 20px;min-height:38px;box-shadow:none;letter-spacing:2px;"
                 onclick="toggleMusic()"
                 ontouchstart="toggleMusic()">🎵 MUSIC: OFF</button>
     </div>
-    <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:10px;letter-spacing:1px;">by Aya · tap targets · dodge hazards</div>
+
+    <!-- Credits -->
+    <div style="font-size:8px;color:rgba(255,255,255,0.15);margin-top:14px;letter-spacing:1px;line-height:2;">
+        made with 💜 by <span style="color:rgba(255,215,0,0.4);">Ayabukwa🌟</span><br>
+        <a href="tel:0845067825" style="color:rgba(255,215,0,0.3);text-decoration:none;">084 506 7825</a>
+        &nbsp;·&nbsp;
+        <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(255,215,0,0.3);text-decoration:none;">unakomtumtum0@gmail.com</a>
+    </div>
 </div>
 
 <!-- ══ LOSE POPUP ══ -->
@@ -571,7 +786,7 @@
             onclick="restartGame()"
             ontouchstart="restartGame()">🔄 Try Again</button>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,255,255,.12);font-size:10px;color:rgba(255,255,255,.3);line-height:2;letter-spacing:.5px;">
-        made with 💜 by <span style="color:rgba(0,255,255,.6);">uAya</span><br>
+        made with 💜 by <span style="color:rgba(0,255,255,.6);">Aya</span><br>
         📱 <a href="tel:0845067825" style="color:rgba(0,255,255,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
         ✉️ <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(0,255,255,.5);text-decoration:none;">unakomtumtum0@gmail.com</a>
     </div>
@@ -680,6 +895,34 @@ const SECRET_MESSAGES = [
     "The system was like 'you can't do that' and you were like 'watch me' and then you did. The system is now questioning its existence ngl.",
     "I hope ungumntu oOn ebomini.",
 ];
+const PB_KEY='digitalBreakV21_pb';
+function getPersonalBest(){
+    try{return parseInt(localStorage.getItem(PB_KEY))||0;}catch{return 0;}
+}
+function savePersonalBest(sc){
+    try{localStorage.setItem(PB_KEY,sc);}catch{}
+}
+function updatePersonalBestDisplay(){
+    const pb=getPersonalBest();
+    const el=document.getElementById('pbDisplay');
+    const hud=document.getElementById('personalBestHUD');
+    if(el)el.textContent=pb.toLocaleString();
+    if(hud)hud.textContent=pb.toLocaleString();
+}
+function checkNewPersonalBest(sc){
+    const pb=getPersonalBest();
+    if(sc>pb){
+        savePersonalBest(sc);
+        updatePersonalBestDisplay();
+        const t=document.getElementById('newBestToast');
+        t.classList.add('show');
+        setTimeout(()=>t.classList.remove('show'),2200);
+        playSound('newbest');
+        return true;
+    }
+    return false;
+}
+
 const SEED_PLAYERS = [
     {name:"xX_H4ck3r_Xx",score:1820,diff:"normal"},
     {name:"umamakho_wifi",score:1650,diff:"normal"},
@@ -832,13 +1075,15 @@ function runHackLoader(callback){
     },3200);
 }
 
-function showWinScreen(finalScore,tc,sh,diff,targetSc){
+function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
     document.getElementById('winScoreBadge').textContent=`${finalScore.toLocaleString()} PTS`;
     document.getElementById('winStreakBadge').textContent=`🔥 Best Streak: ${bestStreak} hits`;
     const acc=tc>0?Math.round((sh/tc)*100):0;
     const accLine=acc>=80?"Precision mode, okay!":acc>=50?"Mediocre aim but the W is the W":"Literally a 50/50 clicker. Embarrassing.";
     document.getElementById('winAccuracy').textContent=`Accuracy: ${acc}% — ${accLine}`;
-    document.getElementById('roastText').textContent=getSavageRoast(finalScore,targetSc);
+    document.getElementById('roastText').textContent=
+        isNewBest ? '🏆 NEW PERSONAL BEST! You actually outdid yourself. Respect.' :
+        getSavageRoast(finalScore,targetSc);
 
     const lb=addToLeaderboard(finalScore,diff);
     renderLeaderboard(lb.map(e=>e.score===finalScore?{...e,isNew:true}:e),finalScore);
@@ -888,21 +1133,28 @@ let gameStartTime=0,gameDuration=0;
 let inputLock=false;
 
 const difficultySettings={
-    easy:  {time:45,targetScore:900, obstacleCount:2,description:"ROOKIE MODE: 45 seconds, fewer obstacles, forgiving gameplay"},
-    normal:{time:60,targetScore:1500,obstacleCount:4,description:"HACKER MODE: 60 seconds, moving obstacles, power-ups enabled"},
-    insane:{time:75,targetScore:2000,obstacleCount:6,description:"LEGEND MODE: 75 seconds, maximum chaos, expert-level challenge"}
+    easy:  {time:45,targetScore:600, obstacleCount:2,description:"ROOKIE MODE: 45 seconds, fewer obstacles, forgiving gameplay"},
+    normal:{time:60,targetScore:1200,obstacleCount:4,description:"HACKER MODE: 60 seconds, moving obstacles, power-ups enabled"},
+    insane:{time:75,targetScore:1800,obstacleCount:4,description:"LEGEND MODE: 75 seconds, maximum chaos, expert-level challenge"}
 };
 
 // Lock prevents ontouchstart + onclick double-fire
 let diffLock=false;
 function selectDifficulty(diff){
-    if(diffLock)return;
-    diffLock=true;setTimeout(()=>{diffLock=false;},400);
     difficulty=diff;
     targetScore=difficultySettings[diff].targetScore;
-    document.querySelectorAll('.difficulty-btn').forEach(b=>b.classList.remove('selected'));
-    document.querySelector(`[data-difficulty="${diff}"]`).classList.add('selected');
-    document.getElementById('difficultyDesc').innerHTML=`<strong>${diff.toUpperCase()} MODE:</strong> ${difficultySettings[diff].description}`;
+}
+let diffCardLock=false;
+function selectDiffCard(diff){
+    if(diffCardLock)return;
+    diffCardLock=true;setTimeout(()=>{diffCardLock=false;},400);
+    selectDifficulty(diff);
+    document.querySelectorAll('.diff-card').forEach(b=>b.classList.remove('selected'));
+    const card=document.querySelector(`.diff-card[data-difficulty="${diff}"]`);
+    if(card)card.classList.add('selected');
+    const labels={easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'};
+    document.getElementById('difficultyDesc').innerHTML=
+        `<strong style="color:rgba(255,215,0,0.8);">${labels[diff]} MODE:</strong> ${difficultySettings[diff].description}`;
 }
 
 // Audio context for iOS haptic-style feedback
@@ -961,6 +1213,148 @@ function triggerVibration(type='hit'){
 }
 
 // ══════════════════════════════════════════
+//  SOUND EFFECTS
+// ══════════════════════════════════════════
+let sfxCtx=null;
+function getSfxCtx(){
+    if(!sfxCtx)sfxCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(sfxCtx.state==='suspended')sfxCtx.resume();
+    return sfxCtx;
+}
+function playSound(type){
+    try{
+        const ctx=getSfxCtx();
+        const t=ctx.currentTime;
+        const sounds={
+            hit:()=>{
+                // Satisfying cyan blip
+                const o=ctx.createOscillator();
+                const g=ctx.createGain();
+                o.type='sine';
+                o.frequency.setValueAtTime(520,t);
+                o.frequency.exponentialRampToValueAtTime(820,t+0.06);
+                g.gain.setValueAtTime(0.18,t);
+                g.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(t);o.stop(t+0.15);
+            },
+            bonus:()=>{
+                // Double blip — gold target
+                [0,0.08].forEach((delay,i)=>{
+                    const o=ctx.createOscillator();
+                    const g=ctx.createGain();
+                    o.type='sine';
+                    o.frequency.setValueAtTime(660+i*220,t+delay);
+                    g.gain.setValueAtTime(0.2,t+delay);
+                    g.gain.exponentialRampToValueAtTime(0.001,t+delay+0.1);
+                    o.connect(g);g.connect(ctx.destination);
+                    o.start(t+delay);o.stop(t+delay+0.12);
+                });
+            },
+            perfect:()=>{
+                // Rising chime — late hit bonus
+                const o=ctx.createOscillator();
+                const g=ctx.createGain();
+                o.type='triangle';
+                o.frequency.setValueAtTime(440,t);
+                o.frequency.exponentialRampToValueAtTime(1200,t+0.15);
+                g.gain.setValueAtTime(0.22,t);
+                g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(t);o.stop(t+0.22);
+            },
+            miss:()=>{
+                // Short low thud
+                const o=ctx.createOscillator();
+                const g=ctx.createGain();
+                o.type='sine';
+                o.frequency.setValueAtTime(180,t);
+                o.frequency.exponentialRampToValueAtTime(60,t+0.08);
+                g.gain.setValueAtTime(0.15,t);
+                g.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(t);o.stop(t+0.12);
+            },
+            obstacle:()=>{
+                // Harsh buzz
+                const o=ctx.createOscillator();
+                const g=ctx.createGain();
+                o.type='sawtooth';
+                o.frequency.setValueAtTime(120,t);
+                o.frequency.exponentialRampToValueAtTime(40,t+0.18);
+                g.gain.setValueAtTime(0.25,t);
+                g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(t);o.stop(t+0.25);
+            },
+            powerup:()=>{
+                // Ascending sweep
+                [0,0.07,0.14,0.21].forEach((delay,i)=>{
+                    const o=ctx.createOscillator();
+                    const g=ctx.createGain();
+                    o.type='sine';
+                    o.frequency.setValueAtTime(400+i*150,t+delay);
+                    g.gain.setValueAtTime(0.14,t+delay);
+                    g.gain.exponentialRampToValueAtTime(0.001,t+delay+0.08);
+                    o.connect(g);g.connect(ctx.destination);
+                    o.start(t+delay);o.stop(t+delay+0.1);
+                });
+            },
+            streak:()=>{
+                // Fanfare chord
+                [523,659,784].forEach((freq,i)=>{
+                    const o=ctx.createOscillator();
+                    const g=ctx.createGain();
+                    o.type='triangle';
+                    o.frequency.setValueAtTime(freq,t+i*0.04);
+                    g.gain.setValueAtTime(0.18,t+i*0.04);
+                    g.gain.exponentialRampToValueAtTime(0.001,t+i*0.04+0.25);
+                    o.connect(g);g.connect(ctx.destination);
+                    o.start(t+i*0.04);o.stop(t+i*0.04+0.28);
+                });
+            },
+            boss:()=>{
+                // Deep dramatic hit
+                const o=ctx.createOscillator();
+                const g=ctx.createGain();
+                o.type='sawtooth';
+                o.frequency.setValueAtTime(220,t);
+                o.frequency.exponentialRampToValueAtTime(55,t+0.3);
+                g.gain.setValueAtTime(0.3,t);
+                g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(t);o.stop(t+0.38);
+            },
+            countdown:()=>{
+                // Single tick beep for last 5 seconds
+                const o=ctx.createOscillator();
+                const g=ctx.createGain();
+                o.type='square';
+                o.frequency.setValueAtTime(880,t);
+                g.gain.setValueAtTime(0.12,t);
+                g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(t);o.stop(t+0.08);
+            },
+            newbest:()=>{
+                // Victory fanfare
+                [523,659,784,1047].forEach((freq,i)=>{
+                    const o=ctx.createOscillator();
+                    const g=ctx.createGain();
+                    o.type='triangle';
+                    o.frequency.setValueAtTime(freq,t+i*0.08);
+                    g.gain.setValueAtTime(0.2,t+i*0.08);
+                    g.gain.exponentialRampToValueAtTime(0.001,t+i*0.08+0.3);
+                    o.connect(g);g.connect(ctx.destination);
+                    o.start(t+i*0.08);o.stop(t+i*0.08+0.32);
+                });
+            },
+        };
+        sounds[type]&&sounds[type]();
+    }catch(e){}
+}
+
+// ══════════════════════════════════════════
 //  STREAK
 // ══════════════════════════════════════════
 function onSuccessfulHit(){
@@ -969,7 +1363,7 @@ function onSuccessfulHit(){
     document.getElementById('streakCount').textContent=currentStreak;
     if(currentStreak>0&&currentStreak%10===0){
         const bonus=currentStreak*5;score+=bonus;
-        triggerVibration('streak');
+        triggerVibration('streak');playSound('streak');
         showStreakToast(`🔥 ${currentStreak} STREAK! +${bonus}pts`);
     }
 }
@@ -1035,7 +1429,7 @@ function hitBoss(tx,ty){
 // ══════════════════════════════════════════
 function getSpeedMultiplier(){
     const total=difficultySettings[difficulty].time;
-    return 1+Math.min((total-timeLeft)/total,1)*1.2;
+    return 1+Math.min((total-timeLeft)/total,1)*0.8;
 }
 function updateSpeedIndicator(){
     const sp=getSpeedMultiplier();
@@ -1224,8 +1618,11 @@ function updateAndDisplayObstacles(){
         if(ob.x<25||ob.x>width-25)ob.vx*=-1;if(ob.y<25||ob.y>height-25)ob.vy*=-1;
         ob.x=constrain(ob.x,25,width-25);ob.y=constrain(ob.y,25,height-25);
         ob.phase+=.05;ob.rotation+=ob.rotationSpeed;ob.pulsePhase+=.1;
+        // Proximity warning — pulses brighter when near screen center
+        const distFromCenter=dist(ob.x,ob.y,width/2,height/2);
+        const proximityAlpha=map(distFromCenter,0,width/2,1.8,0.6);
         push();translate(ob.x,ob.y);rotate(ob.rotation);
-        for(let r=ob.size*1.2;r>0;r-=8){stroke(255,0,100,map(r,0,ob.size*1.2,200,0)*.6);strokeWeight(2);noFill();ellipse(0,0,r);}
+        for(let r=ob.size*1.2;r>0;r-=8){stroke(255,0,100,map(r,0,ob.size*1.2,200,0)*proximityAlpha);strokeWeight(2);noFill();ellipse(0,0,r);}
         fill(255,20,60,160);stroke(255,0,100,255);strokeWeight(3);
         let ps=ob.size+sin(ob.pulsePhase)*6;
         beginShape();for(let i=0;i<8;i++){let a=(i*TWO_PI)/8,r=(i%2===0)?ps/2:ps/4;vertex(cos(a)*r,sin(a)*r);}endShape(CLOSE);
@@ -1291,18 +1688,13 @@ function mousePressed(){
     handleInput(mouseX,mouseY);return false;
 }
 function touchStarted(){
-    if(gameState!=='playing')return false;
-    lastInputTS=performance.now();
-    handleInput(mouseX,mouseY);
-    return false;function touchStarted(){
-    // Only intercept touches on the actual canvas during gameplay
     if(gameState!=='playing')return;
     if(!p5Canvas)return;
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);
     return false;
 }
-}
+
 function handleInput(tx,ty){
     if(inputLock)return;
     inputLock=true;setTimeout(()=>{inputLock=false;},150);
@@ -1318,10 +1710,11 @@ function handleInput(tx,ty){
                 else triggerVibration('hit');
                 if(multiTime>0)pts*=2;
                 score+=pts*combo;successfulHits++;onSuccessfulHit();
-                combo=(millis()-lastHitTime<1200)?Math.min(combo+1,8):1;
+                combo=(millis()-lastHitTime<1800)?Math.min(combo+1,8):1;
                 lastHitTime=millis();
                 createParticles(t.x,t.y,{r:0,g:255,b:255},15);
                 shakeDuration=2; hitFlashAlpha=40;
+                playSound(t.type==='bonus'?'bonus':t.activeTime>t.maxActiveTime*.75?'perfect':'hit');
                 updateDisplay();targets.splice(i,1);createTarget();hit=true;break;
             }
         }
@@ -1330,7 +1723,7 @@ function handleInput(tx,ty){
         for(let i=powerups.length-1;i>=0;i--){
             let pw=powerups[i];
             if(dist(tx,ty,pw.x,pw.y)<pw.size/2){
-                activatePowerup(pw.type);triggerVibration('powerup');
+                activatePowerup(pw.type);triggerVibration('powerup');playSound('powerup');
                 createParticles(pw.x,pw.y,{r:0,g:255,b:0},12);
                 powerups.splice(i,1);hit=true;break;
             }
@@ -1338,15 +1731,20 @@ function handleInput(tx,ty){
     }
     if(!hit&&shieldTime<=0){
         for(let ob of obstacles){
-            if(dist(tx,ty,ob.x,ob.y)<ob.size/2){
-                lives--;combo=1;breakStreak();triggerVibration('obstacle');
+            if(dist(tx,ty,ob.x,ob.y)<ob.size/3.2){
+                lives--;
+                combo=Math.max(1,Math.floor(combo/2));
+                if(currentStreak>5)currentStreak=Math.floor(currentStreak/2);
+                else breakStreak();
+                triggerVibration('obstacle');
                 createParticles(ob.x,ob.y,{r:255,g:0,b:100},20);
                 shakeDuration=7;
+                playSound('obstacle');
                 updateDisplay();if(lives<=0)endGame();hit=true;break;
             }
         }
     }
-    if(!hit){combo=1;breakStreak();updateDisplay();}
+    if(!hit){combo=1;breakStreak();playSound('miss');updateDisplay();}
 }
 function activatePowerup(type){
     ({shield:()=>shieldTime=360,slow:()=>slowTime=300,multi:()=>multiTime=240,points:()=>score+=10}[type]||(() =>{}))();
@@ -1365,6 +1763,7 @@ function updateDisplay(){
 // Wire music button
 document.addEventListener('DOMContentLoaded',()=>{
     musicBtn=document.getElementById('musicToggleBtn');
+    updatePersonalBestDisplay();
 });
 
 let startLock=false;
@@ -1403,17 +1802,28 @@ function startGame(){
     clearInterval(gameTimer);
     gameStartTime=Date.now();
     gameDuration=difficultySettings[difficulty].time*1000;
+    let lastBeepSecond=-1;
     gameTimer=setInterval(()=>{
         if(gameState!=='playing')return;
         const elapsed=Date.now()-gameStartTime;
         timeLeft=Math.max(0,Math.ceil((gameDuration-elapsed)/1000));
         document.getElementById('timeLeft').textContent=timeLeft;
         updatePanicMode();
+        if(timeLeft<=5&&timeLeft>0&&timeLeft!==lastBeepSecond){
+            lastBeepSecond=timeLeft;
+            playSound('countdown');
+        }
         if(elapsed>=gameDuration)endGame();
     },250);
 }
 
 function endGame(){
+    gtag('event', 'game_end', {
+        score: score,
+        difficulty: difficulty,
+        result: score >= targetScore ? 'win' : 'loss',
+        best_streak: bestStreak
+    });
     gameState='end';
     clearInterval(gameTimer);
     if(countdownInterval)clearInterval(countdownInterval);
@@ -1431,8 +1841,9 @@ function endGame(){
 
     const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
 
+    const isNewBest=checkNewPersonalBest(score);
     if(score>=targetScore){
-        runHackLoader(()=>showWinScreen(score,totalClicks,successfulHits,difficulty,targetScore));
+        runHackLoader(()=>showWinScreen(score,totalClicks,successfulHits,difficulty,targetScore,isNewBest));
     }else{
         const msgs=[
             `You needed ${targetScore-score} more points. Rough.`,
@@ -1756,7 +2167,7 @@ function generateScoreCard(finalScore, streakVal, acc, diff, secretMsg){
 
     // Credits
     ctx.font='32px monospace';ctx.fillStyle='rgba(255,100,180,0.55)';
-    ctx.fillText('made with 💜 by Ayabukwa',W/2,1440);
+    ctx.fillText('made with 💜 by Ayabukwa🌟',W/2,1440);
 
     // Bottom accent line
     const lb=ctx.createLinearGradient(0,0,W,0);
