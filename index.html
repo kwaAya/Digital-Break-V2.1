@@ -1935,14 +1935,14 @@ function updatePowerUps(){
 //  INPUT
 // ══════════════════════════════════════════
 function mousePressed(){
-    if(gameState==='preplay'){beginFromPrePlay();return false;}
+    if(gameState==='preplay')return false;
     if(gameState!=='playing')return false;
     if(performance.now()-lastInputTS<150)return false;
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);return false;
 }
 function touchStarted(){
-    if(gameState==='preplay'){beginFromPrePlay();return false;}
+    if(gameState==='preplay')return false;
     if(gameState!=='playing')return;
     if(!p5Canvas)return;
     lastInputTS=performance.now();
@@ -2040,13 +2040,19 @@ function updateDisplay(){
 //  GAME FLOW
 // ══════════════════════════════════════════
 function showPrePlay(){
-    const el=document.getElementById('prePlayOverlay');
-    if(!el)return;
-    // Update difficulty badge
+    const el=document.getElementById('prePlayOverlay');if(!el)return;
     const labels={easy:'ROOKIE MODE',normal:'HACKER MODE',insane:'LEGEND MODE'};
-    const badge=document.getElementById('ppDiffBadge');
-    if(badge)badge.textContent=labels[difficulty]||'HACKER MODE';
+    const badge=document.getElementById('ppDiffBadge');if(badge)badge.textContent=labels[difficulty]||'HACKER MODE';
     el.classList.add('show');
+    if(!el._patched){
+        el._patched=true;
+        el.addEventListener('touchstart',function(e){
+            if(gameState==='preplay'){e.stopPropagation();beginFromPrePlay();}
+        },{passive:true,capture:true});
+        el.addEventListener('click',function(e){
+            if(gameState==='preplay'){e.stopPropagation();beginFromPrePlay();}
+        },{capture:true});
+    }
 }
 function hidePrePlay(){
     const el=document.getElementById('prePlayOverlay');
@@ -2204,11 +2210,13 @@ function makeDelay(ac,time,fb){
     d.connect(f); f.connect(d); return d;
 }
 
-function noiseBuffer(ac,dur){
-    const buf=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate);
-    const d=buf.getChannelData(0);
-    for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-    return buf;
+const _noiseCache={};
+function getCachedNoise(ac,dur){
+    const key=Math.round(dur*1000);
+    if(_noiseCache[key])return _noiseCache[key];
+    const buf=ac.createBuffer(1,Math.ceil(ac.sampleRate*dur),ac.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    _noiseCache[key]=buf;return buf;
 }
 
 // ── SCENE REGISTRY
@@ -2245,7 +2253,7 @@ const SCENES={
             o.type='sine'; o.frequency.setValueAtTime(note,t);
             g.gain.setValueAtTime(0,t);
             g.gain.linearRampToValueAtTime(0.13,t+0.08);
-            g.gain.exponentialRampToValueAtTime(0.001,t+S*2.6);
+            g.gain.exponentialRampToValueAtTime(0.0001,t+S*2.6);
             o.connect(f); f.connect(g); g.connect(master);
             const rg=ac.createGain(); rg.gain.value=0.6;
             g.connect(rg); rg.connect(rev);
@@ -2263,7 +2271,7 @@ const SCENES={
                     po.type='sine'; po.frequency.value=freq;
                     pg.gain.setValueAtTime(0,t);
                     pg.gain.linearRampToValueAtTime(0.04,t+0.25);
-                    pg.gain.exponentialRampToValueAtTime(0.001,t+S*5);
+                    pg.gain.exponentialRampToValueAtTime(0.0001,t+S*5);
                     po.connect(pf); pf.connect(pg); pg.connect(master);
                     const prg=ac.createGain(); prg.gain.value=0.4;
                     pg.connect(prg); prg.connect(rev);
@@ -2312,7 +2320,7 @@ const SCENES={
             o.type='triangle'; o.frequency.setValueAtTime(rising[ni],t);
             g.gain.setValueAtTime(0,t);
             g.gain.linearRampToValueAtTime(0.1+prog*0.08,t+0.012);
-            g.gain.exponentialRampToValueAtTime(0.001,t+S*0.7);
+            g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.7);
             o.connect(f); f.connect(g); g.connect(master);
             const rg=ac.createGain(); rg.gain.value=0.25;
             g.connect(rg); rg.connect(rev);
@@ -2327,7 +2335,7 @@ const SCENES={
                 ko.frequency.setValueAtTime(150,t);
                 ko.frequency.exponentialRampToValueAtTime(40,t+0.065);
                 kg.gain.setValueAtTime(0.35*prog,t);
-                kg.gain.exponentialRampToValueAtTime(0.001,t+0.11);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.11);
                 ko.connect(kg); kg.connect(master);
                 ko.start(t); ko.stop(t+0.14);
                 nodes.push(ko,kg);
@@ -2338,9 +2346,9 @@ const SCENES={
                 const hn=ac.createBufferSource();
                 const hf=ac.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=9500;
                 const hg=ac.createGain();
-                hn.buffer=noiseBuffer(ac,0.022);
+                hn.buffer=getCachedNoise(ac,0.022);
                 hg.gain.setValueAtTime(0.03*prog,t);
-                hg.gain.exponentialRampToValueAtTime(0.001,t+0.018);
+                hg.gain.exponentialRampToValueAtTime(0.0001,t+0.018);
                 hn.connect(hf); hf.connect(hg); hg.connect(master);
                 hn.start(t);
                 nodes.push(hn,hf,hg);
@@ -2361,8 +2369,8 @@ const SCENES={
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         const comp=ac.createDynamicsCompressor();
-        comp.threshold.value=-14; comp.knee.value=8;
-        comp.ratio.value=3; comp.attack.value=0.003; comp.release.value=0.18;
+        comp.threshold.value=-16; comp.knee.value=28;
+        comp.ratio.value=3; comp.attack.value=0.006; comp.release.value=0.22;
         master.connect(comp); comp.connect(dest);
         const rev=makeReverb(ac,2.2,2.2);
         const revG=ac.createGain(); revG.gain.value=0.17;
@@ -2423,7 +2431,7 @@ const SCENES={
                 g.gain.setValueAtTime(0,t);
                 g.gain.linearRampToValueAtTime(0.22,t+0.022);
                 g.gain.setValueAtTime(0.22,t+S*0.5);
-                g.gain.exponentialRampToValueAtTime(0.001,t+S*0.9);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.9);
                 g.connect(master);
                 const dg=ac.createGain(); dg.gain.value=0.16; g.connect(dg); dg.connect(delay);
                 const rg=ac.createGain(); rg.gain.value=0.22; g.connect(rg); rg.connect(rev);
@@ -2444,7 +2452,7 @@ const SCENES={
                     g.gain.setValueAtTime(0,t);
                     g.gain.linearRampToValueAtTime(0.052,t+0.09);
                     g.gain.setValueAtTime(0.052,t+S*6.5);
-                    g.gain.exponentialRampToValueAtTime(0.001,t+S*7.5);
+                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*7.5);
                     o.connect(f); f.connect(g); g.connect(master);
                     const rg=ac.createGain(); rg.gain.value=0.32; g.connect(rg); rg.connect(rev);
                     o.start(t); o.stop(t+S*8);
@@ -2464,7 +2472,7 @@ const SCENES={
                 bg.gain.setValueAtTime(0,t);
                 bg.gain.linearRampToValueAtTime(0.18,t+0.016);
                 bg.gain.setValueAtTime(0.18,t+S*1.6);
-                bg.gain.exponentialRampToValueAtTime(0.001,t+S*1.9);
+                bg.gain.exponentialRampToValueAtTime(0.0001,t+S*1.9);
                 bo.connect(bf); bf.connect(bg); bg.connect(master);
                 bo.start(t); bo.stop(t+S*2);
                 nodes.push(bo,bg,bf);
@@ -2478,7 +2486,7 @@ const SCENES={
                 ko.frequency.setValueAtTime(158,t);
                 ko.frequency.exponentialRampToValueAtTime(38,t+0.068);
                 kg.gain.setValueAtTime(0.55,t);
-                kg.gain.exponentialRampToValueAtTime(0.001,t+0.13);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.13);
                 ko.connect(kg); kg.connect(master);
                 ko.start(t); ko.stop(t+0.16);
                 nodes.push(ko,kg);
@@ -2490,9 +2498,9 @@ const SCENES={
                 const sf=ac.createBiquadFilter();
                 sf.type='bandpass'; sf.frequency.value=2200; sf.Q.value=0.7;
                 const sg=ac.createGain();
-                sn.buffer=noiseBuffer(ac,0.11);
+                sn.buffer=getCachedNoise(ac,0.11);
                 sg.gain.setValueAtTime(0.13,t);
-                sg.gain.exponentialRampToValueAtTime(0.001,t+0.09);
+                sg.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
                 sn.connect(sf); sf.connect(sg); sg.connect(master);
                 sn.start(t);
                 nodes.push(sn,sf,sg);
@@ -2503,9 +2511,9 @@ const SCENES={
             const hf=ac.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=9000;
             const hg=ac.createGain();
             const open=sib%4===2;
-            hh.buffer=noiseBuffer(ac,open?0.085:0.028);
+            hh.buffer=getCachedNoise(ac,open?0.085:0.028);
             hg.gain.setValueAtTime(open?0.052:0.035,t);
-            hg.gain.exponentialRampToValueAtTime(0.001,t+(open?0.078:0.024));
+            hg.gain.exponentialRampToValueAtTime(0.0001,t+(open?0.078:0.024));
             hh.connect(hf); hf.connect(hg); hg.connect(master);
             hh.start(t);
             nodes.push(hh,hf,hg);
@@ -2518,7 +2526,7 @@ const SCENES={
                 go.frequency.setValueAtTime(110,t);
                 go.frequency.exponentialRampToValueAtTime(38,t+0.045);
                 gg.gain.setValueAtTime(0.18,t);
-                gg.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+                gg.gain.exponentialRampToValueAtTime(0.0001,t+0.08);
                 go.connect(gg); gg.connect(master);
                 go.start(t); go.stop(t+0.1);
                 nodes.push(go,gg);
@@ -2568,7 +2576,7 @@ const SCENES={
             o.type='sawtooth'; o.frequency.setValueAtTime(note,t);
             g.gain.setValueAtTime(0,t);
             g.gain.linearRampToValueAtTime(0.16,t+0.008);
-            g.gain.exponentialRampToValueAtTime(0.001,t+S*0.65);
+            g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.65);
             o.connect(f); f.connect(g); g.connect(master);
             o.start(t); o.stop(t+S*0.8);
             nodes.push(o,g,f);
@@ -2583,7 +2591,7 @@ const SCENES={
                 bo.type='sine'; bo.frequency.value=panicBass[bi];
                 bg.gain.setValueAtTime(0,t);
                 bg.gain.linearRampToValueAtTime(0.2,t+0.012);
-                bg.gain.exponentialRampToValueAtTime(0.001,t+S*1.0);
+                bg.gain.exponentialRampToValueAtTime(0.0001,t+S*1.0);
                 bo.connect(bf); bf.connect(bg); bg.connect(master);
                 bo.start(t); bo.stop(t+S*1.1);
                 nodes.push(bo,bg,bf);
@@ -2597,7 +2605,7 @@ const SCENES={
                 ko.frequency.setValueAtTime(160,t);
                 ko.frequency.exponentialRampToValueAtTime(40,t+0.055);
                 kg.gain.setValueAtTime(0.6,t);
-                kg.gain.exponentialRampToValueAtTime(0.001,t+0.11);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.11);
                 ko.connect(kg); kg.connect(master);
                 ko.start(t); ko.stop(t+0.14);
                 nodes.push(ko,kg);
@@ -2609,9 +2617,9 @@ const SCENES={
                 const sf=ac.createBiquadFilter();
                 sf.type='bandpass'; sf.frequency.value=2500; sf.Q.value=0.6;
                 const sg=ac.createGain();
-                sn.buffer=noiseBuffer(ac,0.08);
+                sn.buffer=getCachedNoise(ac,0.08);
                 sg.gain.setValueAtTime(0.18,t);
-                sg.gain.exponentialRampToValueAtTime(0.001,t+0.07);
+                sg.gain.exponentialRampToValueAtTime(0.0001,t+0.07);
                 sn.connect(sf); sf.connect(sg); sg.connect(master);
                 sn.start(t);
                 nodes.push(sn,sf,sg);
@@ -2621,9 +2629,9 @@ const SCENES={
             const hh=ac.createBufferSource();
             const hf=ac.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=10000;
             const hg=ac.createGain();
-            hh.buffer=noiseBuffer(ac,0.018);
+            hh.buffer=getCachedNoise(ac,0.018);
             hg.gain.setValueAtTime(0.045,t);
-            hg.gain.exponentialRampToValueAtTime(0.001,t+0.015);
+            hg.gain.exponentialRampToValueAtTime(0.0001,t+0.015);
             hh.connect(hf); hf.connect(hg); hg.connect(master);
             hh.start(t);
             nodes.push(hh,hf,hg);
@@ -2681,7 +2689,7 @@ const SCENES={
                 o.type='triangle'; o.frequency.setValueAtTime(note,t);
                 g.gain.setValueAtTime(0,t);
                 g.gain.linearRampToValueAtTime(0.2,t+0.015);
-                g.gain.exponentialRampToValueAtTime(0.001,t+S*0.85);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.85);
                 o.connect(f); f.connect(g); g.connect(master);
                 const rg=ac.createGain(); rg.gain.value=0.4;
                 g.connect(rg); rg.connect(rev);
@@ -2698,7 +2706,7 @@ const SCENES={
                     o.type='sine'; o.frequency.value=freq;
                     g.gain.setValueAtTime(0,t);
                     g.gain.linearRampToValueAtTime(0.065,t+0.1);
-                    g.gain.exponentialRampToValueAtTime(0.001,t+S*7.5);
+                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*7.5);
                     o.connect(g); g.connect(master);
                     const rg=ac.createGain(); rg.gain.value=0.3;
                     g.connect(rg); rg.connect(rev);
@@ -2715,7 +2723,7 @@ const SCENES={
                 ko.frequency.setValueAtTime(140,t);
                 ko.frequency.exponentialRampToValueAtTime(45,t+0.06);
                 kg.gain.setValueAtTime(0.38,t);
-                kg.gain.exponentialRampToValueAtTime(0.001,t+0.11);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.11);
                 ko.connect(kg); kg.connect(master);
                 ko.start(t); ko.stop(t+0.14);
                 nodes.push(ko,kg);
@@ -2725,9 +2733,9 @@ const SCENES={
             const sh=ac.createBufferSource();
             const shf=ac.createBiquadFilter(); shf.type='highpass'; shf.frequency.value=7000;
             const shg=ac.createGain();
-            sh.buffer=noiseBuffer(ac,0.02);
+            sh.buffer=getCachedNoise(ac,0.02);
             shg.gain.setValueAtTime(0.025,t);
-            shg.gain.exponentialRampToValueAtTime(0.001,t+0.018);
+            shg.gain.exponentialRampToValueAtTime(0.0001,t+0.018);
             sh.connect(shf); shf.connect(shg); shg.connect(master);
             sh.start(t);
             nodes.push(sh,shf,shg);
@@ -2773,7 +2781,7 @@ const SCENES={
                 o.detune.setValueAtTime(-18,t);
                 g.gain.setValueAtTime(0,t);
                 g.gain.linearRampToValueAtTime(0.18,t+0.05);
-                g.gain.exponentialRampToValueAtTime(0.001,t+S*1.6);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+S*1.6);
                 o.connect(f); f.connect(g); g.connect(master);
                 const rg=ac.createGain(); rg.gain.value=0.55;
                 g.connect(rg); rg.connect(rev);
@@ -2786,7 +2794,7 @@ const SCENES={
                 td.frequency.setValueAtTime(note*0.25,t);
                 td.frequency.exponentialRampToValueAtTime(note*0.22,t+0.3);
                 tg.gain.setValueAtTime(0.09,t);
-                tg.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+                tg.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
                 td.connect(tg); tg.connect(master);
                 td.start(t); td.stop(t+0.6);
                 nodes.push(o,g,f,rg,td,tg);
