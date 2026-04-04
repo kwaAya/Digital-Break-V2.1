@@ -312,6 +312,10 @@
         }
         #gameHUD.active { display: flex; }
         #gameHUD.panic { border-bottom-color: rgba(255,60,60,0.25); }
+        #progressBarWrap.panic #progressBar {
+            background: linear-gradient(90deg,#ff4444,#ff8800);
+            box-shadow: 0 0 6px rgba(255,60,60,0.6);
+        }
         .hud-score { font-size: 12px; font-weight: 900; color: rgba(255,255,255,0.9); }
         .hud-score span { color: rgba(255,215,0,0.95); }
         .hud-time { font-size: 16px; font-weight: 900; color: #fff; letter-spacing: 2px; }
@@ -804,6 +808,44 @@
             margin-top: 4px;
         }
 
+        .level-pill {
+            padding: 6px 2px;
+            border: 1px solid rgba(255,215,0,0.12);
+            border-radius: 8px;
+            background: rgba(255,215,0,0.03);
+            text-align: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+            font-family: 'Orbitron', monospace;
+        }
+        .level-pill:active { transform: scale(0.92); }
+        .level-pill.cleared {
+            border-color: rgba(0,255,136,0.5);
+            background: rgba(0,255,136,0.08);
+        }
+        .level-pill.selected-preview {
+            border-color: rgba(255,215,0,0.7);
+            background: rgba(255,215,0,0.12);
+            box-shadow: 0 0 10px rgba(255,215,0,0.2);
+        }
+        .level-pill-num {
+            font-size: 9px;
+            font-weight: 900;
+            color: rgba(255,215,0,0.5);
+        }
+        .level-pill.cleared .level-pill-num { color: rgba(0,255,136,0.9); }
+        .level-pill.selected-preview .level-pill-num { color: rgba(255,215,0,1); }
+        .level-pill-check {
+            font-size: 8px;
+            color: rgba(0,255,136,0.7);
+            display: none;
+        }
+        .level-pill.cleared .level-pill-check { 
+            display: block; 
+        }
+
         @media (max-width:480px) {
             .popup{padding:16px 13px}
             .popup h2{font-size:19px}
@@ -825,10 +867,25 @@
         <div class="hud-time"><span id="timeLeft">60</span>s</div>
         <div class="hud-lives"><span id="livesCount">❤️❤️❤️</span></div>
     </div>
+    <!-- Progress bar sits just below the HUD strip -->
+    <div id="progressBarWrap" style="
+        position:absolute;top:42px;left:0;right:0;
+        height:3px;
+        background:rgba(255,255,255,0.06);
+        z-index:101;
+        display:none;
+    ">
+        <div id="progressBar" style="
+            height:100%;width:0%;
+            background:linear-gradient(90deg,#00ff88,#00ffff);
+            transition:width 0.3s ease;
+            box-shadow:0 0 6px rgba(0,255,136,0.6);
+        "></div>
+    </div>
     <div id="gameSubHUD">
+        <span id="hudLevel" style="color:rgba(0,255,200,0.85);font-weight:900;">LV 1</span>
         <span id="hudCombo">x<span id="comboCount">1</span> COMBO</span>
         <span id="hudStreak">🔥 <span id="streakCount">0</span></span>
-        <span id="hudBestSub">⭐ <span id="personalBestHUD">0</span></span>
         <div id="hudPowerBadges"></div>
     </div>
     <div id="streakToast"></div>
@@ -918,7 +975,7 @@
 
     <!-- Challenge line -->
     <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:16px;letter-spacing:1px;line-height:1.6;">
-        Can you <span style="color:rgba(255,215,0,0.85);font-weight:900;">breach the system</span> in 60 seconds?
+        Can you clear all <span style="color:rgba(255,215,0,0.85);font-weight:900;">12 levels</span> and breach the system?
     </div>
 
     <!-- BREACH BUTTON — top priority -->
@@ -934,32 +991,18 @@
         <div class="feature-pill">⚡ Speed</div>
     </div>
 
-    <!-- Difficulty selector -->
-    <div style="font-size:8px;letter-spacing:3px;color:rgba(255,215,0,0.3);margin-bottom:10px;">— SELECT DIFFICULTY —</div>
-    <div class="diff-grid">
-        <div class="diff-card" data-difficulty="easy"
-             onclick="selectDiffCard('easy')"
-             ontouchstart="selectDiffCard('easy')">
-            <div class="diff-card-name">ROOKIE</div>
-            <div class="diff-card-score">600+ pts</div>
-        </div>
-        <div class="diff-card selected" data-difficulty="normal"
-             onclick="selectDiffCard('normal')"
-             ontouchstart="selectDiffCard('normal')">
-            <div class="diff-card-name">HACKER</div>
-            <div class="diff-card-score">1200+ pts</div>
-        </div>
-        <div class="diff-card" data-difficulty="insane"
-             onclick="selectDiffCard('insane')"
-             ontouchstart="selectDiffCard('insane')">
-            <div class="diff-card-name">LEGEND</div>
-            <div class="diff-card-score">1800+ pts</div>
-        </div>
+    <!-- Level progression preview -->
+    <div style="font-size:8px;letter-spacing:3px;color:rgba(255,215,0,0.3);margin-bottom:10px;">— 12 LEVELS TO BREACH —</div>
+
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:14px;">
+        <!-- we render level pills via JS so just a container here -->
+        <div id="levelPillGrid" style="display:contents;"></div>
     </div>
 
-    <!-- Difficulty description -->
-    <div id="difficultyDesc">
-        <strong style="color:rgba(255,215,0,0.8);">HACKER MODE:</strong> 60 seconds, moving obstacles, power-ups enabled
+    <!-- Level preview description updates on hover/tap -->
+    <div id="difficultyDesc" style="min-height:48px;">
+        <strong style="color:rgba(255,215,0,0.8);">START FROM LEVEL 1</strong><br>
+        <span style="font-size:9px;opacity:0.6;">Tap a level to preview it — progress unlocks as you play</span>
     </div>
 
     <!-- Music toggle -->
@@ -985,8 +1028,11 @@
     <p id="loseScore"    style="font-size:15px;color:#fff;margin-top:10px;">Final Score: 0</p>
     <p id="loseAccuracy" style="font-size:12px;color:rgba(0,255,255,.7);">Accuracy: 0%</p>
     <button class="btn"
+            onclick="retryLevel()"
+            ontouchstart="retryLevel()">🔄 Try Again</button>
+    <button class="btn" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;"
             onclick="restartGame()"
-            ontouchstart="restartGame()">🔄 Try Again</button>
+            ontouchstart="restartGame()">↩ Back to Start</button>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,255,255,.12);font-size:10px;color:rgba(255,255,255,.3);line-height:2;letter-spacing:.5px;">
         made with 💜 by <span style="color:rgba(0,255,255,.6);">Aya</span><br>
         📱 <a href="tel:0845067825" style="color:rgba(0,255,255,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
@@ -1046,6 +1092,92 @@
             📱 <a href="tel:0845067825" style="color:rgba(255,100,180,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
             ✉️ <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(255,100,180,.5);text-decoration:none;">unakomtumtum0@gmail.com</a>
         </div>
+    </div>
+</div>
+
+
+<!-- ══ LEVEL COMPLETE OVERLAY ══ -->
+<div id="levelCompleteOverlay" style="
+    display:none;
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.92);
+    z-index:1000;
+    overflow-y:scroll;
+    -webkit-overflow-scrolling:touch;
+    padding:30px 15px 60px;
+    font-family:'Orbitron',monospace;
+    text-align:center;
+    color:#fff;
+">
+    <div style="
+        background:linear-gradient(160deg,#05050f,#0d2a10,#0a2e1a);
+        border:3px solid #00ff88;
+        border-radius:22px;
+        width:100%;max-width:480px;
+        padding:28px 22px 40px;
+        margin:10px auto 40px;
+        box-shadow:0 0 60px rgba(0,255,136,0.4);
+        position:relative;
+    ">
+        <!-- scanline texture -->
+        <div style="position:absolute;inset:0;border-radius:19px;pointer-events:none;
+            background:repeating-linear-gradient(0deg,transparent,transparent 34px,
+            rgba(0,255,136,0.03) 34px,rgba(0,255,136,0.03) 35px);"></div>
+
+        <div style="font-size:38px;margin-bottom:8px;">✅</div>
+
+        <div id="lcLevel" style="
+            font-size:20px;font-weight:900;letter-spacing:3px;
+            background:linear-gradient(45deg,#00ff88,#00ffff);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;margin-bottom:14px;
+        ">LEVEL 1 CLEARED</div>
+
+        <div id="lcScore" style="
+            display:inline-block;
+            background:linear-gradient(135deg,#00ff88,#00cc66);
+            color:#000;font-size:30px;font-weight:900;
+            padding:12px 28px;border-radius:16px;
+            margin:0 0 8px;letter-spacing:2px;
+            box-shadow:0 0 25px rgba(0,255,136,0.5);
+        ">0 PTS</div>
+
+        <div id="lcAccuracy" style="font-size:11px;color:rgba(0,255,200,0.7);margin:6px 0 4px;">Accuracy: 0%</div>
+        <div id="lcTotal" style="font-size:11px;color:rgba(255,215,0,0.6);margin:0 0 18px;letter-spacing:1px;">Total so far: 0 pts</div>
+
+        <div id="lcNextNote" style="
+            font-size:10px;color:rgba(255,255,255,0.4);
+            letter-spacing:1px;line-height:1.6;
+            background:rgba(0,255,136,0.05);
+            border:1px solid rgba(0,255,136,0.15);
+            border-radius:10px;padding:10px 14px;
+            margin:0 0 22px;
+        "></div>
+
+        <button onclick="goToNextLevel()" ontouchstart="goToNextLevel()"
+            style="
+                width:100%;padding:16px;
+                background:linear-gradient(135deg,rgba(0,255,136,0.18),rgba(0,200,100,0.08));
+                border:1px solid rgba(0,255,136,0.55);
+                color:rgba(0,255,180,0.96);
+                font-size:13px;font-weight:900;letter-spacing:4px;
+                font-family:'Orbitron',monospace;
+                cursor:pointer;border-radius:14px;margin-bottom:12px;
+                touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                animation:breachGlow 2.5s ease-in-out infinite;
+            ">⚡ NEXT LEVEL</button>
+
+        <button onclick="restartGame()" ontouchstart="restartGame()"
+            style="
+                background:rgba(255,255,255,0.05);
+                color:rgba(255,255,255,0.35);
+                border:1px solid rgba(255,255,255,0.1);
+                padding:10px 22px;border-radius:30px;
+                font-family:'Orbitron',monospace;font-size:10px;
+                cursor:pointer;touch-action:manipulation;
+                -webkit-tap-highlight-color:transparent;
+                letter-spacing:2px;
+            ">↩ BACK TO START</button>
     </div>
 </div>
 
@@ -1226,7 +1358,7 @@ function startConfetti(){
 //  SHARE
 // ══════════════════════════════════════════
 function shareScore(){
-    const text=`🔥 I just breached Digital Break V2.1 with ${score} points on ${difficulty.toUpperCase()} mode! Best streak: ${bestStreak} 🔥 Can you beat me? ⚡`;
+    const text=`🔥 I just cleared Level ${currentLevel} of Digital Break V2.1! Total score: ${totalLevelScore.toLocaleString()} pts · Best streak: ${bestStreak} 🔥 Can you beat me? ⚡`;
     if(navigator.share)navigator.share({title:'Digital Break V2.1',text}).catch(()=>copyFallback(text));
     else copyFallback(text);
 }
@@ -1322,6 +1454,41 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
     },1000);
 }
 
+function showLevelComplete(lv,lvScore,acc){
+    clearedLevels.add(lv);
+    renderLevelPills(); // refresh the pill display on start screen
+    const overlay=document.getElementById('levelCompleteOverlay');
+    if(!overlay)return;
+    
+
+    // Populate content
+    document.getElementById('lcLevel').textContent=`LEVEL ${lv} CLEARED`;
+    document.getElementById('lcScore').textContent=`${lvScore.toLocaleString()} PTS`;
+    document.getElementById('lcAccuracy').textContent=`Accuracy: ${acc}%`;
+    document.getElementById('lcTotal').textContent=
+        `Total so far: ${totalLevelScore.toLocaleString()} pts`;
+
+    // Teaser for next level
+    const next=LEVELS[lv]; // lv is 1-indexed, array is 0-indexed so lv = next level's index
+    document.getElementById('lcNextNote').textContent=
+        next ? `Level ${lv+1}: ${next.note}` : '';
+
+    overlay.style.display='flex';
+    overlay.scrollTop=0;
+    startConfetti();
+    switchMusicTo('win');
+}
+
+function goToNextLevel(){
+    currentLevel++;
+    levelData=LEVELS[currentLevel-1];
+    const overlay=document.getElementById('levelCompleteOverlay');
+    if(overlay)overlay.style.display='none';
+    document.getElementById('confettiCanvas').style.display='none';
+    if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
+    loadLevel(currentLevel);
+}
+
 // ══════════════════════════════════════════
 //  GAME STATE
 // ══════════════════════════════════════════
@@ -1335,6 +1502,7 @@ let difficulty='normal',targetScore=1500;
 let totalClicks=0,successfulHits=0;
 let shieldTime=0,slowTime=0,multiTime=0;
 let currentStreak=0,bestStreak=0,streakToastTimer=null;
+let totalLevelScore=0; // cumulative score across all levels for display
 let bossTarget=null,bossAlertTimer=null;
 let isPanic=false;
 let p5Canvas=null;
@@ -1347,6 +1515,29 @@ const difficultySettings={
     normal:{time:60,targetScore:1200,obstacleCount:4,description:"60 seconds, moving obstacles, power-ups enabled"},
     insane:{time:75,targetScore:1800,obstacleCount:4,description:"75 seconds, maximum chaos, expert-level challenge"}
 };
+
+// ── LEVEL PROGRESSION ──
+const LEVELS=[
+    // lv, time, target, obstacles, hasPowerups, hasBoss, panicAt, note
+    {lv:1,  time:30, target:300,  obstacles:0, powerups:false, boss:false, panicAt:10, speedRamp:0.4, note:"Basics only — hit glowing targets"},
+    {lv:2,  time:35, target:450,  obstacles:0, powerups:false, boss:false, panicAt:10, speedRamp:0.4, note:"Gold targets appear — worth 3x!"},
+    {lv:3,  time:40, target:600,  obstacles:1, powerups:false, boss:false, panicAt:10, speedRamp:0.5, note:"First obstacle — watch out!"},
+    {lv:4,  time:45, target:800,  obstacles:2, powerups:true,  boss:false, panicAt:10, speedRamp:0.5, note:"Power-ups unlocked — collect green circles"},
+    {lv:5,  time:50, target:1000, obstacles:2, powerups:true,  boss:true,  panicAt:10, speedRamp:0.6, note:"Boss target appears — hit it 3 times!"},
+    {lv:6,  time:50, target:1200, obstacles:3, powerups:true,  boss:true,  panicAt:10, speedRamp:0.6, note:"More obstacles, faster targets"},
+    {lv:7,  time:55, target:1400, obstacles:3, powerups:true,  boss:true,  panicAt:10, speedRamp:0.7, note:"Two bosses possible — stay sharp"},
+    {lv:8,  time:55, target:1600, obstacles:4, powerups:true,  boss:true,  panicAt:10, speedRamp:0.7, note:"Targets are smaller — precision required"},
+    {lv:9,  time:60, target:1900, obstacles:4, powerups:true,  boss:true,  panicAt:10, speedRamp:0.9, note:"Speed ramps harder as time runs out"},
+    {lv:10, time:60, target:2200, obstacles:4, powerups:true,  boss:true,  panicAt:15, speedRamp:0.9, note:"Panic starts earlier — 15 seconds!"},
+    {lv:11, time:65, target:2600, obstacles:5, powerups:true,  boss:true,  panicAt:15, speedRamp:1.0, note:"Obstacles speed up — full pressure"},
+    {lv:12, time:70, target:3000, obstacles:5, powerups:true,  boss:true,  panicAt:15, speedRamp:1.0, note:"Full chaos. This is it."},
+];
+
+// current level state — these sit alongside existing vars
+let currentLevel=1;
+let levelData=LEVELS[0]; // always reflects active level config
+// Tracks which levels the player has cleared this session
+let clearedLevels=new Set();
 
 // Lock prevents ontouchstart + onclick double-fire
 let diffLock=false;
@@ -1589,7 +1780,9 @@ function showStreakToast(msg){
 //  BOSS
 // ══════════════════════════════════════════
 function trySpawnBoss(){
-    if(bossTarget||timeLeft<=15||Math.random()>=.012)return;
+    if(!levelData.boss)return;
+    const maxBosses=currentLevel>=7?2:1;
+    if((bossTarget?1:0)>=maxBosses||timeLeft<=15||Math.random()>=.012)return;
     document.getElementById('bossAlert').classList.add('show');
     triggerVibration('boss');
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
@@ -1638,23 +1831,27 @@ function hitBoss(tx,ty){
 //  SPEED & PANIC
 // ══════════════════════════════════════════
 function getSpeedMultiplier(){
-    const total=difficultySettings[difficulty].time;
-    return 1+Math.min((total-timeLeft)/total,1)*0.8;
+    const total=levelData.time;
+    return 1+Math.min((total-timeLeft)/total,1)*levelData.speedRamp;
 }
 function updateSpeedIndicator(){} // speed now felt, not shown
 function updatePanicMode(){
-    const should=timeLeft<=10&&timeLeft>0;
+    const should=timeLeft<=levelData.panicAt&&timeLeft>0;
     if(should&&!isPanic){
         isPanic=true;
         document.getElementById('gameContainer').classList.add('panic');
         document.getElementById('gameHUD').classList.add('panic');
         document.getElementById('timeLeft').classList.add('panic');
+        const pbw=document.getElementById('progressBarWrap');
+        if(pbw)pbw.classList.add('panic');
         switchMusicTo('panic');
     }else if(!should&&isPanic){
         isPanic=false;
         document.getElementById('gameContainer').classList.remove('panic');
         document.getElementById('gameHUD').classList.remove('panic');
         document.getElementById('timeLeft').classList.remove('panic');
+        const pbw=document.getElementById('progressBarWrap');
+        if(pbw)pbw.classList.remove('panic');
     }
 }
 
@@ -1665,7 +1862,7 @@ function getCanvasSize(){
     const vp=window.visualViewport;
     const W=vp?vp.width:window.innerWidth;
     const H=vp?vp.height:window.innerHeight;
-    return{w:Math.min(Math.floor(W)-20,520),h:Math.min(Math.floor(H*0.82),680)};
+    return{w:Math.min(Math.floor(W)-10,600),h:Math.min(Math.floor(H*0.88),760)};
 }
 
 function applyCanvasStyle(){
@@ -1807,8 +2004,8 @@ function draw(){
         updateAndDisplayPowerups(); updateAndDisplayBoss();
         updateAndDisplayParticles();
         if(frameCount%70===0)createTarget();
-        if(frameCount%180===0&&obstacles.length<difficultySettings[difficulty].obstacleCount)createObstacle();
-        if(frameCount%240===0&&Math.random()<.7)createPowerup();
+        if(frameCount%180===0&&obstacles.length<levelData.obstacles)createObstacle();
+        if(levelData.powerups&&frameCount%240===0&&Math.random()<.7)createPowerup();
         trySpawnBoss();
         if(shieldTime>0){stroke(0,255,100,80);strokeWeight(6);noFill();rect(10,10,width-20,height-20,13);}
         if(slowTime>0){fill(0,80,200,20);noStroke();rect(0,0,width,height);}
@@ -1827,7 +2024,12 @@ function createTarget(){
         for(let t of targets){if(dist(x,y,t.x,t.y)<70){valid=false;break;}}
         attempts++;
     }while(!valid&&attempts<30);
-    targets.push({x,y,vx:random(-3,3),vy:random(-3,3),size:random(45,75),phase:0,active:false,activeTime:0,maxActiveTime:random(60,120),points:Math.floor(random(2,6)),type:Math.random()<.1?'bonus':'normal'});
+    // Level 8+ targets are smaller — forces precision
+    const sizeMin=currentLevel>=8?32:45;
+    const sizeMax=currentLevel>=8?55:75;
+    // Gold targets more common from level 2+
+    const bonusChance=currentLevel>=2?0.14:0.0;
+    targets.push({x,y,vx:random(-3,3),vy:random(-3,3),size:random(sizeMin,sizeMax),phase:0,active:false,activeTime:0,maxActiveTime:random(60,120),points:Math.floor(random(2,6)),type:Math.random()<bonusChance?'bonus':'normal'});
 }
 function updateAndDisplayTargets(){
     const sp=slowTime>0?.3:getSpeedMultiplier();
@@ -1837,7 +2039,7 @@ function updateAndDisplayTargets(){
         if(t.x<30||t.x>width-30)t.vx*=-1;if(t.y<30||t.y>height-30)t.vy*=-1;
         t.x=constrain(t.x,30,width-30);t.y=constrain(t.y,30,height-30);
         t.phase+=.08;
-        if(!t.active&&Math.random()<(difficulty==='insane'?.012:.008)){t.active=true;t.activeTime=0;}
+        if(!t.active&&Math.random()<(currentLevel>=9?.012:.008)){t.active=true;t.activeTime=0;}
         if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
         push();translate(t.x,t.y);
         if(t.active){
@@ -1956,7 +2158,7 @@ function beginFromPrePlay(){
     switchMusicTo('gameplay');
     // Start the actual timer now
     gameStartTime=Date.now();
-    gameDuration=difficultySettings[difficulty].time*1000;
+    gameDuration=levelData.time*1000;
     let lastBeepSecond=-1;
     clearInterval(gameTimer);
     gameTimer=setInterval(()=>{
@@ -2034,6 +2236,22 @@ function updateDisplay(){
     const lEl=document.getElementById('livesCount');
     if(lEl)lEl.textContent='❤️'.repeat(Math.max(0,lives))+'🖤'.repeat(Math.max(0,3-lives));
     document.getElementById('streakCount').textContent=currentStreak;
+
+    // Progress bar — shows % toward level target
+    const pct=Math.min((score/levelData.target)*100,100);
+    const bar=document.getElementById('progressBar');
+    if(bar)bar.style.width=pct+'%';
+
+    // Turn bar red in panic
+    const pbw=document.getElementById('progressBarWrap');
+    if(pbw){
+        if(isPanic)pbw.classList.add('panic');
+        else pbw.classList.remove('panic');
+    }
+
+    // Level badge
+    const lvBadge=document.getElementById('hudLevel');
+    if(lvBadge)lvBadge.textContent=`LV ${currentLevel}`;
 }
 
 // ══════════════════════════════════════════
@@ -2041,8 +2259,8 @@ function updateDisplay(){
 // ══════════════════════════════════════════
 function showPrePlay(){
     const el=document.getElementById('prePlayOverlay');if(!el)return;
-    const labels={easy:'ROOKIE MODE',normal:'HACKER MODE',insane:'LEGEND MODE'};
-    const badge=document.getElementById('ppDiffBadge');if(badge)badge.textContent=labels[difficulty]||'HACKER MODE';
+    const badge=document.getElementById('ppDiffBadge');
+    if(badge)badge.textContent=`LEVEL ${currentLevel} — ${levelData.note}`;
     el.classList.add('show');
     if(!el._patched){
         el._patched=true;
@@ -2064,56 +2282,105 @@ function hidePrePlay(){
 document.addEventListener('DOMContentLoaded',()=>{
     musicBtn=document.getElementById('musicToggleBtn');
     updatePersonalBestDisplay();
+    renderLevelPills();
     switchMusicTo('landing');
 });
 
+function renderLevelPills(){
+    const grid=document.getElementById('levelPillGrid');
+    if(!grid)return;
+    grid.innerHTML='';
+    LEVELS.forEach((lv,i)=>{
+        const pill=document.createElement('div');
+        pill.className='level-pill'+(clearedLevels.has(lv.lv)?' cleared':'');
+        pill.innerHTML=`<div class="level-pill-num">${lv.lv}</div>
+            <div class="level-pill-check">✓</div>`;
+        pill.addEventListener('click',()=>previewLevel(lv.lv));
+        pill.addEventListener('touchstart',()=>previewLevel(lv.lv),{passive:true});
+        grid.appendChild(pill);
+    });
+}
+
+function previewLevel(lv){
+    const data=LEVELS[lv-1];
+    // Update description box
+    document.getElementById('difficultyDesc').innerHTML=
+        `<strong style="color:rgba(255,215,0,0.8);">LEVEL ${lv}:</strong> ${data.note}<br>
+        <span style="font-size:9px;opacity:0.55;">
+            ${data.time}s · Target: ${data.target.toLocaleString()} pts ·
+            ${data.obstacles} obstacle${data.obstacles!==1?'s':''}
+            ${data.boss?' · Boss':''}${data.powerups?' · Power-ups':''}
+        </span>`;
+    // Highlight selected pill
+    document.querySelectorAll('.level-pill').forEach((p,i)=>{
+        p.classList.toggle('selected-preview', i===lv-1);
+    });
+}
+
 let startLock=false;
+
+// Call this when starting fresh from level 1 (from start screen)
 function startGame(){
     if(startLock||gameState==='playing')return;
     startLock=true;setTimeout(()=>{startLock=false;},600);
+    currentLevel=1;
+    totalLevelScore=0;
+    bestStreak=0;
+    loadLevel(currentLevel);
+}
+
+// Call this to initialise any level (fresh or after level complete)
+function loadLevel(lv){
+    levelData=LEVELS[lv-1];
 
     gameState='playing';
-    score=0;timeLeft=difficultySettings[difficulty].time;
+    score=0;
+    timeLeft=levelData.time;
     combo=1;lives=3;totalClicks=0;successfulHits=0;
     shieldTime=0;slowTime=0;multiTime=0;
-    currentStreak=0;bestStreak=0;
+    currentStreak=0;
     bossTarget=null;isPanic=false;
     targets=[];obstacles=[];powerups=[];particles=[];
 
+    // Spawn initial targets
     for(let i=0;i<5;i++)createTarget();
-    for(let i=0;i<difficultySettings[difficulty].obstacleCount;i++)createObstacle();
+    // Spawn obstacles according to level config
+    for(let i=0;i<levelData.obstacles;i++)createObstacle();
 
+    // Hide all popups
     document.getElementById('startPopup').style.display='none';
     document.getElementById('startBorderWrap').style.display='none';
     document.getElementById('losePopup').style.display='none';
     const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
+    // Hide level complete screen if visible
+    const lc=document.getElementById('levelCompleteOverlay');
+    if(lc)lc.style.display='none';
 
-    if(p5Canvas)p5Canvas.style.pointerEvents='auto'; // enable canvas taps
+    if(p5Canvas)p5Canvas.style.pointerEvents='auto';
 
     document.getElementById('gameHUD').classList.add('active');
     document.getElementById('gameSubHUD').classList.add('active');
+    const pb=document.getElementById('progressBarWrap');
+    if(pb){pb.style.display='block';pb.classList.remove('panic');}
+    document.getElementById('progressBar').style.width='0%';
     document.getElementById('gameContainer').classList.remove('panic');
+    document.getElementById('gameHUD').classList.remove('panic');
     document.getElementById('timeLeft').classList.remove('panic');
-    // Show pre-play screen — game is paused until player taps
+
+    // Show level badge in sub-HUD (we'll add the element in Part 5)
+    const lvBadge=document.getElementById('hudLevel');
+    if(lvBadge)lvBadge.textContent=`LV ${lv}`;
+
     gameState='preplay';
     showPrePlay();
     switchMusicTo('preplay');
 
     updateDisplay();
     document.getElementById('timeLeft').textContent=timeLeft;
-
-    // Timer starts only when player taps away from pre-play screen
     clearInterval(gameTimer);
-    document.getElementById('timeLeft').textContent=timeLeft;
 }
 
 function endGame(){
-    gtag('event', 'game_end', {
-        score: score,
-        difficulty: difficulty,
-        result: score >= targetScore ? 'win' : 'loss',
-        best_streak: bestStreak
-    });
     gameState='end';
     clearInterval(gameTimer);
     if(countdownInterval)clearInterval(countdownInterval);
@@ -2124,24 +2391,51 @@ function endGame(){
     document.getElementById('timeLeft').classList.remove('panic');
     document.getElementById('gameHUD').classList.remove('active');
     document.getElementById('gameSubHUD').classList.remove('active');
-
-    if(p5Canvas)p5Canvas.style.pointerEvents='none'; // disable canvas, popups need taps
+    const pbw=document.getElementById('progressBarWrap');
+    if(pbw)pbw.style.display='none';
+    if(p5Canvas)p5Canvas.style.pointerEvents='none';
 
     const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
+    const passed=score>=levelData.target;
 
-    const isNewBest=checkNewPersonalBest(score);
-    if(score>=targetScore){
-        runHackLoader(()=>showWinScreen(score,totalClicks,successfulHits,difficulty,targetScore,isNewBest));
-    }else{
+    gtag('event','level_end',{
+        level:currentLevel,
+        score,
+        result:passed?'pass':'fail',
+        best_streak:bestStreak
+    });
+
+    if(passed){
+        totalLevelScore+=score;
+        checkNewPersonalBest(totalLevelScore);
+
+        if(currentLevel>=LEVELS.length){
+            // ── GAME COMPLETE — all 12 levels cleared
+            runHackLoader(()=>showWinScreen(
+                totalLevelScore,totalClicks,successfulHits,
+                'insane',LEVELS[LEVELS.length-1].target,true
+            ));
+        } else {
+            // ── LEVEL COMPLETE — show interstitial then load next
+            showLevelComplete(currentLevel,score,acc);
+        }
+    } else {
+        // ── FAILED — retry same level
+        const shortfall=levelData.target-score;
         const msgs=[
-            `You needed ${targetScore-score} more points. Rough.`,
-            `${targetScore-score} points away. The system laughed at you.`,
-            `LOL. ${targetScore-score} points short. Back to the lobby.`,
-            `Try harder? Maybe? ${targetScore-score} points needed.`,
+            `${shortfall} more points needed. So close.`,
+            `The system held. ${shortfall} points short.`,
+            `LOL. ${shortfall} pts away. Try again.`,
+            `Level ${currentLevel} says no. Need ${shortfall} more.`,
         ];
-        document.getElementById('loseMessage').textContent=msgs[Math.floor(Math.random()*msgs.length)];
-        document.getElementById('loseScore').textContent=`Final Score: ${score.toLocaleString()} | Best Streak: ${bestStreak}`;
-        document.getElementById('loseAccuracy').textContent=`Accuracy: ${acc}% (${successfulHits}/${totalClicks} hits)`;
+        document.getElementById('loseMessage').textContent=
+            msgs[Math.floor(Math.random()*msgs.length)];
+            const rb=document.getElementById('retryBtn');
+            if(rb)rb.textContent=`🔄 Try Level ${currentLevel} Again`;
+        document.getElementById('loseScore').textContent=
+            `Score: ${score.toLocaleString()} / ${levelData.target.toLocaleString()} needed`;
+        document.getElementById('loseAccuracy').textContent=
+            `Accuracy: ${acc}% (${successfulHits}/${totalClicks} hits)`;
         document.getElementById('losePopup').style.display='block';
         switchMusicTo('lose');
     }
@@ -2152,6 +2446,10 @@ function restartGame(){
     if(restartLock)return;
     restartLock=true;setTimeout(()=>{restartLock=false;},600);
 
+    // Full reset back to level 1 and start screen
+    currentLevel=1;
+    levelData=LEVELS[0];
+    totalLevelScore=0;
     gameState='start';
     hidePrePlay();
     switchMusicTo('landing');
@@ -2161,6 +2459,7 @@ function restartGame(){
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
 
     const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
+    const lc=document.getElementById('levelCompleteOverlay');if(lc)lc.style.display='none';
     document.getElementById('losePopup').style.display='none';
     document.getElementById('startPopup').style.display='block';
     document.getElementById('startBorderWrap').style.display='block';
@@ -2170,6 +2469,13 @@ function restartGame(){
     document.getElementById('streakToast').classList.remove('show');
     document.getElementById('bossAlert').classList.remove('show');
     if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
+}
+
+function retryLevel(){
+    if(restartLock)return;
+    restartLock=true;setTimeout(()=>{restartLock=false;},600);
+    // Retry the same level — keep totalLevelScore and bestStreak intact
+    loadLevel(currentLevel);
 }
 
 // ══════════════════════════════════════════
@@ -2222,591 +2528,532 @@ function getCachedNoise(ac,dur){
 // ── SCENE REGISTRY
 const SCENES={
 
-    // ─────────────────────────────────────
-    // LANDING — dreamy, sparse, floating
-    // ─────────────────────────────────────
     landing(ac,dest,nodes){
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         master.connect(dest);
-        const rev=makeReverb(ac,3.8,1.6);
-        const revG=ac.createGain(); revG.gain.value=0.55;
-        rev.connect(revG); revG.connect(master);
+        const rev=makeReverb(ac,3.5,1.6);
+        const revG=ac.createGain();revG.gain.value=0.5;
+        rev.connect(revG);revG.connect(master);
         nodes.push(master,rev,revG);
 
-        // Am pentatonic — A C D E G — feels dreamy
-        const melody=[220,261.6,293.7,329.6,392,440,392,329.6,261.6,220,246.9,293.7];
+        const mel=[220,261.6,293.7,329.6,392,440,392,329.6,261.6,220,246.9,293.7];
         const pads=[[55,110,164.8],[65.4,130.8,196],[49,98,146.8],[61.7,123.5,185]];
-        const BPM=50; const S=60/BPM;
-        let step=0,running=true;
+        const S=60/50;
+        let step=0;
 
-        function tick(){
-            if(!running)return;
-            const t=ac.currentTime;
-            const note=melody[step%melody.length];
-
-            // Soft sine note, long fade
+        function tick(t){
+            const note=mel[step%mel.length];
             const o=ac.createOscillator();
             const g=ac.createGain();
             const f=ac.createBiquadFilter();
-            f.type='lowpass'; f.frequency.value=900;
-            o.type='sine'; o.frequency.setValueAtTime(note,t);
+            f.type='lowpass';f.frequency.value=900;
+            o.type='sine';o.frequency.setValueAtTime(note,t);
             g.gain.setValueAtTime(0,t);
-            g.gain.linearRampToValueAtTime(0.13,t+0.08);
-            g.gain.exponentialRampToValueAtTime(0.0001,t+S*2.6);
-            o.connect(f); f.connect(g); g.connect(master);
-            const rg=ac.createGain(); rg.gain.value=0.6;
-            g.connect(rg); rg.connect(rev);
-            o.start(t); o.stop(t+S*3);
+            g.gain.linearRampToValueAtTime(0.11,t+0.1);
+            g.gain.exponentialRampToValueAtTime(0.0001,t+S*2.4);
+            o.connect(f);f.connect(g);g.connect(master);
+            const rg=ac.createGain();rg.gain.value=0.55;
+            g.connect(rg);rg.connect(rev);
+            o.start(t);o.stop(t+S*2.8);
             nodes.push(o,g,f,rg);
 
-            // Pad chord every 4 steps
             if(step%4===0){
                 const pi=Math.floor(step/4)%pads.length;
                 pads[pi].forEach(freq=>{
                     const po=ac.createOscillator();
                     const pg=ac.createGain();
-                    const pf=ac.createBiquadFilter();
-                    pf.type='lowpass'; pf.frequency.value=400;
-                    po.type='sine'; po.frequency.value=freq;
+                    po.type='sine';po.frequency.value=freq;
                     pg.gain.setValueAtTime(0,t);
-                    pg.gain.linearRampToValueAtTime(0.04,t+0.25);
-                    pg.gain.exponentialRampToValueAtTime(0.0001,t+S*5);
-                    po.connect(pf); pf.connect(pg); pg.connect(master);
-                    const prg=ac.createGain(); prg.gain.value=0.4;
-                    pg.connect(prg); prg.connect(rev);
-                    po.start(t); po.stop(t+S*5.5);
-                    nodes.push(po,pg,pf,prg);
+                    pg.gain.linearRampToValueAtTime(0.035,t+0.3);
+                    pg.gain.exponentialRampToValueAtTime(0.0001,t+S*5.5);
+                    po.connect(pg);pg.connect(master);
+                    const prg=ac.createGain();prg.gain.value=0.38;
+                    pg.connect(prg);prg.connect(rev);
+                    po.start(t);po.stop(t+S*6);
+                    nodes.push(po,pg,prg);
                 });
             }
-
             step++;
-            if(nodes.length>140)nodes.splice(3,nodes.length-70);
-            setTimeout(tick,S*1000*0.86);
+            if(nodes.length>120)nodes.splice(3,nodes.length-60);
         }
-        tick();
-        return{master,stop:()=>{running=false;}};
+        tick.stepSize=S;
+        const sched=makeScheduler(ac,tick);
+        return{master,stop:()=>sched.stop()};
     },
 
-    // ─────────────────────────────────────
-    // PRE-PLAY — tension, rising energy
-    // ─────────────────────────────────────
     preplay(ac,dest,nodes){
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         master.connect(dest);
-        const rev=makeReverb(ac,1.4,2.2);
-        const revG=ac.createGain(); revG.gain.value=0.18;
-        rev.connect(revG); revG.connect(master);
+        const rev=makeReverb(ac,1.2,2.0);
+        const revG=ac.createGain();revG.gain.value=0.15;
+        rev.connect(revG);revG.connect(master);
         nodes.push(master,rev,revG);
 
-        // Rising tension — A minor ascending, sparse then full
         const rising=[220,246.9,261.6,293.7,329.6,349.2,392,440,493.9,523.3];
-        const BPM=84; const S=60/BPM/2;
-        let step=0,running=true;
+        const S=60/84/2;
+        let step=0;
 
-        function tick(){
-            if(!running)return;
-            const t=ac.currentTime;
+        function tick(t){
             const prog=Math.min(step/40,1);
             const sib=step%16;
-
-            // Rising pulse note
             const ni=Math.min(Math.floor(step/4),rising.length-1);
             const o=ac.createOscillator();
             const g=ac.createGain();
             const f=ac.createBiquadFilter();
-            f.type='lowpass'; f.frequency.value=1600+prog*1200;
-            o.type='triangle'; o.frequency.setValueAtTime(rising[ni],t);
+            f.type='lowpass';f.frequency.value=1600+prog*1200;
+            o.type='triangle';o.frequency.setValueAtTime(rising[ni],t);
             g.gain.setValueAtTime(0,t);
-            g.gain.linearRampToValueAtTime(0.1+prog*0.08,t+0.012);
-            g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.7);
-            o.connect(f); f.connect(g); g.connect(master);
-            const rg=ac.createGain(); rg.gain.value=0.25;
-            g.connect(rg); rg.connect(rev);
-            o.start(t); o.stop(t+S*0.9);
+            g.gain.linearRampToValueAtTime(0.09+prog*0.07,t+0.015);
+            g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.75);
+            o.connect(f);f.connect(g);g.connect(master);
+            const rg=ac.createGain();rg.gain.value=0.22;
+            g.connect(rg);rg.connect(rev);
+            o.start(t);o.stop(t+S*0.95);
             nodes.push(o,g,f,rg);
 
-            // Kick builds in
-            if(prog>0.25&&(sib===0||sib===8)){
+            if(prog>0.3&&(sib===0||sib===8)){
                 const ko=ac.createOscillator();
                 const kg=ac.createGain();
                 ko.type='sine';
                 ko.frequency.setValueAtTime(150,t);
                 ko.frequency.exponentialRampToValueAtTime(40,t+0.065);
-                kg.gain.setValueAtTime(0.35*prog,t);
-                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.11);
-                ko.connect(kg); kg.connect(master);
-                ko.start(t); ko.stop(t+0.14);
+                kg.gain.setValueAtTime(0.32*prog,t);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
+                ko.connect(kg);kg.connect(master);
+                ko.start(t);ko.stop(t+0.15);
                 nodes.push(ko,kg);
             }
 
-            // Hihat gets louder
-            if(prog>0.5&&step%2===0){
+            if(prog>0.55&&step%2===0){
                 const hn=ac.createBufferSource();
-                const hf=ac.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=9500;
+                const hf=ac.createBiquadFilter();hf.type='highpass';hf.frequency.value=9500;
                 const hg=ac.createGain();
                 hn.buffer=getCachedNoise(ac,0.022);
-                hg.gain.setValueAtTime(0.03*prog,t);
-                hg.gain.exponentialRampToValueAtTime(0.0001,t+0.018);
-                hn.connect(hf); hf.connect(hg); hg.connect(master);
+                hg.gain.setValueAtTime(0.028*prog,t);
+                hg.gain.exponentialRampToValueAtTime(0.0001,t+0.02);
+                hn.connect(hf);hf.connect(hg);hg.connect(master);
                 hn.start(t);
                 nodes.push(hn,hf,hg);
             }
-
             step++;
-            if(nodes.length>130)nodes.splice(3,nodes.length-65);
-            setTimeout(tick,S*1000*0.87);
+            if(nodes.length>120)nodes.splice(3,nodes.length-60);
         }
-        tick();
-        return{master,stop:()=>{running=false;}};
+        tick.stepSize=S;
+        const sched=makeScheduler(ac,tick);
+        return{master,stop:()=>sched.stop()};
     },
 
-    // ─────────────────────────────────────
-    // GAMEPLAY — full melodic groove
-    // ─────────────────────────────────────
     gameplay(ac,dest,nodes){
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         const comp=ac.createDynamicsCompressor();
-        comp.threshold.value=-16; comp.knee.value=28;
-        comp.ratio.value=3; comp.attack.value=0.006; comp.release.value=0.22;
-        master.connect(comp); comp.connect(dest);
-        const rev=makeReverb(ac,2.2,2.2);
-        const revG=ac.createGain(); revG.gain.value=0.17;
-        rev.connect(revG); revG.connect(comp);
-        const delay=makeDelay(ac,0.46,0.26);
-        const delG=ac.createGain(); delG.gain.value=0.5;
-        delay.connect(delG); delG.connect(comp);
+        comp.threshold.value=-18;comp.knee.value=30;
+        comp.ratio.value=2.5;comp.attack.value=0.008;comp.release.value=0.25;
+        master.connect(comp);comp.connect(dest);
+        const rev=makeReverb(ac,2.0,2.2);
+        const revG=ac.createGain();revG.gain.value=0.14;
+        rev.connect(revG);revG.connect(comp);
+        const delay=makeDelay(ac,0.46,0.24);
+        const delG=ac.createGain();delG.gain.value=0.45;
+        delay.connect(delG);delG.connect(comp);
         nodes.push(master,comp,rev,revG,delay,delG);
 
         const N={A2:110,C3:130.8,E3:164.8,F3:174.6,G3:196,
             A3:220,B3:246.9,C4:261.6,D4:293.7,E4:329.6,
             F4:349.2,G4:392,A4:440,B4:493.9,C5:523.3,
-            D5:587.3,E5:659.3,G5:784,A5:880};
+            D5:587.3,E5:659.3,G5:784};
         const MELODY=[
-            N.E5,N.D5,N.C5,N.A4, N.C5,N.D5,N.C5,N.A4,
-            N.G4,N.A4,N.C5,N.D5, N.E5,N.D5,N.C5,N.A4,
-            N.E5,N.G5,N.E5,N.D5, N.C5,N.D5,N.E5,N.C5,
-            N.A4,N.C5,N.D5,N.E5, N.D5,N.C5,N.B4,N.A4,
+            N.E5,N.D5,N.C5,N.A4,N.C5,N.D5,N.C5,N.A4,
+            N.G4,N.A4,N.C5,N.D5,N.E5,N.D5,N.C5,N.A4,
+            N.E5,N.G5,N.E5,N.D5,N.C5,N.D5,N.E5,N.C5,
+            N.A4,N.C5,N.D5,N.E5,N.D5,N.C5,N.B4,N.A4,
         ];
         const COUNTER=[
-            N.A4,0,N.C5,0,       N.E5,N.D5,0,N.C5,
-            N.A4,0,N.G4,N.A4,    N.C5,0,N.B4,0,
-            N.A4,N.B4,N.C5,N.D5, N.E5,0,N.D5,0,
-            N.C5,N.B4,N.A4,0,    N.G4,N.A4,N.C5,0,
+            N.A4,0,N.C5,0,N.E5,N.D5,0,N.C5,
+            N.A4,0,N.G4,N.A4,N.C5,0,N.B4,0,
+            N.A4,N.B4,N.C5,N.D5,N.E5,0,N.D5,0,
+            N.C5,N.B4,N.A4,0,N.G4,N.A4,N.C5,0,
         ];
         const CHORDS=[
             [N.A2,N.E3,N.A3,N.C4],[N.F3,N.C4,N.F4],
             [N.C3,N.G3,N.C4,N.E4],[N.G3,N.D4,N.G4,N.B4],
         ];
-        const BASS=[
-            N.A2,N.A2,N.C3,N.E3, N.F3,N.F3,N.A2,N.C3,
-            N.C3,N.E3,N.G3,N.E3, N.G3,N.G3,N.F3,N.E3,
-        ];
-        const BPM=98; const S=60/BPM/2;
-        let step=0,bar=0,running=true;
+        const BASS=[N.A2,N.A2,N.C3,N.E3,N.F3,N.F3,N.A2,N.C3,
+            N.C3,N.E3,N.G3,N.E3,N.G3,N.G3,N.F3,N.E3];
+        const S=60/98/2;
+        let step=0,bar=0;
 
-        function tick(){
-            if(!running)return;
-            const t=ac.currentTime;
+        function tick(t){
             const sib=step%16;
-
-            // Melody
             const seq=bar%4>=2?COUNTER:MELODY;
             const note=seq[step%32];
+
             if(note){
                 const o1=ac.createOscillator();
                 const o2=ac.createOscillator();
                 const g=ac.createGain();
                 const f=ac.createBiquadFilter();
-                f.type='lowpass'; f.frequency.setValueAtTime(3200,t);
-                f.frequency.exponentialRampToValueAtTime(1800,t+S*0.55);
-                o1.type='sine'; o1.frequency.value=note;
-                o2.type='triangle'; o2.frequency.value=note*2.001;
-                const g1=ac.createGain(); g1.gain.value=0.7;
-                const g2=ac.createGain(); g2.gain.value=0.18;
-                o1.connect(g1); o2.connect(g2);
-                g1.connect(f); g2.connect(f); f.connect(g);
+                f.type='lowpass';
+                f.frequency.setValueAtTime(3000,t);
+                f.frequency.exponentialRampToValueAtTime(1600,t+S*0.5);
+                o1.type='sine';o1.frequency.value=note;
+                o2.type='triangle';o2.frequency.value=note*2.001;
+                const g1=ac.createGain();g1.gain.value=0.68;
+                const g2=ac.createGain();g2.gain.value=0.16;
+                o1.connect(g1);o2.connect(g2);
+                g1.connect(f);g2.connect(f);f.connect(g);
                 g.gain.setValueAtTime(0,t);
-                g.gain.linearRampToValueAtTime(0.22,t+0.022);
-                g.gain.setValueAtTime(0.22,t+S*0.5);
-                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.9);
+                g.gain.linearRampToValueAtTime(0.2,t+0.018);
+                g.gain.setValueAtTime(0.2,t+S*0.48);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.88);
                 g.connect(master);
-                const dg=ac.createGain(); dg.gain.value=0.16; g.connect(dg); dg.connect(delay);
-                const rg=ac.createGain(); rg.gain.value=0.22; g.connect(rg); rg.connect(rev);
-                o1.start(t); o1.stop(t+S+0.05);
-                o2.start(t); o2.stop(t+S+0.05);
+                const dg=ac.createGain();dg.gain.value=0.14;g.connect(dg);dg.connect(delay);
+                const rg=ac.createGain();rg.gain.value=0.18;g.connect(rg);rg.connect(rev);
+                o1.start(t);o1.stop(t+S+0.04);
+                o2.start(t);o2.stop(t+S+0.04);
                 nodes.push(o1,o2,g,f,g1,g2,dg,rg);
             }
 
-            // Chord pads
             if(step%8===0){
                 const ci=Math.floor(step/8)%CHORDS.length;
                 CHORDS[ci].forEach(freq=>{
                     const o=ac.createOscillator();
                     const g=ac.createGain();
                     const f=ac.createBiquadFilter();
-                    f.type='lowpass'; f.frequency.value=750;
-                    o.type='sine'; o.frequency.value=freq;
+                    f.type='lowpass';f.frequency.value=700;
+                    o.type='sine';o.frequency.value=freq;
                     g.gain.setValueAtTime(0,t);
-                    g.gain.linearRampToValueAtTime(0.052,t+0.09);
-                    g.gain.setValueAtTime(0.052,t+S*6.5);
-                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*7.5);
-                    o.connect(f); f.connect(g); g.connect(master);
-                    const rg=ac.createGain(); rg.gain.value=0.32; g.connect(rg); rg.connect(rev);
-                    o.start(t); o.stop(t+S*8);
+                    g.gain.linearRampToValueAtTime(0.048,t+0.1);
+                    g.gain.setValueAtTime(0.048,t+S*6.5);
+                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*7.8);
+                    o.connect(f);f.connect(g);g.connect(master);
+                    const rg=ac.createGain();rg.gain.value=0.28;g.connect(rg);rg.connect(rev);
+                    o.start(t);o.stop(t+S*8.2);
                     nodes.push(o,g,f,rg);
                 });
             }
 
-            // Bass
             if(step%4===0){
                 const bi=Math.floor(step/4)%BASS.length;
                 const bo=ac.createOscillator();
                 const bg=ac.createGain();
                 const bf=ac.createBiquadFilter();
-                bf.type='lowpass'; bf.frequency.value=400;
-                bo.type='sine'; bo.frequency.setValueAtTime(BASS[bi],t);
-                bo.frequency.exponentialRampToValueAtTime(BASS[bi]*0.98,t+S*2);
+                bf.type='lowpass';bf.frequency.value=380;
+                bo.type='sine';bo.frequency.setValueAtTime(BASS[bi],t);
                 bg.gain.setValueAtTime(0,t);
-                bg.gain.linearRampToValueAtTime(0.18,t+0.016);
-                bg.gain.setValueAtTime(0.18,t+S*1.6);
-                bg.gain.exponentialRampToValueAtTime(0.0001,t+S*1.9);
-                bo.connect(bf); bf.connect(bg); bg.connect(master);
-                bo.start(t); bo.stop(t+S*2);
+                bg.gain.linearRampToValueAtTime(0.16,t+0.018);
+                bg.gain.setValueAtTime(0.16,t+S*1.5);
+                bg.gain.exponentialRampToValueAtTime(0.0001,t+S*1.85);
+                bo.connect(bf);bf.connect(bg);bg.connect(master);
+                bo.start(t);bo.stop(t+S*2);
                 nodes.push(bo,bg,bf);
             }
 
-            // Kick
             if(sib===0||sib===8){
                 const ko=ac.createOscillator();
                 const kg=ac.createGain();
                 ko.type='sine';
-                ko.frequency.setValueAtTime(158,t);
-                ko.frequency.exponentialRampToValueAtTime(38,t+0.068);
-                kg.gain.setValueAtTime(0.55,t);
-                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.13);
-                ko.connect(kg); kg.connect(master);
-                ko.start(t); ko.stop(t+0.16);
+                ko.frequency.setValueAtTime(155,t);
+                ko.frequency.exponentialRampToValueAtTime(36,t+0.07);
+                kg.gain.setValueAtTime(0.52,t);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.14);
+                ko.connect(kg);kg.connect(master);
+                ko.start(t);ko.stop(t+0.17);
                 nodes.push(ko,kg);
             }
 
-            // Snare
             if(sib===4||sib===12){
                 const sn=ac.createBufferSource();
                 const sf=ac.createBiquadFilter();
-                sf.type='bandpass'; sf.frequency.value=2200; sf.Q.value=0.7;
+                sf.type='bandpass';sf.frequency.value=2000;sf.Q.value=0.8;
                 const sg=ac.createGain();
-                sn.buffer=getCachedNoise(ac,0.11);
-                sg.gain.setValueAtTime(0.13,t);
+                sn.buffer=getCachedNoise(ac,0.1);
+                sg.gain.setValueAtTime(0.11,t);
                 sg.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
-                sn.connect(sf); sf.connect(sg); sg.connect(master);
+                sn.connect(sf);sf.connect(sg);sg.connect(master);
                 sn.start(t);
                 nodes.push(sn,sf,sg);
             }
 
-            // Hihat
-            const hh=ac.createBufferSource();
-            const hf=ac.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=9000;
-            const hg=ac.createGain();
             const open=sib%4===2;
-            hh.buffer=getCachedNoise(ac,open?0.085:0.028);
-            hg.gain.setValueAtTime(open?0.052:0.035,t);
-            hg.gain.exponentialRampToValueAtTime(0.0001,t+(open?0.078:0.024));
-            hh.connect(hf); hf.connect(hg); hg.connect(master);
+            const hh=ac.createBufferSource();
+            const hf=ac.createBiquadFilter();hf.type='highpass';hf.frequency.value=9200;
+            const hg=ac.createGain();
+            hh.buffer=getCachedNoise(ac,open?0.08:0.026);
+            hg.gain.setValueAtTime(open?0.048:0.032,t);
+            hg.gain.exponentialRampToValueAtTime(0.0001,t+(open?0.072:0.022));
+            hh.connect(hf);hf.connect(hg);hg.connect(master);
             hh.start(t);
             nodes.push(hh,hf,hg);
 
-            // Ghost kick
             if(sib===10){
                 const go=ac.createOscillator();
                 const gg=ac.createGain();
                 go.type='sine';
-                go.frequency.setValueAtTime(110,t);
-                go.frequency.exponentialRampToValueAtTime(38,t+0.045);
-                gg.gain.setValueAtTime(0.18,t);
-                gg.gain.exponentialRampToValueAtTime(0.0001,t+0.08);
-                go.connect(gg); gg.connect(master);
-                go.start(t); go.stop(t+0.1);
+                go.frequency.setValueAtTime(105,t);
+                go.frequency.exponentialRampToValueAtTime(36,t+0.048);
+                gg.gain.setValueAtTime(0.16,t);
+                gg.gain.exponentialRampToValueAtTime(0.0001,t+0.085);
+                go.connect(gg);gg.connect(master);
+                go.start(t);go.stop(t+0.1);
                 nodes.push(go,gg);
             }
 
             if(sib===0)bar++;
             step++;
-            if(nodes.length>280)nodes.splice(6,nodes.length-140);
-            setTimeout(tick,S*1000*0.876);
+            if(nodes.length>240)nodes.splice(6,nodes.length-120);
         }
-        tick();
-        return{master,stop:()=>{running=false;}};
+        tick.stepSize=S;
+        const sched=makeScheduler(ac,tick);
+        return{master,stop:()=>sched.stop()};
     },
 
-    // ─────────────────────────────────────
-    // PANIC — same groove, faster + higher
-    // ─────────────────────────────────────
     panic(ac,dest,nodes){
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         const comp=ac.createDynamicsCompressor();
-        comp.threshold.value=-12; comp.ratio.value=4;
-        comp.attack.value=0.002; comp.release.value=0.12;
-        master.connect(comp); comp.connect(dest);
+        comp.threshold.value=-14;comp.ratio.value=3.5;
+        comp.attack.value=0.003;comp.release.value=0.14;
+        master.connect(comp);comp.connect(dest);
         nodes.push(master,comp);
 
-        // High energy Am riff — faster tempo, higher octave melody
-        const panicMel=[
-            659.3,587.3,523.3,493.9, 523.3,587.3,523.3,493.9,
-            440,493.9,523.3,587.3,   659.3,784,659.3,587.3,
-        ];
-        const panicBass=[110,110,130.8,164.8, 174.6,174.6,110,130.8];
-        const BPM=118; const S=60/BPM/2;
-        let step=0,running=true;
+        const panicMel=[659.3,587.3,523.3,493.9,523.3,587.3,523.3,493.9,
+            440,493.9,523.3,587.3,659.3,784,659.3,587.3];
+        const panicBass=[110,110,130.8,164.8,174.6,174.6,110,130.8];
+        const S=60/118/2;
+        let step=0;
 
-        function tick(){
-            if(!running)return;
-            const t=ac.currentTime;
+        function tick(t){
             const sib=step%16;
             const note=panicMel[step%panicMel.length];
-
-            // Lead — sharper, more urgent
             const o=ac.createOscillator();
             const g=ac.createGain();
             const f=ac.createBiquadFilter();
-            f.type='lowpass'; f.frequency.value=3800;
-            o.type='sawtooth'; o.frequency.setValueAtTime(note,t);
+            f.type='lowpass';f.frequency.value=3600;
+            o.type='sawtooth';o.frequency.setValueAtTime(note,t);
             g.gain.setValueAtTime(0,t);
-            g.gain.linearRampToValueAtTime(0.16,t+0.008);
-            g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.65);
-            o.connect(f); f.connect(g); g.connect(master);
-            o.start(t); o.stop(t+S*0.8);
+            g.gain.linearRampToValueAtTime(0.14,t+0.01);
+            g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.68);
+            o.connect(f);f.connect(g);g.connect(master);
+            o.start(t);o.stop(t+S*0.82);
             nodes.push(o,g,f);
 
-            // Bass every 2 steps
             if(step%2===0){
                 const bi=Math.floor(step/2)%panicBass.length;
                 const bo=ac.createOscillator();
                 const bg=ac.createGain();
                 const bf=ac.createBiquadFilter();
-                bf.type='lowpass'; bf.frequency.value=380;
-                bo.type='sine'; bo.frequency.value=panicBass[bi];
+                bf.type='lowpass';bf.frequency.value=360;
+                bo.type='sine';bo.frequency.value=panicBass[bi];
                 bg.gain.setValueAtTime(0,t);
-                bg.gain.linearRampToValueAtTime(0.2,t+0.012);
+                bg.gain.linearRampToValueAtTime(0.18,t+0.014);
                 bg.gain.exponentialRampToValueAtTime(0.0001,t+S*1.0);
-                bo.connect(bf); bf.connect(bg); bg.connect(master);
-                bo.start(t); bo.stop(t+S*1.1);
+                bo.connect(bf);bf.connect(bg);bg.connect(master);
+                bo.start(t);bo.stop(t+S*1.1);
                 nodes.push(bo,bg,bf);
             }
 
-            // Driving kick on every beat
             if(sib===0||sib===4||sib===8||sib===12){
                 const ko=ac.createOscillator();
                 const kg=ac.createGain();
                 ko.type='sine';
-                ko.frequency.setValueAtTime(160,t);
-                ko.frequency.exponentialRampToValueAtTime(40,t+0.055);
-                kg.gain.setValueAtTime(0.6,t);
-                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.11);
-                ko.connect(kg); kg.connect(master);
-                ko.start(t); ko.stop(t+0.14);
+                ko.frequency.setValueAtTime(158,t);
+                ko.frequency.exponentialRampToValueAtTime(38,t+0.058);
+                kg.gain.setValueAtTime(0.58,t);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
+                ko.connect(kg);kg.connect(master);
+                ko.start(t);ko.stop(t+0.15);
                 nodes.push(ko,kg);
             }
 
-            // Snare
             if(sib===4||sib===12){
                 const sn=ac.createBufferSource();
                 const sf=ac.createBiquadFilter();
-                sf.type='bandpass'; sf.frequency.value=2500; sf.Q.value=0.6;
+                sf.type='bandpass';sf.frequency.value=2400;sf.Q.value=0.65;
                 const sg=ac.createGain();
-                sn.buffer=getCachedNoise(ac,0.08);
-                sg.gain.setValueAtTime(0.18,t);
-                sg.gain.exponentialRampToValueAtTime(0.0001,t+0.07);
-                sn.connect(sf); sf.connect(sg); sg.connect(master);
+                sn.buffer=getCachedNoise(ac,0.075);
+                sg.gain.setValueAtTime(0.16,t);
+                sg.gain.exponentialRampToValueAtTime(0.0001,t+0.068);
+                sn.connect(sf);sf.connect(sg);sg.connect(master);
                 sn.start(t);
                 nodes.push(sn,sf,sg);
             }
 
-            // Fast hihat — 16ths
             const hh=ac.createBufferSource();
-            const hf=ac.createBiquadFilter(); hf.type='highpass'; hf.frequency.value=10000;
+            const hf=ac.createBiquadFilter();hf.type='highpass';hf.frequency.value=10000;
             const hg=ac.createGain();
-            hh.buffer=getCachedNoise(ac,0.018);
-            hg.gain.setValueAtTime(0.045,t);
-            hg.gain.exponentialRampToValueAtTime(0.0001,t+0.015);
-            hh.connect(hf); hf.connect(hg); hg.connect(master);
+            hh.buffer=getCachedNoise(ac,0.016);
+            hg.gain.setValueAtTime(0.04,t);
+            hg.gain.exponentialRampToValueAtTime(0.0001,t+0.013);
+            hh.connect(hf);hf.connect(hg);hg.connect(master);
             hh.start(t);
             nodes.push(hh,hf,hg);
 
             step++;
-            if(nodes.length>200)nodes.splice(3,nodes.length-100);
-            setTimeout(tick,S*1000*0.875);
+            if(nodes.length>180)nodes.splice(3,nodes.length-90);
         }
-        tick();
-        return{master,stop:()=>{running=false;}};
+        tick.stepSize=S;
+        const sched=makeScheduler(ac,tick);
+        return{master,stop:()=>sched.stop()};
     },
 
-    // ─────────────────────────────────────
-    // WIN — triumphant, major key, bright
-    // ─────────────────────────────────────
     win(ac,dest,nodes){
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         master.connect(dest);
-        const rev=makeReverb(ac,2.5,2.0);
-        const revG=ac.createGain(); revG.gain.value=0.35;
-        rev.connect(revG); revG.connect(master);
+        const rev=makeReverb(ac,2.2,2.0);
+        const revG=ac.createGain();revG.gain.value=0.32;
+        rev.connect(revG);revG.connect(master);
         nodes.push(master,rev,revG);
 
-        // A major — bright and triumphant
         const fanfare=[
-            440,554.4,659.3,880,       // A maj arpeggio up
-            880,659.3,880,0,            // top notes
-            784,659.3,587.3,523.3,      // descend
-            659.3,0,659.3,880,          // hook
-            784,659.3,554.4,440,        // resolve down
-            440,523.3,554.4,587.3,      // build again
-            659.3,784,880,0,            // peak
-            880,784,659.3,0,            // final phrase
+            440,554.4,659.3,880,880,659.3,880,0,
+            784,659.3,587.3,523.3,659.3,0,659.3,880,
+            784,659.3,554.4,440,440,523.3,554.4,587.3,
+            659.3,784,880,0,880,784,659.3,0,
         ];
-        const chords=[
-            [110,220,277.2,329.6],      // A maj
-            [138.6,196,246.9,329.6],    // C# min
-            [146.8,220,293.7,370],      // D maj
-            [110,220,277.2,329.6],      // A maj
-        ];
-        const BPM=108; const S=60/BPM/2;
-        let step=0,running=true;
+        const chords=[[110,220,277.2,329.6],[138.6,196,246.9],[146.8,220,293.7],[110,220,277.2]];
+        const S=60/108/2;
+        let step=0;
 
-        function tick(){
-            if(!running)return;
-            const t=ac.currentTime;
+        function tick(t){
             const note=fanfare[step%fanfare.length];
-
             if(note){
                 const o=ac.createOscillator();
                 const g=ac.createGain();
                 const f=ac.createBiquadFilter();
-                f.type='lowpass'; f.frequency.value=3000;
-                o.type='triangle'; o.frequency.setValueAtTime(note,t);
+                f.type='lowpass';f.frequency.value=2800;
+                o.type='triangle';o.frequency.setValueAtTime(note,t);
                 g.gain.setValueAtTime(0,t);
-                g.gain.linearRampToValueAtTime(0.2,t+0.015);
-                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.85);
-                o.connect(f); f.connect(g); g.connect(master);
-                const rg=ac.createGain(); rg.gain.value=0.4;
-                g.connect(rg); rg.connect(rev);
-                o.start(t); o.stop(t+S);
+                g.gain.linearRampToValueAtTime(0.18,t+0.018);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.88);
+                o.connect(f);f.connect(g);g.connect(master);
+                const rg=ac.createGain();rg.gain.value=0.38;
+                g.connect(rg);rg.connect(rev);
+                o.start(t);o.stop(t+S+0.02);
                 nodes.push(o,g,f,rg);
             }
 
-            // Bright chord pads
             if(step%8===0){
                 const ci=Math.floor(step/8)%chords.length;
                 chords[ci].forEach(freq=>{
                     const o=ac.createOscillator();
                     const g=ac.createGain();
-                    o.type='sine'; o.frequency.value=freq;
+                    o.type='sine';o.frequency.value=freq;
                     g.gain.setValueAtTime(0,t);
-                    g.gain.linearRampToValueAtTime(0.065,t+0.1);
-                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*7.5);
-                    o.connect(g); g.connect(master);
-                    const rg=ac.createGain(); rg.gain.value=0.3;
-                    g.connect(rg); rg.connect(rev);
-                    o.start(t); o.stop(t+S*8);
+                    g.gain.linearRampToValueAtTime(0.058,t+0.12);
+                    g.gain.setValueAtTime(0.058,t+S*6.8);
+                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*7.8);
+                    o.connect(g);g.connect(master);
+                    const rg=ac.createGain();rg.gain.value=0.28;g.connect(rg);rg.connect(rev);
+                    o.start(t);o.stop(t+S*8.2);
                     nodes.push(o,g,rg);
                 });
             }
 
-            // Light kick on beats
             if(step%8===0||step%8===4){
                 const ko=ac.createOscillator();
                 const kg=ac.createGain();
                 ko.type='sine';
-                ko.frequency.setValueAtTime(140,t);
-                ko.frequency.exponentialRampToValueAtTime(45,t+0.06);
-                kg.gain.setValueAtTime(0.38,t);
-                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.11);
-                ko.connect(kg); kg.connect(master);
-                ko.start(t); ko.stop(t+0.14);
+                ko.frequency.setValueAtTime(138,t);
+                ko.frequency.exponentialRampToValueAtTime(44,t+0.062);
+                kg.gain.setValueAtTime(0.36,t);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
+                ko.connect(kg);kg.connect(master);
+                ko.start(t);ko.stop(t+0.15);
                 nodes.push(ko,kg);
             }
 
-            // Shaker every step
             const sh=ac.createBufferSource();
-            const shf=ac.createBiquadFilter(); shf.type='highpass'; shf.frequency.value=7000;
+            const shf=ac.createBiquadFilter();shf.type='highpass';shf.frequency.value=7000;
             const shg=ac.createGain();
-            sh.buffer=getCachedNoise(ac,0.02);
-            shg.gain.setValueAtTime(0.025,t);
-            shg.gain.exponentialRampToValueAtTime(0.0001,t+0.018);
-            sh.connect(shf); shf.connect(shg); shg.connect(master);
+            sh.buffer=getCachedNoise(ac,0.018);
+            shg.gain.setValueAtTime(0.022,t);
+            shg.gain.exponentialRampToValueAtTime(0.0001,t+0.016);
+            sh.connect(shf);shf.connect(shg);shg.connect(master);
             sh.start(t);
             nodes.push(sh,shf,shg);
 
             step++;
-            if(nodes.length>180)nodes.splice(3,nodes.length-90);
-            setTimeout(tick,S*1000*0.875);
+            if(nodes.length>160)nodes.splice(3,nodes.length-80);
         }
-        tick();
-        return{master,stop:()=>{running=false;}};
+        tick.stepSize=S;
+        const sched=makeScheduler(ac,tick);
+        return{master,stop:()=>sched.stop()};
     },
 
-    // ─────────────────────────────────────
-    // LOSE — deflated, slow, descending
-    // ─────────────────────────────────────
     lose(ac,dest,nodes){
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         master.connect(dest);
-        const rev=makeReverb(ac,2.8,1.8);
-        const revG=ac.createGain(); revG.gain.value=0.45;
-        rev.connect(revG); revG.connect(master);
+        const rev=makeReverb(ac,2.6,1.8);
+        const revG=ac.createGain();revG.gain.value=0.42;
+        rev.connect(revG);revG.connect(master);
         nodes.push(master,rev,revG);
 
-        // Slow descending Am — feels sad but gently
         const descent=[440,392,349.2,329.6,293.7,261.6,246.9,220,0,0,0,0];
-        const BPM=56; const S=60/BPM;
-        let step=0,running=true;
+        const S=60/56;
+        let step=0;
 
-        function tick(){
-            if(!running)return;
-            if(step>=descent.length){running=false;return;}
-            const t=ac.currentTime;
+        function tick(t){
+            if(step>=descent.length)return;
             const note=descent[step];
-
             if(note){
                 const o=ac.createOscillator();
                 const g=ac.createGain();
                 const f=ac.createBiquadFilter();
-                f.type='lowpass'; f.frequency.value=700;
-                o.type='sine'; o.frequency.setValueAtTime(note,t);
-                // Slight detune for sadness
-                o.detune.setValueAtTime(-18,t);
+                f.type='lowpass';f.frequency.value=680;
+                o.type='sine';o.frequency.setValueAtTime(note,t);
+                o.detune.setValueAtTime(-22,t);
                 g.gain.setValueAtTime(0,t);
-                g.gain.linearRampToValueAtTime(0.18,t+0.05);
-                g.gain.exponentialRampToValueAtTime(0.0001,t+S*1.6);
-                o.connect(f); f.connect(g); g.connect(master);
-                const rg=ac.createGain(); rg.gain.value=0.55;
-                g.connect(rg); rg.connect(rev);
-                o.start(t); o.stop(t+S*1.8);
-
-                // Low thud
+                g.gain.linearRampToValueAtTime(0.16,t+0.06);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+S*1.5);
+                o.connect(f);f.connect(g);g.connect(master);
+                const rg=ac.createGain();rg.gain.value=0.5;
+                g.connect(rg);rg.connect(rev);
+                o.start(t);o.stop(t+S*1.8);
                 const td=ac.createOscillator();
                 const tg=ac.createGain();
                 td.type='sine';
                 td.frequency.setValueAtTime(note*0.25,t);
-                td.frequency.exponentialRampToValueAtTime(note*0.22,t+0.3);
-                tg.gain.setValueAtTime(0.09,t);
-                tg.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
-                td.connect(tg); tg.connect(master);
-                td.start(t); td.stop(t+0.6);
+                td.frequency.exponentialRampToValueAtTime(note*0.22,t+0.28);
+                tg.gain.setValueAtTime(0.08,t);
+                tg.gain.exponentialRampToValueAtTime(0.0001,t+0.48);
+                td.connect(tg);tg.connect(master);
+                td.start(t);td.stop(t+0.58);
                 nodes.push(o,g,f,rg,td,tg);
             }
-
             step++;
-            setTimeout(tick,S*1000);
         }
-        tick();
-        return{master,stop:()=>{running=false;}};
+        tick.stepSize=S;
+        const sched=makeScheduler(ac,tick);
+        return{master,stop:()=>sched.stop()};
     },
 };
+
+// ─────────────────────────────────────────
+// LOOKAHEAD SCHEDULER — fixes crackling
+// ─────────────────────────────────────────
+const LOOKAHEAD=0.12;
+const SCHEDULE_INTERVAL=80;
+
+function makeScheduler(ac,tickFn){
+    let nextNoteTime=ac.currentTime+0.05;
+    let timerId=null;
+    let running=true;
+    function loop(){
+        if(!running)return;
+        while(nextNoteTime<ac.currentTime+LOOKAHEAD){
+            tickFn(nextNoteTime);
+            nextNoteTime+=tickFn.stepSize;
+        }
+        timerId=setTimeout(loop,SCHEDULE_INTERVAL);
+    }
+    loop();
+    return{stop(){running=false;if(timerId)clearTimeout(timerId);}};
+}
 
 // ─────────────────────────────────────────
 // CROSSFADE ENGINE
@@ -2894,10 +3141,12 @@ function toggleMusic(){
 // ══════════════════════════════════════════
 function fixScrolling(){
     const scrollables=[
-        document.getElementById('winOverlay'),
-        document.getElementById('startPopup'),
-        document.getElementById('losePopup'),
-    ];
+    document.getElementById('winOverlay'),
+    document.getElementById('startPopup'),
+    document.getElementById('losePopup'),
+    document.getElementById('levelCompleteOverlay'),
+];
+
     scrollables.forEach(el=>{
         if(!el)return;
         let startY=0,startScroll=0,isScrolling=false,velY=0,lastY=0,rafId=null;
