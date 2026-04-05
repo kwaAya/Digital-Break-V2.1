@@ -1,0 +1,22 @@
+{
+  "name": "Digital Break",
+  "short_name": "Digital Break",
+  "description": "Hit targets, dodge hazards, unlock secrets.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#07000f",
+  "theme_color": "#ffd700",
+  "icons": [
+    {
+      "src": "favicon_io/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon_io/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

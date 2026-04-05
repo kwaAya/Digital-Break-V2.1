@@ -16,6 +16,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <link rel="icon" type="image/png" sizes="32x32" href="favicon_io\favicon-32x32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="favicon_io\apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffd700">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Digital Break">
     <meta property="og:title" content="Digital Break V2.1 — Can you breach the system?">
     <meta property="og:description" content="Hit targets, dodge hazards, unlock secrets. Made by Ayabukwa.">
     <meta property="og:url" content="https://digitalbreak.netlify.app">
@@ -805,7 +811,7 @@
             font-family: 'Orbitron', monospace;
             animation: ppTapPulse 1.6s ease-in-out infinite;
         }
-        
+
         @keyframes ppTapPulse {
             0%,100%{opacity:0.3} 50%{opacity:0.8}
         }
@@ -905,6 +911,80 @@
     <div id="newBestToast">🏆 NEW PERSONAL BEST!</div>
     <div id="bossAlert">👑 BOSS TARGET INCOMING!</div>
     <div id="firstPlayOverlay" style="display:none;"></div>
+    <!-- Pause button — top right during gameplay -->
+    <button id="pauseBtn" onclick="pauseGame()" style="
+        display:none;
+        position:absolute;top:8px;right:10px;
+        width:28px;height:28px;
+        background:rgba(255,215,0,0.08);
+        border:1px solid rgba(255,215,0,0.25);
+        border-radius:8px;
+        color:rgba(255,215,0,0.7);
+        font-size:13px;
+        cursor:pointer;
+        z-index:110;
+        touch-action:manipulation;
+        -webkit-tap-highlight-color:transparent;
+        display:none;
+        align-items:center;justify-content:center;
+        font-family:'Orbitron',monospace;
+        padding:0;
+        pointer-events:auto;
+    ">⏸</button>
+
+    <!-- Pause overlay -->
+    <div id="pauseOverlay" style="
+        display:none;
+        position:absolute;inset:0;
+        background:rgba(4,1,14,0.94);
+        backdrop-filter:blur(20px);
+        -webkit-backdrop-filter:blur(20px);
+        z-index:160;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        gap:14px;
+        border-radius:13px;
+    ">
+        <div style="font-size:9px;letter-spacing:5px;color:rgba(255,215,0,0.4);font-family:'Orbitron',monospace;">PAUSED</div>
+        <div style="font-size:22px;font-weight:900;letter-spacing:3px;
+            background:linear-gradient(135deg,#fff,rgba(255,215,0,0.9));
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;font-family:'Orbitron',monospace;">
+            DIGITAL BREAK
+        </div>
+        <div style="width:36px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent);margin:2px 0 8px;"></div>
+        <button onclick="resumeGame()" style="
+            width:200px;padding:14px;
+            background:linear-gradient(135deg,rgba(0,255,136,0.18),rgba(0,200,100,0.08));
+            border:1px solid rgba(0,255,136,0.55);
+            color:rgba(0,255,180,0.96);
+            font-size:12px;font-weight:900;letter-spacing:3px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:12px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+        ">▶ RESUME</button>
+        <button onclick="restartCurrentLevel()" style="
+            width:200px;padding:14px;
+            background:rgba(255,215,0,0.06);
+            border:1px solid rgba(255,215,0,0.25);
+            color:rgba(255,215,0,0.8);
+            font-size:12px;font-weight:900;letter-spacing:3px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:12px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+        ">↺ RESTART LEVEL</button>
+        <button onclick="returnHome()" style="
+            width:200px;padding:14px;
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.12);
+            color:rgba(255,255,255,0.4);
+            font-size:12px;font-weight:900;letter-spacing:3px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:12px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+        ">⌂ HOME</button>
+    </div>
 
     <div id="prePlayOverlay">
         <div class="pp-eyebrow">GET READY</div>
@@ -957,6 +1037,18 @@
         </div>
         <div class="pp-tap">TAP ANYWHERE TO START</div>
         <div class="pp-tap-hint">speed increases as time runs out</div>
+        <button onclick="returnHome()" style="
+            margin-top:16px;
+            background:none;
+            border:1px solid rgba(255,255,255,0.1);
+            color:rgba(255,255,255,0.25);
+            font-size:8px;letter-spacing:2px;
+            font-family:'Orbitron',monospace;
+            padding:7px 18px;border-radius:20px;
+            cursor:pointer;touch-action:manipulation;
+            -webkit-tap-highlight-color:transparent;
+            pointer-events:auto;
+        ">⌂ HOME</button>
     </div>
 </div>
 
@@ -1023,6 +1115,9 @@
         <button id="musicToggleBtn" class="btn"
                 style="font-size:10px;padding:9px 20px;min-height:38px;box-shadow:none;letter-spacing:2px;"
                 onclick="toggleMusic()">🎵 MUSIC: OFF</button>
+        <div style="font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:1px;margin-top:6px;font-family:'Orbitron',monospace;">
+            or mute & play your own vibe 🎵
+        </div>
     </div>
 
     <!-- Credits -->
@@ -2187,19 +2282,23 @@ function updatePowerUps(){
 // ══════════════════════════════════════════
 function mousePressed(){
     if(gameState==='preplay')return false;
+    if(isPaused)return false;
     if(gameState!=='playing')return false;
     if(performance.now()-lastInputTS<150)return false;
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);return false;
 }
+
 function touchStarted(){
     if(gameState==='preplay')return false;
+    if(isPaused)return false;
     if(gameState!=='playing')return;
     if(!p5Canvas)return;
     lastInputTS=performance.now();
     handleInput(mouseX,mouseY);
     return false;
 }
+
 function beginFromPrePlay(){
     if(gameState!=='preplay')return;
     hidePrePlay();
@@ -2338,6 +2437,9 @@ function hidePrePlay(){
     const el=document.getElementById('prePlayOverlay');
     if(!el)return;
     el.classList.remove('show');
+    // Show pause button now that gameplay is starting
+    const pauseBtn=document.getElementById('pauseBtn');
+    if(pauseBtn)pauseBtn.style.display='flex';
 }
 
 // Wire music button
@@ -2437,6 +2539,8 @@ function loadLevel(lv){
 
     document.getElementById('gameHUD').classList.add('active');
     document.getElementById('gameSubHUD').classList.add('active');
+    const pauseBtn=document.getElementById('pauseBtn');
+    if(pauseBtn)pauseBtn.style.display='flex';
     const pb=document.getElementById('progressBarWrap');
     if(pb){pb.style.display='block';pb.classList.remove('panic');}
     document.getElementById('progressBar').style.width='0%';
@@ -2447,9 +2551,10 @@ function loadLevel(lv){
     // Show level badge in sub-HUD (we'll add the element in Part 5)
     const lvBadge=document.getElementById('hudLevel');
     if(lvBadge)lvBadge.textContent=`LV ${lv}`;
-
+    
     gameState='preplay';
     showPrePlay();
+
     switchMusicTo('preplay');
 
     updateDisplay();
@@ -2468,6 +2573,8 @@ function endGame(){
     document.getElementById('timeLeft').classList.remove('panic');
     document.getElementById('gameHUD').classList.remove('active');
     document.getElementById('gameSubHUD').classList.remove('active');
+    const pauseBtn=document.getElementById('pauseBtn');
+    if(pauseBtn)pauseBtn.style.display='none';
     const pbw=document.getElementById('progressBarWrap');
     if(pbw)pbw.style.display='none';
     if(p5Canvas)p5Canvas.style.pointerEvents='none';
@@ -2548,11 +2655,75 @@ function restartGame(){
     if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
 }
 
-function retryLevel(){
-    if(restartLock)return;
-    restartLock=true;setTimeout(()=>{restartLock=false;},600);
-    // Retry the same level — keep totalLevelScore and bestStreak intact
+let isPaused=false;
+let pausedTimeRemaining=0;
+
+function pauseGame(){
+    if(gameState!=='playing'||isPaused)return;
+    isPaused=true;
+    clearInterval(gameTimer);
+    // Store remaining time so we can resume accurately
+    pausedTimeRemaining=timeLeft;
+    const po=document.getElementById('pauseOverlay');
+    if(po)po.style.display='flex';
+    if(p5Canvas)p5Canvas.style.pointerEvents='none';
+    // Pause music by fading out without stopping scene
+    if(activeMaster&&musicAC){
+        try{
+            const now=musicAC.currentTime;
+            activeMaster.gain.cancelScheduledValues(now);
+            activeMaster.gain.setValueAtTime(activeMaster.gain.value,now);
+            activeMaster.gain.linearRampToValueAtTime(0,now+0.3);
+        }catch{}
+    }
+}
+
+function resumeGame(){
+    if(!isPaused)return;
+    isPaused=false;
+    const po=document.getElementById('pauseOverlay');
+    if(po)po.style.display='none';
+    if(p5Canvas)p5Canvas.style.pointerEvents='auto';
+    // Fade music back in
+    if(activeMaster&&musicAC){
+        try{
+            const now=musicAC.currentTime;
+            activeMaster.gain.cancelScheduledValues(now);
+            activeMaster.gain.setValueAtTime(0,now);
+            activeMaster.gain.linearRampToValueAtTime(0.88,now+0.3);
+        }catch{}
+    }
+    // Restart timer from where we left off
+    gameStartTime=Date.now()-(( levelData.time-pausedTimeRemaining)*1000);
+    gameDuration=levelData.time*1000;
+    let lastBeepSecond=-1;
+    clearInterval(gameTimer);
+    gameTimer=setInterval(()=>{
+        if(gameState!=='playing')return;
+        const elapsed=Date.now()-gameStartTime;
+        timeLeft=Math.max(0,Math.ceil((gameDuration-elapsed)/1000));
+        document.getElementById('timeLeft').textContent=timeLeft;
+        updatePanicMode();
+        if(timeLeft<=5&&timeLeft>0&&timeLeft!==lastBeepSecond){
+            lastBeepSecond=timeLeft;playSound('countdown');
+        }
+        if(elapsed>=gameDuration)endGame();
+    },250);
+}
+
+function restartCurrentLevel(){
+    isPaused=false;
+    const po=document.getElementById('pauseOverlay');
+    if(po)po.style.display='none';
     loadLevel(currentLevel);
+}
+
+function returnHome(){
+    isPaused=false;
+    clearInterval(gameTimer);
+    const po=document.getElementById('pauseOverlay');
+    if(po)po.style.display='none';
+    restartGame();
 }
 
 // ══════════════════════════════════════════
@@ -3113,8 +3284,8 @@ const SCENES={
 // ─────────────────────────────────────────
 // LOOKAHEAD SCHEDULER — fixes crackling
 // ─────────────────────────────────────────
-const LOOKAHEAD=0.12;
-const SCHEDULE_INTERVAL=80;
+const LOOKAHEAD=0.25;
+const SCHEDULE_INTERVAL=50;
 
 function makeScheduler(ac,tickFn){
     let nextNoteTime=ac.currentTime+0.05;
