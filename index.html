@@ -15,7 +15,7 @@
     <title>Digital Break V2.1 - by Aya</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <link rel="icon" type="image/png" sizes="32x32" href="favicon_io\favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon_io\apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffd700">
     <meta name="mobile-web-app-capable" content="yes">
@@ -911,80 +911,6 @@
     <div id="newBestToast">🏆 NEW PERSONAL BEST!</div>
     <div id="bossAlert">👑 BOSS TARGET INCOMING!</div>
     <div id="firstPlayOverlay" style="display:none;"></div>
-    <!-- Pause button — top right during gameplay -->
-    <button id="pauseBtn" onclick="pauseGame()" style="
-        display:none;
-        position:absolute;top:8px;right:10px;
-        width:28px;height:28px;
-        background:rgba(255,215,0,0.08);
-        border:1px solid rgba(255,215,0,0.25);
-        border-radius:8px;
-        color:rgba(255,215,0,0.7);
-        font-size:13px;
-        cursor:pointer;
-        z-index:110;
-        touch-action:manipulation;
-        -webkit-tap-highlight-color:transparent;
-        display:none;
-        align-items:center;justify-content:center;
-        font-family:'Orbitron',monospace;
-        padding:0;
-        pointer-events:auto;
-    ">⏸</button>
-
-    <!-- Pause overlay -->
-    <div id="pauseOverlay" style="
-        display:none;
-        position:absolute;inset:0;
-        background:rgba(4,1,14,0.94);
-        backdrop-filter:blur(20px);
-        -webkit-backdrop-filter:blur(20px);
-        z-index:160;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        gap:14px;
-        border-radius:13px;
-    ">
-        <div style="font-size:9px;letter-spacing:5px;color:rgba(255,215,0,0.4);font-family:'Orbitron',monospace;">PAUSED</div>
-        <div style="font-size:22px;font-weight:900;letter-spacing:3px;
-            background:linear-gradient(135deg,#fff,rgba(255,215,0,0.9));
-            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-            background-clip:text;font-family:'Orbitron',monospace;">
-            DIGITAL BREAK
-        </div>
-        <div style="width:36px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent);margin:2px 0 8px;"></div>
-        <button onclick="resumeGame()" style="
-            width:200px;padding:14px;
-            background:linear-gradient(135deg,rgba(0,255,136,0.18),rgba(0,200,100,0.08));
-            border:1px solid rgba(0,255,136,0.55);
-            color:rgba(0,255,180,0.96);
-            font-size:12px;font-weight:900;letter-spacing:3px;
-            font-family:'Orbitron',monospace;
-            cursor:pointer;border-radius:12px;
-            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-        ">▶ RESUME</button>
-        <button onclick="restartCurrentLevel()" style="
-            width:200px;padding:14px;
-            background:rgba(255,215,0,0.06);
-            border:1px solid rgba(255,215,0,0.25);
-            color:rgba(255,215,0,0.8);
-            font-size:12px;font-weight:900;letter-spacing:3px;
-            font-family:'Orbitron',monospace;
-            cursor:pointer;border-radius:12px;
-            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-        ">↺ RESTART LEVEL</button>
-        <button onclick="returnHome()" style="
-            width:200px;padding:14px;
-            background:rgba(255,255,255,0.04);
-            border:1px solid rgba(255,255,255,0.12);
-            color:rgba(255,255,255,0.4);
-            font-size:12px;font-weight:900;letter-spacing:3px;
-            font-family:'Orbitron',monospace;
-            cursor:pointer;border-radius:12px;
-            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-        ">⌂ HOME</button>
-    </div>
 
     <div id="prePlayOverlay">
         <div class="pp-eyebrow">GET READY</div>
@@ -1037,7 +963,7 @@
         </div>
         <div class="pp-tap">TAP ANYWHERE TO START</div>
         <div class="pp-tap-hint">speed increases as time runs out</div>
-        <button onclick="returnHome()" style="
+        <button onclick="event.stopPropagation();returnHome()" style="
             margin-top:16px;
             background:none;
             border:1px solid rgba(255,255,255,0.1);
@@ -3284,8 +3210,8 @@ const SCENES={
 // ─────────────────────────────────────────
 // LOOKAHEAD SCHEDULER — fixes crackling
 // ─────────────────────────────────────────
-const LOOKAHEAD=0.25;
-const SCHEDULE_INTERVAL=50;
+const LOOKAHEAD=0.4;
+const SCHEDULE_INTERVAL=25;
 
 function makeScheduler(ac,tickFn){
     let nextNoteTime=ac.currentTime+0.05;
