@@ -62,7 +62,7 @@
         }
 
         /* ══ KEY iOS FIX: popup is position:fixed directly, NO wrapper div.
-           This matches the working old version and avoids the iOS Safari
+          This matches the working old version and avoids the iOS Safari
            bug where fixed+overflow wrappers swallow touch events. ══ */
         .popup {
             position: fixed;
@@ -706,7 +706,7 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             gap: 0;
             border-radius: 13px;
             cursor: pointer;
@@ -714,7 +714,7 @@
             -webkit-tap-highlight-color: transparent;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 18px 0 24px;
+            padding: 20px 0 30px;
         }
 
         #prePlayOverlay.show { display: flex; }
@@ -784,16 +784,20 @@
             line-height: 1.5;
         }
         .pp-diff-badge {
-            font-size: 8px;
-            padding: 3px 10px;
+            font-size: 11px;
+            padding: 7px 16px;
             border-radius: 10px;
             background: rgba(255,215,0,0.08);
             border: 1px solid rgba(255,215,0,0.25);
-            color: rgba(255,215,0,0.7);
-            letter-spacing: 2px;
+            color: rgba(255,215,0,0.85);
+            letter-spacing: 1.5px;
             font-family: 'Orbitron', monospace;
             margin-bottom: 14px;
+            line-height: 1.5;
+            max-width: calc(100% - 48px);
+            text-align: center;
         }
+
         .pp-tap {
             font-size: 10px;
             color: rgba(255,255,255,0.3);
@@ -801,15 +805,20 @@
             font-family: 'Orbitron', monospace;
             animation: ppTapPulse 1.6s ease-in-out infinite;
         }
+        
         @keyframes ppTapPulse {
             0%,100%{opacity:0.3} 50%{opacity:0.8}
         }
+
         .pp-tap-hint {
             font-size: 8px;
             color: rgba(255,255,255,0.15);
             letter-spacing: 2px;
             font-family: 'Orbitron', monospace;
-            margin-top: 4px;
+            margin-top: 6px;
+            margin-bottom: 8px;
+            display: block;
+            position: relative;
         }
 
         .level-pill {
@@ -1025,14 +1034,7 @@
             reset progress
         </button>
     </div>
-    <div style="margin-top:12px;text-align:center;">
-        <button onclick="clearProgress();updateStartButton();"
-            style="background:none;border:none;color:rgba(255,255,255,0.15);font-size:8px;
-            font-family:'Orbitron',monospace;cursor:pointer;letter-spacing:1px;
-            text-decoration:underline;padding:4px;">
-            reset progress
-        </button>
-    </div>
+
     <div style="font-size:8px;color:rgba(255,255,255,0.15);margin-top:14px;letter-spacing:1px;line-height:2;">
         Geniusly created by <span style="color:rgba(255,215,0,0.4);">Ayabukwa🌟</span><br>
         <a href="tel:0845067825" style="color:rgba(255,215,0,0.3);text-decoration:none;">084 506 7825</a>
