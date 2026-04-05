@@ -706,13 +706,17 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 0;
             border-radius: 13px;
             cursor: pointer;
-            touch-action: manipulation;
+            touch-action: pan-y;
             -webkit-tap-highlight-color: transparent;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 18px 0 24px;
         }
+
         #prePlayOverlay.show { display: flex; }
 
         .pp-eyebrow {
@@ -1013,6 +1017,22 @@
     </div>
 
     <!-- Credits -->
+    <div style="margin-top:12px;text-align:center;">
+        <button onclick="clearProgress();updateStartButton();"
+            style="background:none;border:none;color:rgba(255,255,255,0.15);font-size:8px;
+            font-family:'Orbitron',monospace;cursor:pointer;letter-spacing:1px;
+            text-decoration:underline;padding:4px;">
+            reset progress
+        </button>
+    </div>
+    <div style="margin-top:12px;text-align:center;">
+        <button onclick="clearProgress();updateStartButton();"
+            style="background:none;border:none;color:rgba(255,255,255,0.15);font-size:8px;
+            font-family:'Orbitron',monospace;cursor:pointer;letter-spacing:1px;
+            text-decoration:underline;padding:4px;">
+            reset progress
+        </button>
+    </div>
     <div style="font-size:8px;color:rgba(255,255,255,0.15);margin-top:14px;letter-spacing:1px;line-height:2;">
         Geniusly created by <span style="color:rgba(255,215,0,0.4);">Ayabukwa🌟</span><br>
         <a href="tel:0845067825" style="color:rgba(255,215,0,0.3);text-decoration:none;">084 506 7825</a>
@@ -1229,6 +1249,32 @@ const SECRET_MESSAGES = [
     "I hope ungumntu oOn ebomini.",
 ];
 const PB_KEY='digitalBreakV21_pb';
+const PROGRESS_KEY='digitalBreakV21_progress';
+
+function saveProgress(){
+    try{
+        const data={
+            clearedLevels:[...clearedLevels],
+            highestUnlocked:Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length)
+        };
+        localStorage.setItem(PROGRESS_KEY,JSON.stringify(data));
+    }catch{}
+}
+
+function loadProgress(){
+    try{
+        const raw=localStorage.getItem(PROGRESS_KEY);
+        if(!raw)return;
+        const data=JSON.parse(raw);
+        if(data.clearedLevels)data.clearedLevels.forEach(lv=>clearedLevels.add(lv));
+    }catch{}
+}
+
+function clearProgress(){
+    try{localStorage.removeItem(PROGRESS_KEY);}catch{}
+    clearedLevels=new Set();
+    renderLevelPills();
+}
 function getPersonalBest(){
     try{return parseInt(localStorage.getItem(PB_KEY))||0;}catch{return 0;}
 }
@@ -1456,6 +1502,7 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
 
 function showLevelComplete(lv,lvScore,acc){
     clearedLevels.add(lv);
+    saveProgress();
     renderLevelPills(); // refresh the pill display on start screen
     const overlay=document.getElementById('levelCompleteOverlay');
     if(!overlay)return;
@@ -2261,8 +2308,21 @@ function showPrePlay(){
     const el=document.getElementById('prePlayOverlay');if(!el)return;
     const badge=document.getElementById('ppDiffBadge');
     if(badge)badge.textContent=`LEVEL ${currentLevel} — ${levelData.note}`;
-    el.classList.add('show');
-    if(!el._patched){
+
+    // Only show rows relevant to this level — prevents overflow/overlap
+    const rows=document.querySelectorAll('.pp-row');
+    // index: 0=targets, 1=gold, 2=hazards, 3=streak, 4=boss, 5=powerups
+    const show=[
+        true,                        // targets — always
+        currentLevel>=2,             // gold
+        currentLevel>=3,             // hazards
+        currentLevel>=3,             // streak (show once obstacles are in play)
+        currentLevel>=5,             // boss
+        currentLevel>=4,             // power-ups
+    ];
+    rows.forEach((r,i)=>{r.style.display=show[i]?'flex':'none';});
+
+    el.classList.add('show');    if(!el._patched){
         el._patched=true;
         el.addEventListener('touchstart',function(e){
             if(gameState==='preplay'){e.stopPropagation();beginFromPrePlay();}
@@ -2281,10 +2341,23 @@ function hidePrePlay(){
 // Wire music button
 document.addEventListener('DOMContentLoaded',()=>{
     musicBtn=document.getElementById('musicToggleBtn');
+    loadProgress();
     updatePersonalBestDisplay();
     renderLevelPills();
+    updateStartButton();
     switchMusicTo('landing');
 });
+
+function updateStartButton(){
+    const highest=Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length);
+    const btn=document.querySelector('.breach-btn');
+    if(!btn)return;
+    if(highest>1){
+        btn.innerHTML=`⚡ CONTINUE — LEVEL ${highest}`;
+    } else {
+        btn.innerHTML=`⚡ BREACH THE SYSTEM`;
+    }
+}
 
 function renderLevelPills(){
     const grid=document.getElementById('levelPillGrid');
@@ -2323,7 +2396,9 @@ let startLock=false;
 function startGame(){
     if(startLock||gameState==='playing')return;
     startLock=true;setTimeout(()=>{startLock=false;},600);
-    currentLevel=1;
+    // Resume from highest unlocked level
+    const highest=Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length);
+    currentLevel=highest;
     totalLevelScore=0;
     bestStreak=0;
     loadLevel(currentLevel);
