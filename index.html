@@ -1237,6 +1237,14 @@
             margin:0 0 22px;
         "></div>
 
+        <div id="lcMessage" style="
+            font-size:11px;color:rgba(0,255,200,0.65);font-style:italic;
+            margin:0 0 20px;line-height:1.7;letter-spacing:0.5px;
+            background:rgba(0,255,136,0.04);
+            border:1px solid rgba(0,255,136,0.1);
+            border-radius:10px;padding:10px 14px;
+        "></div>
+
         <button onclick="goToNextLevel()" ontouchstart="goToNextLevel()"
             style="
                 width:100%;padding:16px;
@@ -1278,6 +1286,112 @@
 </div>
 
 <script>
+// ══ ONLINE LEADERBOARD — SUPABASE ══
+const SB_URL = 'https://ccydnfgfhxfmbzhtnzvc.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjeWRuZmdmaHhmbWJ6aHRuenZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDU2NDAsImV4cCI6MjA5MTA4MTY0MH0.ZHKrmk5jNDtolpmIlRiEMhU110Zo2xCPU98jYE1Tu8M';
+
+async function sbFetch(path, options={}){
+    try{
+        const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+            headers:{
+                'apikey': SB_KEY,
+                'Authorization': `Bearer ${SB_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': options.prefer||'',
+            },
+            ...options
+        });
+        if(!res.ok) return null;
+        const text = await res.text();
+        return text ? JSON.parse(text) : true;
+    } catch{ return null; }
+}
+
+async function submitOnlineScore(playerName, score, levelReached, streak, accuracy){
+    return sbFetch('leaderboard', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: JSON.stringify({
+            player_name: playerName,
+            score,
+            level_reached: levelReached,
+            best_streak: streak,
+            accuracy
+        })
+    });
+}
+
+async function fetchOnlineLeaderboard(){
+    return sbFetch('leaderboard?select=*&order=score.desc&limit=10');
+}
+
+async function renderOnlineLeaderboard(containerId, playerScore){
+    const container = document.getElementById(containerId);
+    if(!container) return;
+    container.innerHTML = `<div style="font-size:9px;color:rgba(255,215,0,0.4);letter-spacing:2px;margin-bottom:8px;">LOADING ONLINE SCORES...</div>`;
+    const rows = await fetchOnlineLeaderboard();
+    if(!rows || !rows.length){
+        container.innerHTML = `<div style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">No scores yet — be the first!</div>`;
+        return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    container.innerHTML = rows.map((e,i)=>{
+        const isMe = e.score === playerScore;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;
+            border-radius:10px;margin-bottom:5px;font-size:11px;
+            background:${isMe?'rgba(255,215,0,0.1)':'rgba(255,255,255,0.03)'};
+            border:1px solid ${isMe?'rgba(255,215,0,0.4)':'rgba(255,255,255,0.06)'};
+            ${isMe?'box-shadow:0 0 12px rgba(255,215,0,0.2);':''}">
+            <span style="width:26px;">${i<3?medals[i]:'#'+(i+1)}</span>
+            <span style="flex:1;text-align:left;color:${isMe?'rgba(255,215,0,0.95)':'rgba(0,255,255,0.9)'};
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${isMe?'⚡ YOU':e.player_name}</span>
+            <span style="color:rgba(255,255,255,0.4);font-size:9px;margin-right:4px;">LV${e.level_reached}</span>
+            <span style="font-weight:900;color:${isMe?'#ffd700':'#ff1493'};">${e.score.toLocaleString()}</span>
+        </div>`;
+    }).join('');
+}
+
+// Name prompt before submitting
+function promptPlayerName(callback){
+    const existing = localStorage.getItem('digitalBreak_playerName');
+    if(existing){ callback(existing); return; }
+    const overlay = document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:1300;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML=`
+        <div style="background:rgba(8,4,18,0.95);border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:28px 24px;width:100%;max-width:360px;text-align:center;font-family:Orbitron,monospace;">
+            <div style="font-size:22px;margin-bottom:10px;">🏆</div>
+            <div style="font-size:13px;font-weight:900;color:rgba(255,215,0,0.9);letter-spacing:3px;margin-bottom:6px;">ENTER YOUR NAME</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:18px;">This goes on the global leaderboard</div>
+            <input id="_nameInput" maxlength="20" placeholder="Your name..."
+                style="width:100%;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.3);
+                border-radius:10px;padding:12px 14px;color:rgba(255,215,0,0.9);font-family:Orbitron,monospace;
+                font-size:12px;letter-spacing:2px;text-align:center;outline:none;margin-bottom:14px;">
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button id="_nameSubmit" style="background:linear-gradient(135deg,rgba(255,215,0,0.18),rgba(255,140,0,0.08));
+                    border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);
+                    padding:12px 22px;border-radius:12px;font-family:Orbitron,monospace;
+                    font-size:11px;font-weight:900;letter-spacing:3px;cursor:pointer;">⚡ SUBMIT</button>
+                <button id="_nameSkip" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+                    color:rgba(255,255,255,0.3);padding:12px 18px;border-radius:12px;
+                    font-family:Orbitron,monospace;font-size:9px;cursor:pointer;letter-spacing:2px;">SKIP</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#_nameInput');
+    input.focus();
+    const adjs=['Sweaty','Lucky','Shaking','Elite','Mid-tier','Confused','Trembling'];
+    const nouns=['Gamer','Clicker','Legend','Tryhard','NPC','Bot','President'];
+    const randomName = adjs[Math.floor(Math.random()*adjs.length)]+' '+nouns[Math.floor(Math.random()*nouns.length)];
+    overlay.querySelector('#_nameSubmit').onclick = ()=>{
+        const name = (input.value.trim()||randomName).slice(0,20);
+        localStorage.setItem('digitalBreak_playerName', name);
+        overlay.remove(); callback(name);
+    };
+    overlay.querySelector('#_nameSkip').onclick = ()=>{ overlay.remove(); callback(randomName); };
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') overlay.querySelector('#_nameSubmit').click(); });
+}
+
 // ══════════════════════════════════════════
 //  LEADERBOARD
 // ══════════════════════════════════════════
@@ -1547,8 +1661,15 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
         isNewBest ? '🏆 NEW PERSONAL BEST! You actually outdid yourself. Respect.' :
         getSavageRoast(finalScore,targetSc);
 
-    const lb=addToLeaderboard(finalScore,diff);
-    renderLeaderboard(lb.map(e=>e.score===finalScore?{...e,isNew:true}:e),finalScore);
+    // Submit to online leaderboard
+    const lvReached = Math.max(...[...clearedLevels, currentLevel]);
+    const accVal = tc>0?Math.round((sh/tc)*100):0;
+    promptPlayerName(name=>{
+        submitOnlineScore(name, finalScore, lvReached, bestStreak, accVal);
+    });
+    // Render online board into existing container
+    document.getElementById('leaderboardRows').innerHTML='';
+    renderOnlineLeaderboard('leaderboardRows', finalScore);
 
     document.getElementById('secretText').textContent=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
     document.getElementById('countdownSection').style.display='block';
@@ -1578,7 +1699,33 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
 function showLevelComplete(lv,lvScore,acc){
     clearedLevels.add(lv);
     saveProgress();
-    renderLevelPills(); // refresh the pill display on start screen
+    renderLevelPills();
+    updateStartButton();
+
+    // 2s transition loader
+    const tl=document.createElement('div');
+    tl.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:1200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:Orbitron,monospace;';
+    tl.innerHTML=`
+        <div id="_tlCheck" style="font-size:52px;opacity:0;transform:scale(0.4) translateY(-20px);transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);">✅</div>
+        <div style="font-size:10px;letter-spacing:5px;color:rgba(0,255,136,0.7);opacity:0;transition:opacity 0.4s ease 0.25s;" id="_tlText">LEVEL ${lv} CLEARED</div>
+        <div style="width:140px;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;overflow:hidden;">
+            <div id="_tlBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00ff88,#00ffff);transition:width 1.7s ease;box-shadow:0 0 8px rgba(0,255,136,0.6);"></div>
+        </div>`;
+    document.body.appendChild(tl);
+    setTimeout(()=>{
+        const c=document.getElementById('_tlCheck'),t=document.getElementById('_tlText'),b=document.getElementById('_tlBar');
+        if(c){c.style.opacity='1';c.style.transform='scale(1) translateY(0)';}
+        if(t)t.style.opacity='1';
+        if(b)b.style.width='100%';
+    },60);
+    setTimeout(()=>{
+        tl.style.transition='opacity 0.35s ease';
+        tl.style.opacity='0';
+        setTimeout(()=>{tl.remove();_showLevelCompleteInner(lv,lvScore,acc);},360);
+    },1800);
+}
+
+function _showLevelCompleteInner(lv,lvScore,acc){
     const overlay=document.getElementById('levelCompleteOverlay');
     if(!overlay)return;
     const lcPbw=document.getElementById('progressBarWrap');
@@ -1587,7 +1734,15 @@ function showLevelComplete(lv,lvScore,acc){
     // Populate content
     document.getElementById('lcLevel').textContent=`LEVEL ${lv} CLEARED`;
     document.getElementById('lcScore').textContent=`${lvScore.toLocaleString()} PTS`;
-    document.getElementById('lcAccuracy').textContent=`Accuracy: ${acc}%`;
+    const accComment=
+        acc>=95?'Surgical. You do not miss.':
+        acc>=85?'Elite aim — clean and composed.':
+        acc>=75?'Solid accuracy. Kept it together.':
+        acc>=65?'Good aim. Held it when it counted.':
+        acc>=50?'Decent. A few misses but the W counts.':
+        acc>=35?'Shaky aim but the heart was there 💀':
+        'Listen... the accuracy needs work. But you still cleared it somehow 😭';
+    document.getElementById('lcAccuracy').textContent=`Accuracy: ${acc}% — ${accComment}`;
     document.getElementById('lcTotal').textContent=
         `Total so far: ${totalLevelScore.toLocaleString()} pts`;
 
@@ -1595,6 +1750,10 @@ function showLevelComplete(lv,lvScore,acc){
     const next=LEVELS[lv]; // lv is 1-indexed, array is 0-indexed so lv = next level's index
     document.getElementById('lcNextNote').textContent=
         next ? `Level ${lv+1}: ${next.note}` : '';
+
+    // Random message for this level
+    const lcMsg=document.getElementById('lcMessage');
+    if(lcMsg)lcMsg.textContent=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
 
     overlay.style.display='flex';
     overlay.scrollTop=0;
@@ -1611,6 +1770,109 @@ function goToNextLevel(){
     document.getElementById('confettiCanvas').style.display='none';
     if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
     loadLevel(currentLevel);
+}
+
+function showEpicGameComplete(finalScore,tc,sh){
+    const acc=tc>0?Math.round((sh/tc)*100):0;
+    checkNewPersonalBest(finalScore);
+
+    // Build the overlay
+    const el=document.createElement('div');
+    el.id='epicCompleteOverlay';
+    el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:1000;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding:30px 15px 80px;font-family:Orbitron,monospace;text-align:center;color:#fff;';
+
+    const msg=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
+    const lbHtml = `<div id="epicLbRows"><div style="font-size:9px;color:rgba(255,215,0,0.4);letter-spacing:2px;">LOADING GLOBAL SCORES...</div></div>`;
+
+    el.innerHTML=`
+    <div style="max-width:480px;margin:0 auto;">
+        <div style="font-size:11px;letter-spacing:6px;color:rgba(255,215,0,0.4);margin-bottom:10px;">ALL 12 LEVELS</div>
+        <div style="font-size:clamp(22px,6vw,38px);font-weight:900;letter-spacing:4px;
+            background:linear-gradient(135deg,#ffd700,#ff8800,#ff1493,#ffd700);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;margin-bottom:6px;
+            animation:flicker 2.5s infinite;">
+            ⚡ SYSTEM FULLY BREACHED ⚡
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;margin-bottom:8px;">YOU ARE THE 1%</div>
+        <div style="font-size:9px;color:rgba(255,215,0,0.35);letter-spacing:2px;margin-bottom:24px;
+            background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.1);
+            border-radius:8px;padding:6px 14px;display:inline-block;">
+            ⚡ MORE LEVELS DROPPING SOON — STAY READY
+        </div>
+
+        <div style="background:linear-gradient(135deg,rgba(255,215,0,0.14),rgba(255,140,0,0.06));
+            border:2px solid rgba(255,215,0,0.6);border-radius:18px;padding:22px 18px;
+            margin-bottom:18px;box-shadow:0 0 60px rgba(255,215,0,0.2);">
+            <div style="font-size:11px;letter-spacing:3px;color:rgba(255,215,0,0.5);margin-bottom:8px;">TOTAL SCORE</div>
+            <div style="font-size:clamp(32px,8vw,52px);font-weight:900;color:#ffd700;
+                text-shadow:0 0 30px rgba(255,215,0,0.6);letter-spacing:3px;">${finalScore.toLocaleString()}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px;">PTS · ${acc}% accuracy · ${bestStreak} best streak</div>
+        </div>
+
+        <div style="background:rgba(0,255,100,0.06);border:1px solid rgba(0,255,136,0.25);
+            border-radius:14px;padding:16px 18px;margin-bottom:18px;">
+            <div style="font-size:9px;letter-spacing:3px;color:rgba(0,255,136,0.5);margin-bottom:8px;">🔓 CLASSIFIED TRANSMISSION</div>
+            <div style="font-size:13px;color:#00ff88;line-height:1.7;letter-spacing:0.5px;
+                animation:glow 2s ease-in-out infinite alternate;">${msg}</div>
+        </div>
+
+        <div style="margin-bottom:18px;">
+            <div style="font-size:10px;letter-spacing:3px;color:rgba(255,215,0,0.4);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.3));"></span>
+                HALL OF FAME
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,215,0,0.3),transparent);"></span>
+            </div>
+            ${lbHtml}
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;">
+            <button onclick="shareScore()" style="
+                background:linear-gradient(45deg,#1da1f2,#0d8fd4);color:#fff;border:none;
+                padding:13px 22px;border-radius:30px;font-family:Orbitron,monospace;
+                font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
+                min-height:46px;touch-action:manipulation;">📤 SHARE YOUR WIN</button>
+            <button onclick="saveScoreCard()" style="
+                background:linear-gradient(45deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border:none;
+                padding:13px 22px;border-radius:30px;font-family:Orbitron,monospace;
+                font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
+                min-height:46px;touch-action:manipulation;">📸 SAVE FOR STORY</button>
+        </div>
+        <div id="shareConfirm" style="font-size:11px;color:#00ff00;min-height:16px;letter-spacing:1px;margin-bottom:10px;"></div>
+
+        <button onclick="restartGame();document.getElementById('epicCompleteOverlay').remove();"
+            style="width:100%;padding:16px;
+            background:linear-gradient(135deg,rgba(255,215,0,0.14),rgba(255,140,0,0.07));
+            border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);
+            font-size:12px;font-weight:900;letter-spacing:4px;font-family:Orbitron,monospace;
+            cursor:pointer;border-radius:14px;margin-bottom:16px;
+            animation:breachGlow 2.5s ease-in-out infinite;touch-action:manipulation;">
+            ⚡ PLAY AGAIN FROM START</button>
+
+        <div style="font-size:8px;color:rgba(255,255,255,0.15);letter-spacing:1px;line-height:2;margin-top:10px;">
+            Geniusly created by <span style="color:rgba(255,215,0,0.4);">Ayabukwa🌟</span><br>
+            <a href="tel:0845067825" style="color:rgba(255,215,0,0.3);text-decoration:none;">084 506 7825</a>
+            &nbsp;·&nbsp;
+            <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(255,215,0,0.3);text-decoration:none;">unakomtumtum0@gmail.com</a>
+        </div>
+    </div>`;
+
+    document.body.appendChild(el);
+    // Submit and load online leaderboard
+    const lvReached = Math.max(...[...clearedLevels, 12]);
+    promptPlayerName(name=>{
+        submitOnlineScore(name, finalScore, lvReached, bestStreak, acc);
+        renderOnlineLeaderboard('epicLbRows', finalScore);
+    });
+    startConfetti();
+    switchMusicTo('win');
+    playSound('newbest');
+
+    // Fix the shareConfirm reference — point to the one inside epic overlay
+    setTimeout(()=>{
+        const eb=el.querySelector('#shareConfirm');
+        if(eb)eb.id='shareConfirmEpic';
+    },100);
 }
 
 // ══════════════════════════════════════════
@@ -2642,10 +2904,7 @@ function endGame(){
 
         if(currentLevel>=LEVELS.length){
             // ── GAME COMPLETE — all 12 levels cleared
-            runHackLoader(()=>showWinScreen(
-                totalLevelScore,totalClicks,successfulHits,
-                'insane',LEVELS[LEVELS.length-1].target,true
-            ));
+            runHackLoader(()=>showEpicGameComplete(totalLevelScore,totalClicks,successfulHits));
         } else {
             // ── LEVEL COMPLETE — show interstitial then load next
             showLevelComplete(currentLevel,score,acc);
@@ -2701,6 +2960,8 @@ function restartGame(){
     document.getElementById('losePopup').style.display='none';
     document.getElementById('startPopup').style.display='block';
     document.getElementById('startBorderWrap').style.display='block';
+    updateStartButton();
+    renderLevelPills();
     document.getElementById('shareConfirm').textContent='';
     document.getElementById('confettiCanvas').style.display='none';
     document.getElementById('gameContainer').classList.remove('panic');
@@ -3542,7 +3803,8 @@ function generateScoreCard(finalScore, streakVal, acc, diff, secretMsg){
     ctx.fillText(`${Number(finalScore).toLocaleString()} PTS`,W/2,672);
 
     // Stats row
-    const stats=[['STREAK',`${streakVal} hits`],['ACCURACY',`${acc}%`],['MODE',diff.toUpperCase()]];
+    const lvReached = Math.max(...[...clearedLevels, currentLevel], 1);
+    const stats=[['STREAK',`${streakVal} hits`],['ACCURACY',`${acc}%`],['LEVEL',`${lvReached} / 12`]];
     stats.forEach(([k,v],i)=>{
         const sx=80+i*310, sy=760;
         ctx.fillStyle='rgba(0,0,0,0.4)';
@@ -3606,9 +3868,11 @@ function generateScoreCard(finalScore, streakVal, acc, diff, secretMsg){
 }
 
 function saveScoreCard(){
-    const secretMsg=document.getElementById('secretText').textContent||'You breached the system!';
-    const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
-    const cv=generateScoreCard(totalLevelScore||score,bestStreak,acc,difficulty,secretMsg);
+    const secretEl = document.getElementById('secretText');
+    const secretMsg = (secretEl&&secretEl.textContent)||SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
+    const acc = totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
+    const cardScore = totalLevelScore||score;
+    const cv=generateScoreCard(cardScore,bestStreak,acc,'insane',secretMsg);
     const link=document.createElement('a');
     link.download='digitalbreak-score.png';
     link.href=cv.toDataURL('image/png');
