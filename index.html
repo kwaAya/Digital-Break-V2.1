@@ -1542,6 +1542,7 @@ function showLevelComplete(lv,lvScore,acc){
     overlay.scrollTop=0;
     startConfetti();
     switchMusicTo('win');
+    playSound('levelcomplete');
 }
 
 function goToNextLevel(){
@@ -1814,6 +1815,33 @@ function playSound(type){
                     g.gain.exponentialRampToValueAtTime(0.001,t+i*0.08+0.3);
                     o.connect(g);g.connect(ctx.destination);
                     o.start(t+i*0.08);o.stop(t+i*0.08+0.32);
+                });
+            },
+            levelcomplete:()=>{
+                // Ascending celebration — 6 note flourish
+                [523,659,784,880,1047,1319].forEach((freq,i)=>{
+                    const o=ctx.createOscillator();
+                    const g=ctx.createGain();
+                    o.type='triangle';
+                    o.frequency.setValueAtTime(freq,t+i*0.1);
+                    o.frequency.exponentialRampToValueAtTime(freq*1.02,t+i*0.1+0.18);
+                    g.gain.setValueAtTime(0,t+i*0.1);
+                    g.gain.linearRampToValueAtTime(0.22,t+i*0.1+0.02);
+                    g.gain.exponentialRampToValueAtTime(0.001,t+i*0.1+0.35);
+                    o.connect(g);g.connect(ctx.destination);
+                    o.start(t+i*0.1);o.stop(t+i*0.1+0.38);
+                });
+                // Warm chord underneath
+                [261.6,329.6,392,523].forEach((freq,i)=>{
+                    const o=ctx.createOscillator();
+                    const g=ctx.createGain();
+                    o.type='sine';
+                    o.frequency.value=freq;
+                    g.gain.setValueAtTime(0,t);
+                    g.gain.linearRampToValueAtTime(0.1,t+0.05);
+                    g.gain.exponentialRampToValueAtTime(0.001,t+1.2);
+                    o.connect(g);g.connect(ctx.destination);
+                    o.start(t);o.stop(t+1.3);
                 });
             },
         };
