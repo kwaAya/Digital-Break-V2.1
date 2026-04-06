@@ -2821,161 +2821,215 @@ const SCENES={
         const master=ac.createGain();
         master.gain.setValueAtTime(0,ac.currentTime);
         const comp=ac.createDynamicsCompressor();
-        comp.threshold.value=-18;comp.knee.value=30;
-        comp.ratio.value=2.5;comp.attack.value=0.008;comp.release.value=0.25;
+        comp.threshold.value=-14;comp.knee.value=22;
+        comp.ratio.value=3.5;comp.attack.value=0.004;comp.release.value=0.18;
         master.connect(comp);comp.connect(dest);
-        const rev=makeReverb(ac,2.0,2.2);
-        const revG=ac.createGain();revG.gain.value=0.14;
+        const rev=makeReverb(ac,1.6,2.0);
+        const revG=ac.createGain();revG.gain.value=0.10;
         rev.connect(revG);revG.connect(comp);
-        const delay=makeDelay(ac,0.46,0.24);
-        const delG=ac.createGain();delG.gain.value=0.45;
+        const delay=makeDelay(ac,0.375,0.28);
+        const delG=ac.createGain();delG.gain.value=0.32;
         delay.connect(delG);delG.connect(comp);
         nodes.push(master,comp,rev,revG,delay,delG);
 
-        const N={A2:110,C3:130.8,E3:164.8,F3:174.6,G3:196,
-            A3:220,B3:246.9,C4:261.6,D4:293.7,E4:329.6,
-            F4:349.2,G4:392,A4:440,B4:493.9,C5:523.3,
-            D5:587.3,E5:659.3,G5:784};
-        const MELODY=[
-            N.E5,N.D5,N.C5,N.A4,N.C5,N.D5,N.C5,N.A4,
-            N.G4,N.A4,N.C5,N.D5,N.E5,N.D5,N.C5,N.A4,
-            N.E5,N.G5,N.E5,N.D5,N.C5,N.D5,N.E5,N.C5,
-            N.A4,N.C5,N.D5,N.E5,N.D5,N.C5,N.B4,N.A4,
+        // 128bpm — 4-on-the-floor energy
+        const BPM=128;
+        const S=60/BPM/4; // sixteenth note
+
+        // Melodic hook — punchy and memorable
+        const HOOK=[
+            880,0,880,0,1047,880,0,784,
+            880,0,1047,0,1319,0,1047,880,
+            784,0,784,0,880,784,0,659,
+            784,0,880,1047,880,0,784,0,
         ];
-        const COUNTER=[
-            N.A4,0,N.C5,0,N.E5,N.D5,0,N.C5,
-            N.A4,0,N.G4,N.A4,N.C5,0,N.B4,0,
-            N.A4,N.B4,N.C5,N.D5,N.E5,0,N.D5,0,
-            N.C5,N.B4,N.A4,0,N.G4,N.A4,N.C5,0,
+
+        // Bassline — deep and driving
+        const BASS=[
+            110,0,110,110,0,110,0,138.6,
+            110,0,110,0,130.8,0,110,0,
+            98,0,98,98,0,98,0,110,
+            98,0,110,0,130.8,110,0,98,
         ];
-        const CHORDS=[
-            [N.A2,N.E3,N.A3,N.C4],[N.F3,N.C4,N.F4],
-            [N.C3,N.G3,N.C4,N.E4],[N.G3,N.D4,N.G4,N.B4],
+
+        // Chord stabs — every 8 steps
+        const STABS=[
+            [220,277.2,329.6],[196,246.9,293.7],
+            [174.6,220,261.6],[196,246.9,329.6],
         ];
-        const BASS=[N.A2,N.A2,N.C3,N.E3,N.F3,N.F3,N.A2,N.C3,
-            N.C3,N.E3,N.G3,N.E3,N.G3,N.G3,N.F3,N.E3];
-        const S=60/98/2;
-        let step=0,bar=0;
+
+        // Arp — fills the upper register
+        const ARP=[
+            1319,1047,880,1047,1319,1047,1319,1568,
+            1319,1047,880,784,880,1047,880,784,
+        ];
+
+        let step=0;
 
         function tick(t){
-            const sib=step%16;
-            const seq=bar%4>=2?COUNTER:MELODY;
-            const note=seq[step%32];
+            const sib=step%32;
+            const s16=step%16;
 
+            // ── HOOK MELODY
+            const note=HOOK[sib];
             if(note){
                 const o1=ac.createOscillator();
                 const o2=ac.createOscillator();
                 const g=ac.createGain();
                 const f=ac.createBiquadFilter();
                 f.type='lowpass';
-                f.frequency.setValueAtTime(3000,t);
-                f.frequency.exponentialRampToValueAtTime(1600,t+S*0.5);
+                f.frequency.setValueAtTime(4200,t);
+                f.frequency.exponentialRampToValueAtTime(1800,t+S*0.6);
                 o1.type='sine';o1.frequency.value=note;
-                o2.type='triangle';o2.frequency.value=note*2.001;
-                const g1=ac.createGain();g1.gain.value=0.68;
-                const g2=ac.createGain();g2.gain.value=0.16;
+                o2.type='triangle';o2.frequency.value=note*2.002;
+                const g1=ac.createGain();g1.gain.value=0.72;
+                const g2=ac.createGain();g2.gain.value=0.18;
                 o1.connect(g1);o2.connect(g2);
                 g1.connect(f);g2.connect(f);f.connect(g);
                 g.gain.setValueAtTime(0,t);
-                g.gain.linearRampToValueAtTime(0.2,t+0.018);
-                g.gain.setValueAtTime(0.2,t+S*0.48);
-                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.88);
+                g.gain.linearRampToValueAtTime(0.22,t+0.008);
+                g.gain.setValueAtTime(0.22,t+S*0.42);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+S*0.82);
                 g.connect(master);
-                const dg=ac.createGain();dg.gain.value=0.14;g.connect(dg);dg.connect(delay);
-                const rg=ac.createGain();rg.gain.value=0.18;g.connect(rg);rg.connect(rev);
-                o1.start(t);o1.stop(t+S+0.04);
-                o2.start(t);o2.stop(t+S+0.04);
+                const dg=ac.createGain();dg.gain.value=0.18;g.connect(dg);dg.connect(delay);
+                const rg=ac.createGain();rg.gain.value=0.12;g.connect(rg);rg.connect(rev);
+                o1.start(t);o1.stop(t+S+0.02);
+                o2.start(t);o2.stop(t+S+0.02);
                 nodes.push(o1,o2,g,f,g1,g2,dg,rg);
             }
 
-            if(step%8===0){
-                const ci=Math.floor(step/8)%CHORDS.length;
-                CHORDS[ci].forEach(freq=>{
+            // ── ARP — upper shimmer every other step
+            if(step%2===0){
+                const an=ARP[s16];
+                if(an){
+                    const ao=ac.createOscillator();
+                    const ag=ac.createGain();
+                    const af=ac.createBiquadFilter();
+                    af.type='bandpass';af.frequency.value=an*1.1;af.Q.value=1.2;
+                    ao.type='sine';ao.frequency.value=an;
+                    ag.gain.setValueAtTime(0,t);
+                    ag.gain.linearRampToValueAtTime(0.055,t+0.006);
+                    ag.gain.exponentialRampToValueAtTime(0.0001,t+S*0.55);
+                    ao.connect(af);af.connect(ag);ag.connect(master);
+                    const arg=ac.createGain();arg.gain.value=0.22;
+                    ag.connect(arg);arg.connect(delay);
+                    ao.start(t);ao.stop(t+S*0.7);
+                    nodes.push(ao,ag,af,arg);
+                }
+            }
+
+            // ── BASSLINE
+            const bn=BASS[sib];
+            if(bn){
+                const bo=ac.createOscillator();
+                const bg=ac.createGain();
+                const bf=ac.createBiquadFilter();
+                bf.type='lowpass';bf.frequency.value=320;
+                bo.type='sine';bo.frequency.setValueAtTime(bn,t);
+                bg.gain.setValueAtTime(0,t);
+                bg.gain.linearRampToValueAtTime(0.38,t+0.01);
+                bg.gain.setValueAtTime(0.38,t+S*0.55);
+                bg.gain.exponentialRampToValueAtTime(0.0001,t+S*0.88);
+                bo.connect(bf);bf.connect(bg);bg.connect(master);
+                bo.start(t);bo.stop(t+S*1.0);
+                nodes.push(bo,bg,bf);
+
+                // Sub layer
+                const so=ac.createOscillator();
+                const sg=ac.createGain();
+                so.type='sine';so.frequency.value=bn*0.5;
+                sg.gain.setValueAtTime(0,t);
+                sg.gain.linearRampToValueAtTime(0.22,t+0.012);
+                sg.gain.exponentialRampToValueAtTime(0.0001,t+S*0.72);
+                so.connect(sg);sg.connect(master);
+                so.start(t);so.stop(t+S*0.85);
+                nodes.push(so,sg);
+            }
+
+            // ── CHORD STABS every 8 steps
+            if(sib%8===0){
+                const ci=Math.floor(sib/8)%STABS.length;
+                STABS[ci].forEach(freq=>{
                     const o=ac.createOscillator();
                     const g=ac.createGain();
                     const f=ac.createBiquadFilter();
-                    f.type='lowpass';f.frequency.value=700;
-                    o.type='sine';o.frequency.value=freq;
+                    f.type='lowpass';f.frequency.value=1800;
+                    o.type='sawtooth';o.frequency.value=freq;
                     g.gain.setValueAtTime(0,t);
-                    g.gain.linearRampToValueAtTime(0.048,t+0.1);
-                    g.gain.setValueAtTime(0.048,t+S*6.5);
-                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*7.8);
+                    g.gain.linearRampToValueAtTime(0.055,t+0.006);
+                    g.gain.setValueAtTime(0.055,t+S*1.8);
+                    g.gain.exponentialRampToValueAtTime(0.0001,t+S*3.2);
                     o.connect(f);f.connect(g);g.connect(master);
-                    const rg=ac.createGain();rg.gain.value=0.28;g.connect(rg);rg.connect(rev);
-                    o.start(t);o.stop(t+S*8.2);
+                    const rg=ac.createGain();rg.gain.value=0.18;g.connect(rg);rg.connect(rev);
+                    o.start(t);o.stop(t+S*3.5);
                     nodes.push(o,g,f,rg);
                 });
             }
 
-            if(step%4===0){
-                const bi=Math.floor(step/4)%BASS.length;
-                const bo=ac.createOscillator();
-                const bg=ac.createGain();
-                const bf=ac.createBiquadFilter();
-                bf.type='lowpass';bf.frequency.value=380;
-                bo.type='sine';bo.frequency.setValueAtTime(BASS[bi],t);
-                bg.gain.setValueAtTime(0,t);
-                bg.gain.linearRampToValueAtTime(0.16,t+0.018);
-                bg.gain.setValueAtTime(0.16,t+S*1.5);
-                bg.gain.exponentialRampToValueAtTime(0.0001,t+S*1.85);
-                bo.connect(bf);bf.connect(bg);bg.connect(master);
-                bo.start(t);bo.stop(t+S*2);
-                nodes.push(bo,bg,bf);
-            }
-
-            if(sib===0||sib===8){
+            // ── KICK — 4 on the floor
+            if(sib%8===0){
                 const ko=ac.createOscillator();
                 const kg=ac.createGain();
                 ko.type='sine';
-                ko.frequency.setValueAtTime(155,t);
-                ko.frequency.exponentialRampToValueAtTime(36,t+0.07);
-                kg.gain.setValueAtTime(0.52,t);
-                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.14);
+                ko.frequency.setValueAtTime(180,t);
+                ko.frequency.exponentialRampToValueAtTime(36,t+0.055);
+                kg.gain.setValueAtTime(0.9,t);
+                kg.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
                 ko.connect(kg);kg.connect(master);
-                ko.start(t);ko.stop(t+0.17);
+                ko.start(t);ko.stop(t+0.15);
                 nodes.push(ko,kg);
             }
 
-            if(sib===4||sib===12){
+            // ── SNARE on 2 and 4
+            if(sib===8||sib===24){
                 const sn=ac.createBufferSource();
                 const sf=ac.createBiquadFilter();
-                sf.type='bandpass';sf.frequency.value=2000;sf.Q.value=0.8;
-                const sg=ac.createGain();
-                sn.buffer=getCachedNoise(ac,0.1);
-                sg.gain.setValueAtTime(0.11,t);
-                sg.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
-                sn.connect(sf);sf.connect(sg);sg.connect(master);
+                sf.type='bandpass';sf.frequency.value=2200;sf.Q.value=0.7;
+                const sg2=ac.createGain();
+                sn.buffer=getCachedNoise(ac,0.12);
+                sg2.gain.setValueAtTime(0.28,t);
+                sg2.gain.exponentialRampToValueAtTime(0.0001,t+0.10);
+                sn.connect(sf);sf.connect(sg2);sg2.connect(master);
                 sn.start(t);
-                nodes.push(sn,sf,sg);
+                // Snare body
+                const sb=ac.createOscillator();
+                const sbg=ac.createGain();
+                sb.type='sine';sb.frequency.value=180;
+                sbg.gain.setValueAtTime(0.18,t);
+                sbg.gain.exponentialRampToValueAtTime(0.0001,t+0.06);
+                sb.connect(sbg);sbg.connect(master);
+                sb.start(t);sb.stop(t+0.08);
+                nodes.push(sn,sf,sg2,sb,sbg);
             }
 
-            const open=sib%4===2;
+            // ── OPEN/CLOSED HI-HAT
+            const isOpen=sib%16===6||sib%16===14;
             const hh=ac.createBufferSource();
-            const hf=ac.createBiquadFilter();hf.type='highpass';hf.frequency.value=9200;
+            const hf=ac.createBiquadFilter();hf.type='highpass';hf.frequency.value=9800;
             const hg=ac.createGain();
-            hh.buffer=getCachedNoise(ac,open?0.08:0.026);
-            hg.gain.setValueAtTime(open?0.048:0.032,t);
-            hg.gain.exponentialRampToValueAtTime(0.0001,t+(open?0.072:0.022));
+            hh.buffer=getCachedNoise(ac,isOpen?0.09:0.022);
+            hg.gain.setValueAtTime(isOpen?0.055:0.038,t);
+            hg.gain.exponentialRampToValueAtTime(0.0001,t+(isOpen?0.082:0.018));
             hh.connect(hf);hf.connect(hg);hg.connect(master);
             hh.start(t);
             nodes.push(hh,hf,hg);
 
-            if(sib===10){
-                const go=ac.createOscillator();
-                const gg=ac.createGain();
-                go.type='sine';
-                go.frequency.setValueAtTime(105,t);
-                go.frequency.exponentialRampToValueAtTime(36,t+0.048);
-                gg.gain.setValueAtTime(0.16,t);
-                gg.gain.exponentialRampToValueAtTime(0.0001,t+0.085);
-                go.connect(gg);gg.connect(master);
-                go.start(t);go.stop(t+0.1);
-                nodes.push(go,gg);
+            // ── CLAP on offbeats
+            if(sib===4||sib===12||sib===20||sib===28){
+                const cn=ac.createBufferSource();
+                const cf=ac.createBiquadFilter();
+                cf.type='bandpass';cf.frequency.value=1400;cf.Q.value=1.4;
+                const cg=ac.createGain();
+                cn.buffer=getCachedNoise(ac,0.055);
+                cg.gain.setValueAtTime(0.14,t);
+                cg.gain.exponentialRampToValueAtTime(0.0001,t+0.048);
+                cn.connect(cf);cf.connect(cg);cg.connect(master);
+                cn.start(t);
+                nodes.push(cn,cf,cg);
             }
 
-            if(sib===0)bar++;
             step++;
-            if(nodes.length>240)nodes.splice(6,nodes.length-120);
+            if(nodes.length>280)nodes.splice(6,nodes.length-140);
         }
         tick.stepSize=S;
         const sched=makeScheduler(ac,tick);
