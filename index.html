@@ -712,7 +712,7 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 0;
             border-radius: 13px;
             cursor: pointer;
@@ -1011,8 +1011,7 @@
 
     <!-- BREACH BUTTON — top priority -->
     <button class="breach-btn"
-            onclick="startGame()"
-            ontouchstart="startGame()">⚡ BREACH THE SYSTEM</button>
+        onclick="startGame()">⚡ BREACH THE SYSTEM</button>
 
     <!-- Feature pills -->
     <div class="feature-row">
@@ -1048,7 +1047,7 @@
 
     <!-- Credits -->
     <div style="margin-top:12px;text-align:center;">
-        <button onclick="clearProgress();updateStartButton();"
+        <button onclick="if(confirm('Reset all progress? This cannot be undone.'))clearProgress(),updateStartButton();"
             style="background:none;border:none;color:rgba(255,255,255,0.15);font-size:8px;
             font-family:'Orbitron',monospace;cursor:pointer;letter-spacing:1px;
             text-decoration:underline;padding:4px;">
@@ -1071,11 +1070,9 @@
     <p id="loseScore"    style="font-size:15px;color:#fff;margin-top:10px;">Final Score: 0</p>
     <p id="loseAccuracy" style="font-size:12px;color:rgba(0,255,255,.7);">Accuracy: 0%</p>
     <button class="btn"
-            onclick="retryLevel()"
-            ontouchstart="retryLevel()">🔄 Try Again</button>
+            onclick="retryLevel()">🔄 Try Again</button>
     <button class="btn" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;"
-            onclick="restartGame()"
-            ontouchstart="restartGame()">↩ Back to Start</button>
+            onclick="restartGame()">↩ Back to Start</button>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,255,255,.12);font-size:10px;color:rgba(255,255,255,.3);line-height:2;letter-spacing:.5px;">
         made with 💜 by <span style="color:rgba(0,255,255,.6);">Aya</span><br>
         📱 <a href="tel:0845067825" style="color:rgba(0,255,255,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
@@ -1092,8 +1089,7 @@
         <div id="winStreakBadge">🔥 Best Streak: 0</div>
         <div id="winAccuracy">Accuracy: 0%</div>
         <button class="btn" style="margin:10px 0 4px;padding:12px 28px;font-size:13px;"
-                onclick="restartGame()"
-                ontouchstart="restartGame()">🔄 Play Again</button>
+                onclick="restartGame()">🔄 Play Again</button>
 
         <div id="countdownSection">
             <div id="countdownLabel">⚡ SECRET UNLOCKING IN...</div>
@@ -1102,7 +1098,7 @@
 
         <div id="secretReveal">
             <p>🔓 CLASSIFIED MESSAGE</p>
-            <div id="secretText">Anginalutho but please screenshot this and send me your score.💋</div>
+            <div id="secretText">uhhhhh</div>
         </div>
 
         <div id="leaderboardSection">
@@ -1112,8 +1108,7 @@
 
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
             <button id="shareBtn"
-                    onclick="shareScore()"
-                    ontouchstart="shareScore()">📤 SHARE SCORE</button>
+                    onclick="shareScore()">📤 SHARE SCORE</button>
             <button onclick="saveScoreCard()" ontouchstart="saveScoreCard()"
                     style="background:linear-gradient(45deg,#833ab4,#fd1d1d,#fcb045);
                     color:#fff;border:none;padding:12px 20px;border-radius:30px;
@@ -1128,8 +1123,7 @@
         <div id="igConfirm" style="font-size:11px;color:#00ff00;margin:4px 0;min-height:16px;letter-spacing:1px;text-align:center;"></div>
 
         <button class="btn" style="margin-top:10px;"
-                onclick="restartGame()"
-                ontouchstart="restartGame()">🔄 Play Again</button>
+                onclick="restartGame()">🔄 Play Again</button>
         <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,20,147,.15);font-size:10px;color:rgba(255,255,255,.28);line-height:2;letter-spacing:.5px;">
             Geniusly created by <span style="color:rgba(255,100,180,.7);">Ayabukwa</span><br>
             📱 <a href="tel:0845067825" style="color:rgba(255,100,180,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
@@ -1298,11 +1292,23 @@ function clearProgress(){
     clearedLevels=new Set();
     renderLevelPills();
 }
-function getPersonalBest(){
-    try{return parseInt(localStorage.getItem(PB_KEY))||0;}catch{return 0;}
+function getPersonalBest(lv){
+    try{
+        const key=lv?`${PB_KEY}_lv${lv}`:PB_KEY;
+        return parseInt(localStorage.getItem(key))||0;
+    }catch{return 0;}
 }
-function savePersonalBest(sc){
-    try{localStorage.setItem(PB_KEY,sc);}catch{}
+function savePersonalBest(sc,lv){
+    try{
+        if(lv){
+            const key=`${PB_KEY}_lv${lv}`;
+            const prev=getPersonalBest(lv);
+            if(sc>prev)localStorage.setItem(key,sc);
+        }
+        // Also save overall best
+        const prev=getPersonalBest();
+        if(sc>prev)localStorage.setItem(PB_KEY,sc);
+    }catch{}
 }
 function updatePersonalBestDisplay(){
     const pb=getPersonalBest();
@@ -1312,7 +1318,7 @@ function updatePersonalBestDisplay(){
     if(hud)hud.textContent=pb.toLocaleString();
 }
 function checkNewPersonalBest(sc){
-    const pb=getPersonalBest();
+    const pb=getPersonalBest(null);
     if(sc>pb){
         savePersonalBest(sc);
         updatePersonalBestDisplay();
@@ -1529,7 +1535,8 @@ function showLevelComplete(lv,lvScore,acc){
     renderLevelPills(); // refresh the pill display on start screen
     const overlay=document.getElementById('levelCompleteOverlay');
     if(!overlay)return;
-    
+    const lcPbw=document.getElementById('progressBarWrap');
+    if(lcPbw)lcPbw.style.display='none';
 
     // Populate content
     document.getElementById('lcLevel').textContent=`LEVEL ${lv} CLEARED`;
@@ -2491,6 +2498,8 @@ function loadLevel(lv){
 function endGame(){
     gameState='end';
     clearInterval(gameTimer);
+    shakeDuration=8;
+    hitFlashAlpha=120;
     if(countdownInterval)clearInterval(countdownInterval);
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
 
@@ -2518,6 +2527,7 @@ function endGame(){
     if(passed){
         totalLevelScore+=score;
         checkNewPersonalBest(totalLevelScore);
+        savePersonalBest(score,currentLevel);
 
         if(currentLevel>=LEVELS.length){
             // ── GAME COMPLETE — all 12 levels cleared
@@ -3497,7 +3507,7 @@ function generateScoreCard(finalScore, streakVal, acc, diff, secretMsg){
 function saveScoreCard(){
     const secretMsg=document.getElementById('secretText').textContent||'You breached the system!';
     const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
-    const cv=generateScoreCard(score,bestStreak,acc,difficulty,secretMsg);
+    const cv=generateScoreCard(totalLevelScore||score,bestStreak,acc,difficulty,secretMsg);
     const link=document.createElement('a');
     link.download='digitalbreak-score.png';
     link.href=cv.toDataURL('image/png');
