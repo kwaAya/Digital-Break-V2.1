@@ -1692,6 +1692,7 @@ function getSfxCtx(){
 function playSound(type){
     try{
         const ctx=getSfxCtx();
+        if(ctx.state==='suspended')ctx.resume();
         const t=ctx.currentTime;
         const sounds={
             hit:()=>{
@@ -3029,7 +3030,7 @@ const SCENES={
             }
 
             step++;
-            if(nodes.length>280)nodes.splice(6,nodes.length-140);
+            if(nodes.length>200)nodes.splice(6,nodes.length-100);
         }
         tick.stepSize=S;
         const sched=makeScheduler(ac,tick);
@@ -3262,8 +3263,8 @@ const SCENES={
 // ─────────────────────────────────────────
 // LOOKAHEAD SCHEDULER — fixes crackling
 // ─────────────────────────────────────────
-const LOOKAHEAD=0.4;
-const SCHEDULE_INTERVAL=25;
+const LOOKAHEAD=0.5;
+const SCHEDULE_INTERVAL=40;
 
 function makeScheduler(ac,tickFn){
     let nextNoteTime=ac.currentTime+0.05;
