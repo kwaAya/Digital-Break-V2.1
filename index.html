@@ -2795,6 +2795,15 @@ document.addEventListener('DOMContentLoaded',()=>{
     switchMusicTo('landing');
 });
 
+function replayLevel(lv){
+    if(startLock||gameState==='playing')return;
+    startLock=true;setTimeout(()=>{startLock=false;},600);
+    currentLevel=lv;
+    totalLevelScore=0;
+    bestStreak=0;
+    loadLevel(currentLevel);
+}
+
 function updateStartButton(){
     const highest=Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length);
     const btn=document.querySelector('.breach-btn');
@@ -2824,15 +2833,45 @@ function renderLevelPills(){
 function previewLevel(lv){
     playSound('select');
     const data=LEVELS[lv-1];
-    // Update description box
+    const isCleared=clearedLevels.has(lv);
+    const isNext=lv===Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length);
+
+    let replayBtn='';
+    if(isCleared){
+        replayBtn=`<button onclick="replayLevel(${lv})"
+            style="margin-top:8px;width:100%;padding:8px;
+            background:rgba(0,255,136,0.08);
+            border:1px solid rgba(0,255,136,0.35);
+            color:rgba(0,255,180,0.85);
+            font-size:9px;font-weight:900;letter-spacing:2px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:10px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+            ↩ REPLAY LEVEL ${lv}
+        </button>`;
+    } else if(isNext){
+        replayBtn=`<button onclick="startGame()"
+            style="margin-top:8px;width:100%;padding:8px;
+            background:rgba(255,215,0,0.08);
+            border:1px solid rgba(255,215,0,0.35);
+            color:rgba(255,215,0,0.85);
+            font-size:9px;font-weight:900;letter-spacing:2px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:10px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+            ⚡ START FROM HERE
+        </button>`;
+    }
+
     document.getElementById('difficultyDesc').innerHTML=
         `<strong style="color:rgba(255,215,0,0.8);">LEVEL ${lv}:</strong> ${data.note}<br>
         <span style="font-size:9px;opacity:0.55;">
             ${data.time}s · Target: ${data.target.toLocaleString()} pts ·
             ${data.obstacles} obstacle${data.obstacles!==1?'s':''}
             ${data.boss?' · Boss':''}${data.powerups?' · Power-ups':''}
-        </span>`;
-    // Highlight selected pill
+        </span>
+        ${replayBtn}`;
+
     document.querySelectorAll('.level-pill').forEach((p,i)=>{
         p.classList.toggle('selected-preview', i===lv-1);
     });
