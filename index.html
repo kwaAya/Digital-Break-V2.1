@@ -878,6 +878,64 @@
 </head>
 <body>
 
+<!-- ══ STRIKE & ZOOM INTRO LOADER ══ -->
+<div id="introLoader" style="
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:#000;z-index:9999;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    overflow:hidden;
+">
+    <div id="introFlash" style="
+        position:absolute;inset:0;
+        background:#fff;opacity:0;
+        pointer-events:none;
+    "></div>
+    <div id="introBolt" style="
+        font-size:80px;
+        opacity:0;
+        transform:translateY(-120px) scale(0.4);
+        filter:drop-shadow(0 0 40px #ffd700) drop-shadow(0 0 80px #ff8800);
+        transition:none;
+    ">⚡</div>
+    <div id="introTitle" style="
+        font-family:'Orbitron',monospace;
+        font-size:clamp(28px,7vw,56px);
+        font-weight:900;
+        letter-spacing:8px;
+        color:#fff;
+        opacity:0;
+        transform:scale(2.8);
+        margin-top:18px;
+        text-shadow:0 0 40px rgba(255,215,0,0.8),0 0 80px rgba(255,140,0,0.4);
+        white-space:nowrap;
+    ">DIGITAL BREAK</div>
+    <div id="introSub" style="
+        font-family:'Orbitron',monospace;
+        font-size:clamp(8px,2vw,11px);
+        letter-spacing:6px;
+        color:rgba(255,215,0,0.5);
+        opacity:0;
+        transform:translateY(10px);
+        margin-top:10px;
+    ">V2.1 — ULTIMATE EDITION</div>
+    <div id="introBar" style="
+        position:absolute;bottom:0;left:0;
+        height:3px;width:0%;
+        background:linear-gradient(90deg,#ffd700,#ff8800,#ff1493);
+        box-shadow:0 0 12px rgba(255,215,0,0.8);
+        transition:width 1.6s cubic-bezier(0.4,0,0.2,1);
+    "></div>
+    <div id="introStrike1" style="
+        position:absolute;top:0;left:50%;
+        width:2px;height:0;
+        background:linear-gradient(180deg,rgba(255,215,0,0),#ffd700,rgba(255,215,0,0));
+        transform:translateX(-50%);
+        opacity:0;
+        box-shadow:0 0 8px #ffd700, 0 0 20px #ffd700;
+    "></div>
+</div>
+
 <canvas id="confettiCanvas"></canvas>
 
 <div id="gameContainer">
@@ -3559,6 +3617,81 @@ function saveScoreCard(){
         '✅ Saved! Open Instagram → Stories → add photo 📸';
     setTimeout(()=>document.getElementById('igConfirm').textContent='',5000);
 }
+
+// ══ STRIKE & ZOOM INTRO ══
+(function(){
+    const loader   = document.getElementById('introLoader');
+    const flash    = document.getElementById('introFlash');
+    const bolt     = document.getElementById('introBolt');
+    const title    = document.getElementById('introTitle');
+    const sub      = document.getElementById('introSub');
+    const bar      = document.getElementById('introBar');
+    const strike   = document.getElementById('introStrike1');
+
+    function ease(el,props,dur,delay){
+        return new Promise(res=>{
+            setTimeout(()=>{
+                Object.assign(el.style, {transition:`all ${dur}ms cubic-bezier(0.34,1.56,0.64,1)`,...props});
+                setTimeout(res, dur);
+            }, delay||0);
+        });
+    }
+    function set(el,props){ Object.assign(el.style,props); }
+
+    async function runIntro(){
+        // Phase 1 — lightning strike drops in (180ms)
+        await new Promise(r=>setTimeout(r,120));
+        set(strike,{transition:'height 0.18s ease-in, opacity 0s',opacity:'1',height:'45%'});
+        await new Promise(r=>setTimeout(r,180));
+
+        // Phase 2 — flash
+        set(flash,{transition:'opacity 0.06s ease',opacity:'0.85'});
+        await new Promise(r=>setTimeout(r,60));
+        set(flash,{transition:'opacity 0.22s ease',opacity:'0'});
+        set(strike,{opacity:'0',height:'0'});
+
+        // Phase 3 — bolt slams down
+        set(bolt,{transition:'none'});
+        await new Promise(r=>setTimeout(r,10));
+        set(bolt,{
+            transition:'opacity 0.12s ease, transform 0.22s cubic-bezier(0.22,1,0.36,1)',
+            opacity:'1',
+            transform:'translateY(0) scale(1.2)'
+        });
+        await new Promise(r=>setTimeout(r,200));
+        set(bolt,{
+            transition:'transform 0.18s ease',
+            transform:'translateY(0) scale(1)'
+        });
+        await new Promise(r=>setTimeout(r,180));
+
+        // Phase 4 — title zooms in
+        set(title,{transition:'opacity 0.28s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1)'});
+        await new Promise(r=>setTimeout(r,10));
+        set(title,{opacity:'1',transform:'scale(1)'});
+
+        // Phase 5 — subtitle fades in
+        await new Promise(r=>setTimeout(r,180));
+        set(sub,{transition:'opacity 0.4s ease, transform 0.4s ease',opacity:'1',transform:'translateY(0)'});
+
+        // Phase 6 — progress bar sweeps
+        await new Promise(r=>setTimeout(r,80));
+        bar.style.width='100%';
+
+        // Phase 7 — hold briefly then fade out
+        await new Promise(r=>setTimeout(r,900));
+        set(loader,{transition:'opacity 0.45s ease',opacity:'0'});
+        await new Promise(r=>setTimeout(r,460));
+        loader.style.display='none';
+    }
+
+    // Run after fonts load
+    if(document.fonts && document.fonts.ready){
+        document.fonts.ready.then(runIntro);
+    } else {
+        window.addEventListener('load', runIntro);
+    }
+})();
 
 </script>
 </body>
