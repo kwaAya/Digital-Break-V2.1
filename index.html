@@ -14,8 +14,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Digital Break V2.1 - by Aya</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon_io\favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffd700">
     <meta name="mobile-web-app-capable" content="yes">
@@ -895,9 +895,24 @@
         font-size:80px;
         opacity:0;
         transform:translateY(-120px) scale(0.4);
-        filter:drop-shadow(0 0 40px #ffd700) drop-shadow(0 0 80px #ff8800);
         transition:none;
+        line-height:1;
+        font-family:Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif;
     ">⚡</div>
+    <div id="introTitleText" style="
+        position:absolute;
+        font-family:'Orbitron',monospace;
+        font-size:clamp(28px,7vw,56px);
+        font-weight:900;
+        letter-spacing:8px;
+        color:rgba(255,215,0,0.15);
+        pointer-events:none;
+        white-space:nowrap;
+        top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        z-index:0;
+    ">DIGITAL BREAK</div>
+    
     <div id="introTitle" style="
         font-family:'Orbitron',monospace;
         font-size:clamp(28px,7vw,56px);
@@ -1685,9 +1700,10 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
 
     // Submit to online leaderboard
     const lvReached = Math.max(...[...clearedLevels, currentLevel]);
-    const accVal = tc>0?Math.round((sh/tc)*100):0;
+    const avgAcc = totalClicksAllLevels>0?Math.round((totalHitsAllLevels/totalClicksAllLevels)*100):0;
+    const avgStreak = levelsCompleted>0?Math.round(totalStreakAllLevels/levelsCompleted):bestStreak;
     promptPlayerName(name=>{
-        submitOnlineScore(name, finalScore, lvReached, bestStreak, accVal);
+        submitOnlineScore(name, totalLevelScore||finalScore, lvReached, avgStreak, avgAcc);
     });
     // Render online board into existing container
     document.getElementById('leaderboardRows').innerHTML='';
@@ -1893,9 +1909,11 @@ function showEpicGameComplete(finalScore,tc,sh){
 
     document.body.appendChild(el);
     // Submit and load online leaderboard
-    const lvReached = Math.max(...[...clearedLevels, 12]);
+    const lvReached = 12;
+    const avgAcc = totalClicksAllLevels>0?Math.round((totalHitsAllLevels/totalClicksAllLevels)*100):acc;
+    const avgStreak = levelsCompleted>0?Math.round(totalStreakAllLevels/levelsCompleted):bestStreak;
     promptPlayerName(name=>{
-        submitOnlineScore(name, finalScore, lvReached, bestStreak, acc);
+        submitOnlineScore(name, finalScore, lvReached, avgStreak, avgAcc);
         renderOnlineLeaderboard('epicLbRows', finalScore);
     });
     startConfetti();
@@ -1922,7 +1940,11 @@ let difficulty='normal',targetScore=1500;
 let totalClicks=0,successfulHits=0;
 let shieldTime=0,slowTime=0,multiTime=0;
 let currentStreak=0,bestStreak=0,streakToastTimer=null;
-let totalLevelScore=0; // cumulative score across all levels for display
+let totalLevelScore=0;
+let totalClicksAllLevels=0;
+let totalHitsAllLevels=0;
+let totalStreakAllLevels=0;
+let levelsCompleted=0; // cumulative score across all levels for display
 let bossTarget=null,bossAlertTimer=null;
 let isPanic=false;
 let p5Canvas=null;
@@ -2888,6 +2910,10 @@ function startGame(){
     currentLevel=highest;
     totalLevelScore=0;
     bestStreak=0;
+    totalClicksAllLevels=0;
+    totalHitsAllLevels=0;
+    totalStreakAllLevels=0;
+    levelsCompleted=0;
     loadLevel(currentLevel);
 }
 
@@ -2972,6 +2998,10 @@ function endGame(){
 
     if(passed){
         totalLevelScore+=score;
+        totalClicksAllLevels+=totalClicks;
+        totalHitsAllLevels+=successfulHits;
+        totalStreakAllLevels+=bestStreak;
+        levelsCompleted++;
         checkNewPersonalBest(totalLevelScore);
         savePersonalBest(score,currentLevel);
 
