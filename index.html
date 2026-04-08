@@ -2628,9 +2628,13 @@ function draw(){
         updateAndDisplayTargets(); updateAndDisplayObstacles();
         updateAndDisplayPowerups(); updateAndDisplayBoss();
         updateAndDisplayParticles();
-        const spawnRate = currentLevel<=3 ? 55 : currentLevel<=6 ? 65 : 75;
-        if(frameCount%spawnRate===0)createTarget();
-        if(frameCount%180===0&&obstacles.length<levelData.obstacles)createObstacle();
+        //const spawnRate = currentLevel<=3 ? 55 : currentLevel<=6 ? 65 : 75;
+        //if(frameCount%spawnRate===0)createTarget();
+        const maxTargets=Math.min(3+Math.floor(currentLevel/2),8);
+        if(targets.filter(t=>t.active).length<maxTargets&&frameCount%Math.max(28,70-currentLevel*3)===0){
+            createTarget();
+        }
+        if(frameCount%200===0&&obstacles.length<levelData.obstacles)createObstacle();
         if(levelData.powerups&&frameCount%240===0&&Math.random()<.7)createPowerup();
         trySpawnBoss();
         if(shieldTime>0){stroke(0,255,100,80);strokeWeight(6);noFill();rect(10,10,width-20,height-20,13);}
