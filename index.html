@@ -159,14 +159,17 @@
             background: rgba(0,0,0,0.92);
             z-index: 1000;
             overflow-y: scroll;
+            overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior-y: contain;
             touch-action: pan-y;
             -webkit-transform: translateZ(0);
             transform: translateZ(0);
             display: none;
-            padding: 20px 15px 60px;
+            padding: 16px 12px 80px;
+            box-sizing: border-box;
         }
+
         #winOverlay::-webkit-scrollbar{width:4px}
         #winOverlay::-webkit-scrollbar-track{background:rgba(255,20,147,.05);border-radius:4px}
         #winOverlay::-webkit-scrollbar-thumb{background:rgba(255,20,147,.35);border-radius:4px}
@@ -178,12 +181,15 @@
             border-radius: 22px;
             width: 100%;
             max-width: 480px;
-            padding: 24px 20px 40px;
-            margin: 10px auto 40px;
+            padding: 22px 16px 40px;
+            margin: 0 auto 40px;
             text-align: center;
             box-shadow: 0 0 60px rgba(255,20,147,0.5);
             position: relative;
             cursor: default;
+            box-sizing: border-box;
+            overflow: hidden;
+            word-break: break-word;
         }
 
         #winBox::before {
@@ -1125,19 +1131,128 @@
 </div>
 
 <!-- ══ LOSE POPUP ══ -->
-<div id="losePopup" class="popup" style="display:none;">
-    <h2 class="access-denied">🔒 ACCESS DENIED</h2>
-    <p id="loseMessage">Nice try though...</p>
-    <p id="loseScore"    style="font-size:15px;color:#fff;margin-top:10px;">Final Score: 0</p>
-    <p id="loseAccuracy" style="font-size:12px;color:rgba(0,255,255,.7);">Accuracy: 0%</p>
-    <button class="btn"
-            onclick="retryLevel()">🔄 Try Again</button>
-    <button class="btn" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;"
-            onclick="restartGame()">↩ Back to Start</button>
-    <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,255,255,.12);font-size:10px;color:rgba(255,255,255,.3);line-height:2;letter-spacing:.5px;">
-        made with 💜 by <span style="color:rgba(0,255,255,.6);">Aya</span><br>
-        📱 <a href="tel:0845067825" style="color:rgba(0,255,255,.5);text-decoration:none;">084 506 7825</a> &nbsp;·&nbsp;
-        ✉️ <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(0,255,255,.5);text-decoration:none;">unakomtumtum0@gmail.com</a>
+<div id="losePopup" style="
+    display:none;
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.94);
+    z-index:1000;
+    overflow-y:scroll;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-y:contain;
+    touch-action:pan-y;
+    -webkit-transform:translateZ(0);
+    transform:translateZ(0);
+    padding:20px 14px 60px;
+    box-sizing:border-box;
+">
+    <div style="
+        max-width:480px;width:100%;margin:0 auto;
+        background:linear-gradient(160deg,#0f0008,#1a000e,#0a0015);
+        border:2px solid rgba(255,40,100,0.5);
+        border-radius:22px;
+        padding:28px 18px 36px;
+        text-align:center;
+        box-shadow:0 0 50px rgba(255,0,60,0.25);
+        position:relative;
+        overflow:hidden;
+        box-sizing:border-box;
+    ">
+        <!-- scanline texture -->
+        <div style="position:absolute;inset:0;border-radius:20px;pointer-events:none;
+            background:repeating-linear-gradient(0deg,transparent,transparent 34px,
+            rgba(255,40,100,0.025) 34px,rgba(255,40,100,0.025) 35px);"></div>
+
+        <!-- Top accent line -->
+        <div style="position:absolute;top:0;left:20px;right:20px;height:1px;
+            background:linear-gradient(90deg,transparent,rgba(255,40,100,0.6),transparent);"></div>
+
+        <!-- Lock icon -->
+        <div style="font-size:48px;margin-bottom:10px;
+            filter:drop-shadow(0 0 20px rgba(255,40,100,0.6));
+            animation:splashBoltAnim 1.5s ease-in-out infinite alternate;">🔒</div>
+
+        <!-- Title -->
+        <div style="
+            font-size:20px;font-weight:900;letter-spacing:3px;
+            background:linear-gradient(45deg,#ff1450,#ff6b00);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;margin-bottom:8px;
+            font-family:'Orbitron',monospace;
+        ">ACCESS DENIED</div>
+
+        <!-- Message -->
+        <div id="loseMessage" style="
+            font-size:11px;color:rgba(255,100,120,0.8);
+            font-style:italic;margin-bottom:16px;
+            font-family:'Orbitron',monospace;
+            letter-spacing:0.5px;line-height:1.6;
+        ">Nice try though...</div>
+
+        <!-- Score badge -->
+        <div id="loseScore" style="
+            display:inline-block;
+            background:linear-gradient(135deg,rgba(255,40,100,0.15),rgba(255,100,0,0.08));
+            border:1px solid rgba(255,40,100,0.4);
+            color:#fff;font-size:22px;font-weight:900;
+            padding:12px 24px;border-radius:14px;
+            margin:0 0 8px;letter-spacing:2px;
+            box-shadow:0 0 20px rgba(255,40,100,0.2);
+            font-family:'Orbitron',monospace;
+            word-break:break-all;
+        ">0 / 0 needed</div>
+
+        <!-- Accuracy -->
+        <div id="loseAccuracy" style="
+            font-size:10px;color:rgba(255,150,170,0.65);
+            margin:0 0 20px;letter-spacing:1px;
+            font-family:'Orbitron',monospace;
+        ">Accuracy: 0%</div>
+
+        <!-- Retry button -->
+        <button onclick="retryLevel()" style="
+            width:100%;padding:15px;
+            background:linear-gradient(135deg,rgba(255,40,100,0.16),rgba(255,80,0,0.08));
+            border:1px solid rgba(255,40,100,0.5);
+            color:rgba(255,100,130,0.95);
+            font-size:12px;font-weight:900;letter-spacing:3px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:12px;margin-bottom:10px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+            position:relative;overflow:hidden;
+        ">🔄 TRY LEVEL <span id="loseLevelNum">1</span> AGAIN</button>
+
+        <!-- Back to start button -->
+        <button onclick="restartGame()" style="
+            width:100%;padding:11px;
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.1);
+            color:rgba(255,255,255,0.35);
+            font-size:10px;font-weight:900;letter-spacing:2px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:12px;margin-bottom:18px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+        ">↩ BACK TO START</button>
+
+        <!-- Tip -->
+        <div id="loseTip" style="
+            font-size:9px;color:rgba(255,180,0,0.5);
+            background:rgba(255,180,0,0.05);
+            border:1px solid rgba(255,180,0,0.12);
+            border-radius:10px;padding:9px 12px;
+            line-height:1.7;letter-spacing:0.5px;
+            font-family:'Orbitron',monospace;
+            margin-bottom:18px;
+        "></div>
+
+        <!-- Credits -->
+        <div style="padding-top:14px;border-top:1px solid rgba(255,40,100,0.12);
+            font-size:9px;color:rgba(255,255,255,0.2);line-height:2;letter-spacing:.5px;
+            font-family:'Orbitron',monospace;">
+            made with 💜 by <span style="color:rgba(255,100,130,0.5);">Ayabukwa</span><br>
+            <a href="tel:0845067825" style="color:rgba(255,100,130,0.4);text-decoration:none;">084 506 7825</a>
+            &nbsp;·&nbsp;
+            <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(255,100,130,0.4);text-decoration:none;">unakomtumtum0@gmail.com</a>
+        </div>
     </div>
 </div>
 
@@ -3024,12 +3139,20 @@ function endGame(){
         ];
         document.getElementById('loseMessage').textContent=
             msgs[Math.floor(Math.random()*msgs.length)];
-            const rb=document.getElementById('retryBtn');
-            if(rb)rb.textContent=`🔄 Try Level ${currentLevel} Again`;
         document.getElementById('loseScore').textContent=
-            `Score: ${score.toLocaleString()} / ${levelData.target.toLocaleString()} needed`;
+            `${score.toLocaleString()} / ${levelData.target.toLocaleString()} pts needed`;
         document.getElementById('loseAccuracy').textContent=
-            `Accuracy: ${acc}% (${successfulHits}/${totalClicks} hits)`;
+            `Accuracy: ${acc}% · ${successfulHits}/${totalClicks} hits`;
+        const lln=document.getElementById('loseLevelNum');
+        if(lln)lln.textContent=currentLevel;
+        // Contextual tip based on how they failed
+        const tips=[
+            acc<40?'💡 Try tapping faster — targets only score when active (glowing bright).':
+            lives<=0?'💡 Avoid the red spinning hazards — tapping them costs a life.':
+            `💡 You need ${levelData.target-score} more points. Focus on gold targets — they\'re worth 3x.`,
+        ];
+        const tipEl=document.getElementById('loseTip');
+        if(tipEl)tipEl.textContent=tips[0];
         document.getElementById('losePopup').style.display='block';
         playSound('fail');
         switchMusicTo('lose');
@@ -3795,6 +3918,7 @@ function fixScrolling(){
     document.getElementById('startPopup'),
     document.getElementById('losePopup'),
     document.getElementById('levelCompleteOverlay'),
+    document.getElementById('winOverlay'),
 ];
 
     scrollables.forEach(el=>{
