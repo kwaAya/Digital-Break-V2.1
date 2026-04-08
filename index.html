@@ -1551,30 +1551,58 @@ function promptPlayerName(callback){
 // ══════════════════════════════════════════
 const LEADERBOARD_KEY = 'digitalBreakV21_lb';
 const SECRET_MESSAGES = [
+    "Suggest more secret messages you'd like the gave to have, via my contact details below! 📩",
+    "Well Done! 6 7!!😛",
     "Why is 6 afraid of 7? Because 7, 8, 9. But why was 7 afraid tho? Because 7 knew that 6, 8, 9 too 💀",
-    "No cap this game actually ate fr fr. The simulation is shaking rn 🔥",
-    "You understood the assignment periodt. We don't make the rules, you just followed them perfectly.",
-    "POV: you just violated the algorithm and the algorithm is embarrassed 🤖",
-    "Respectfully... you ate and left absolutely no crumbs. The plate is clean. 🍽️",
+    //"You understood the assignment periodt. We don't make the rules, you just followed them perfectly.",
+    //"POV: you just violated the algorithm and the algorithm is embarrassed 🤖",
+    //"Respectfully... you ate and left absolutely no crumbs. The plate is clean. 🍽️",
+    "Oh you played so well, you're the birthday game winner",
     "The audacity to WIN?? In THIS economy?? We love to see it bestie 😭",
-    "Main character behaviour fully detected. Stay built different 💅",
-    "IYKYK. And you clearly knew. The rest of them don't. Keep it that way 🤫",
-    "You're giving 'I don't miss' energy and honestly the game felt it 🎯",
-    "We move. But first screenshot this because nobody is going to believe you 📸",
-    "The devs are shaking. (hi it's Aya. I'm shaking. Congrats bestie 💋)",
+    "You won. Cool. Anyway, my therapist says I need to stop attaching my self-worth to your performance. Congrats I guess. 🖤",
+    "Level cleared. That's one more small victory before the void consumes us all. Treat yourself. ☠️",
+    "POV: you succeeded and honestly? That's suspicious. What are you hiding?",
+    "You did it. The voices are quiet. For now. 🧠",
+    "Another win. Another day further from God. Let's go bestie. ⛓️",
+    "Congratulations. You are now statistically less likely to uninstall out of shame. Progress.",
+    "You cleared the level. The level did not clear you. This time. 🔪",
+    "My disappointment is immeasurable and my day is… actually okay because you won. Don't get used to it.",
+    "You passed. The bar was in hell but you limbo'd under it anyway. 🔥",
+    "Winning is fun they said. Nobody mentions the crushing weight of expectation for the next level. Anyway here's your dopamine. 💊",
+    "Level complete. Your reward? Slightly less existential dread. Spend it wisely.",
+    "You won. The game is embarrassed. I am tired. We are all feeling things. Let's move on.",
+    "Congratulations. You have temporarily delayed my villain arc. Appreciate it.",
+    "You cleared it. The funeral is tomorrow. Bring snacks. ⚰️",
+    "Another win. The cemetery of failed attempts grows fuller. Rest in peace to them. Not you though. You're too annoying to die.",
+    "You did the thing. The thing is done. Now we both pretend this fixes anything.",
+    "Level cleared. My will to live has increased by 3%. That's not nothing.",
+    "Congratulations. You are now contractually obligated to keep playing. Read the fine print. (There is no fine print. I'm just lonely.)",
+    "You won. Donate to my therapy fund or don't. Either way the level is over.",
+    "Shout out to my South African players. Wozo'thathu kiss.💋💋💋",
+    //"Main character behaviour fully detected. Stay built different 💅",
+    //"IYKYK. And you clearly knew. The rest of them don't. Keep it that way 🤫",
+    //"You're giving 'I don't miss' energy and honestly the game felt it 🎯",
+    "On to the next. But first screenshot this because nobody is going to believe you 📸",
+    //"The devs are shaking. (hi it's Aya. I'm shaking. Congrats bestie 💋)",
     "Girl math: spending 60 seconds on this game = certified that girl energy ✨",
-    "Lowkey ate. Highkey ate. Midkey absolutely demolished it 🔥",
-    "The haters said you couldn't. The haters were statistically incorrect 📊",
+    //"Lowkey ate. Highkey ate. Midkey absolutely demolished it 🔥",
+    //"The haters said you couldn't. The haters were statistically incorrect 📊",
+    "This is your sign to quit while you're ahead. But we both know you won’t. Onto the next level.",
+    "Objectively: slay. Subjectively: also slay. Spiritually: you need help but congrats.",
+    "Lock in? No chomam you welded the doors shut. That's different.",
+    "You just did something that made the dev open their laptop again.",
+    //"The game's code is crying. You love to see it. 💻😭",
+    "That wasn't a level clear. That was a level MURDER. And you got away with it.",
+    "Udlalile mfwethu. I hope bazokushada one day. 🙏🏽💋",
     "Real ones finish. You? Certified real one. The simulation acknowledges you fr.",
     "POV: it's 3am, your eyes hurt, your thumb is sore, and you WON. No notes. 🌙",
     "This is your villain origin story except you're the hero actually. Or maybe both 😈",
-    "NPC behaviour? Not today. Main character only. Congrats on existing correctly 💅",
+    //"NPC behaviour? Not today. Main character only. Congrats on existing correctly 💅",
     "Bro really said 'let me speedrun this' and then DID IT. Unhinged. Iconic. 🏃",
-    "The way you ate this game up... it's giving chosen one energy and I don't say that lightly.",
+    //"The way you ate this game up... it's giving chosen one energy and I don't say that lightly.",
     "Touch grass? Maybe. But first savour this W because you earned it bestie 🌿",
-    "You just broke the matrix and the matrix is embarrassed. The glitch in the system is you. 🕶️",
-    "Not to flex but you just did a thing that was supposed to be hard and made it look easy. The audacity. The simulation is reeling. 🌀",
-    "The system was like 'you can't do that' and you were like 'watch me' and then you did. The system is now questioning its existence ngl.",
+    //"You just broke the matrix and the matrix is embarrassed. The glitch in the system is you. 🕶️",
+    //"Not to flex but you just did a thing that was supposed to be hard and made it look easy. The audacity. The simulation is reeling. 🌀",
     "I hope ungumntu oOn ebomini.",
 ];
 const PB_KEY='digitalBreakV21_pb';
@@ -1786,7 +1814,7 @@ function runHackLoader(callback){
     });
 
     // Bolt fades in after lines
-    setTimeout(()=>{ bolt.style.opacity='1'; },2200);
+    setTimeout(()=>{ bolt.style.opacity='1'; playSound('lightning'); },2200);
 
     // Done — hide loader and fire callback
     setTimeout(()=>{
@@ -2376,6 +2404,42 @@ function playSound(type){
                 });
             },
         };
+
+        lightning:()=>{
+                // Electric crack — sharp and dramatic
+                const noise=ac.createBufferSource();
+                const nf=ac.createBiquadFilter();
+                nf.type='bandpass';nf.frequency.value=1800;nf.Q.value=0.4;
+                const ng=ac.createGain();
+                noise.buffer=getCachedNoise(ac,0.18);
+                ng.gain.setValueAtTime(0,t);
+                ng.gain.linearRampToValueAtTime(0.6,t+0.004);
+                ng.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+                noise.connect(nf);nf.connect(ng);ng.connect(ctx.destination);
+                noise.start(t);
+                // Low thud underneath
+                const o=ac.createOscillator();
+                const g=ac.createGain();
+                o.type='sine';
+                o.frequency.setValueAtTime(120,t);
+                o.frequency.exponentialRampToValueAtTime(28,t+0.14);
+                g.gain.setValueAtTime(0.5,t);
+                g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(t);o.stop(t+0.2);
+                // High crackle
+                const c=ac.createBufferSource();
+                const cf=ac.createBiquadFilter();
+                cf.type='highpass';cf.frequency.value=8000;
+                const cg=ac.createGain();
+                c.buffer=getCachedNoise(ac,0.08);
+                cg.gain.setValueAtTime(0.35,t+0.01);
+                cg.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
+                c.connect(cf);cf.connect(cg);cg.connect(ctx.destination);
+                c.start(t+0.01);
+                nodes.push(noise,nf,ng,o,g,c,cf,cg);
+            },
+            
         sounds[type]&&sounds[type]();
     }catch(e){}
 }
@@ -2669,8 +2733,11 @@ function updateAndDisplayTargets(){
         if(t.x<30||t.x>width-30)t.vx*=-1;if(t.y<30||t.y>height-30)t.vy*=-1;
         t.x=constrain(t.x,30,width-30);t.y=constrain(t.y,30,height-30);
         t.phase+=.08;
-        const activationRate = currentLevel<=2 ? 0.016 : currentLevel<=4 ? 0.013 : currentLevel>=9 ? 0.012 : 0.010;
-if(!t.active&&Math.random()<activationRate){t.active=true;t.activeTime=0;}
+        const maxActive=Math.min(2+Math.floor(currentLevel/3),5);
+        const currentActive=targets.filter(t=>t.active).length;
+        if(!t.active&&currentActive<maxActive&&frameCount%8===0&&Math.random()<(currentLevel>=9?.18:.12)){
+            t.active=true;t.activeTime=0;
+        }
         if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
         push();translate(t.x,t.y);
         if(t.active){
