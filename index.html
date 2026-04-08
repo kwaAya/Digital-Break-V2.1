@@ -2374,18 +2374,45 @@ function playSound(type){
                 o.start(t);o.stop(t+0.12);
             },
             breach:()=>{
-                // Dramatic power-up surge
-                [110,220,440,880].forEach((freq,i)=>{
-                    const o=ctx.createOscillator();
-                    const g=ctx.createGain();
-                    o.type='sawtooth';
-                    o.frequency.setValueAtTime(freq,t+i*0.07);
-                    o.frequency.exponentialRampToValueAtTime(freq*1.5,t+i*0.07+0.12);
-                    g.gain.setValueAtTime(0.14,t+i*0.07);
-                    g.gain.exponentialRampToValueAtTime(0.001,t+i*0.07+0.18);
-                    o.connect(g);g.connect(ctx.destination);
-                    o.start(t+i*0.07);o.stop(t+i*0.07+0.2);
-                });
+                // Sharp crack — white noise burst
+                const crack=ctx.createBufferSource();
+                const crackBuf=ctx.createBuffer(1,ctx.sampleRate*0.12,ctx.sampleRate);
+                const cd=crackBuf.getChannelData(0);
+                for(let i=0;i<cd.length;i++)cd[i]=(Math.random()*2-1);
+                crack.buffer=crackBuf;
+                const crackF=ctx.createBiquadFilter();
+                crackF.type='highpass';crackF.frequency.value=1800;
+                const crackG=ctx.createGain();
+                crackG.gain.setValueAtTime(1.2,t);
+                crackG.gain.exponentialRampToValueAtTime(0.0001,t+0.1);
+                crack.connect(crackF);crackF.connect(crackG);crackG.connect(ctx.destination);
+                crack.start(t);
+
+                // Thunder rumble — low noise decay
+                const rumble=ctx.createBufferSource();
+                const rumbleBuf=ctx.createBuffer(1,ctx.sampleRate*1.8,ctx.sampleRate);
+                const rd=rumbleBuf.getChannelData(0);
+                for(let i=0;i<rd.length;i++)rd[i]=(Math.random()*2-1);
+                rumble.buffer=rumbleBuf;
+                const rumbleF=ctx.createBiquadFilter();
+                rumbleF.type='lowpass';rumbleF.frequency.value=180;
+                rumbleF.Q.value=2;
+                const rumbleG=ctx.createGain();
+                rumbleG.gain.setValueAtTime(0.7,t+0.04);
+                rumbleG.gain.exponentialRampToValueAtTime(0.0001,t+1.8);
+                rumble.connect(rumbleF);rumbleF.connect(rumbleG);rumbleG.connect(ctx.destination);
+                rumble.start(t+0.04);
+
+                // Electric zap — pitched sine drop
+                const zap=ctx.createOscillator();
+                const zapG=ctx.createGain();
+                zap.type='sawtooth';
+                zap.frequency.setValueAtTime(280,t);
+                zap.frequency.exponentialRampToValueAtTime(28,t+0.35);
+                zapG.gain.setValueAtTime(0.55,t);
+                zapG.gain.exponentialRampToValueAtTime(0.0001,t+0.38);
+                zap.connect(zapG);zapG.connect(ctx.destination);
+                zap.start(t);zap.stop(t+0.4);
             },
             fail:()=>{
                 // Descending thud — game over feel
