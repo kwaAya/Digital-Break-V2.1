@@ -1527,9 +1527,13 @@ function promptPlayerName(callback){
             <div style="font-size:13px;font-weight:900;color:rgba(255,215,0,0.9);letter-spacing:3px;margin-bottom:6px;">ENTER YOUR NAME</div>
             <div style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:18px;">This goes on the global leaderboard</div>
             <input id="_nameInput" maxlength="20" placeholder="Your name..."
+                autocomplete="off" autocorrect="off" autocapitalize="off"
+                inputmode="text"
                 style="width:100%;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.3);
                 border-radius:10px;padding:12px 14px;color:rgba(255,215,0,0.9);font-family:Orbitron,monospace;
-                font-size:12px;letter-spacing:2px;text-align:center;outline:none;margin-bottom:14px;">
+                font-size:16px;letter-spacing:2px;text-align:center;outline:none;margin-bottom:14px;
+                -webkit-appearance:none;appearance:none;
+                touch-action:manipulation;cursor:text;">
             <div style="display:flex;gap:10px;justify-content:center;">
                 <button id="_nameSubmit" style="background:linear-gradient(135deg,rgba(255,215,0,0.18),rgba(255,140,0,0.08));
                     border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);
@@ -1542,7 +1546,11 @@ function promptPlayerName(callback){
         </div>`;
     document.body.appendChild(overlay);
     const input = overlay.querySelector('#_nameInput');
-    input.focus();
+    // Delay focus so iOS registers the tap gesture first
+    setTimeout(()=>{
+        input.focus();
+        input.click();
+    }, 300);
     const adjs=['Sweaty','Lucky','Shaking','Elite','Mid-tier','Confused','Trembling'];
     const nouns=['Gamer','Clicker','Legend','Tryhard','NPC','Bot','President'];
     const randomName = adjs[Math.floor(Math.random()*adjs.length)]+' '+nouns[Math.floor(Math.random()*nouns.length)];
@@ -1980,6 +1988,10 @@ function goToNextLevel(){
 
 function showEpicGameComplete(finalScore,tc,sh){
     const acc=tc>0?Math.round((sh/tc)*100):0;
+    clearedLevels.add(12);
+    saveProgress();
+    renderLevelPills();
+    updateStartButton();
     checkNewPersonalBest(finalScore);
 
     // Build the overlay
@@ -2057,8 +2069,19 @@ function showEpicGameComplete(finalScore,tc,sh){
                 min-height:46px;touch-action:manipulation;">📸 SAVE FOR STORY</button>
         </div>
         <div id="shareConfirm" style="font-size:11px;color:#00ff00;min-height:16px;letter-spacing:1px;margin-bottom:10px;"></div>
+        
+        <button onclick="document.getElementById('epicCompleteOverlay').remove();loadLevel(12);"
+            style="width:100%;padding:14px;
+            background:rgba(255,215,0,0.05);
+            border:1px solid rgba(255,215,0,0.2);color:rgba(255,215,0,0.5);
+            font-size:11px;font-weight:900;letter-spacing:3px;
+            font-family:Orbitron,monospace;
+            cursor:pointer;border-radius:14px;margin-bottom:10px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+            🔁 REPLAY LEVEL 12
+        </button>
 
-        <button onclick="restartGame();document.getElementById('epicCompleteOverlay').remove();"
+        <button onclick="document.getElementById('epicCompleteOverlay').remove();restartGame();"
             style="width:100%;padding:16px;
             background:linear-gradient(135deg,rgba(255,215,0,0.14),rgba(255,140,0,0.07));
             border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);
@@ -4265,8 +4288,11 @@ function saveScoreCard(){
     function set(el,props){ Object.assign(el.style,props); }
 
     async function runIntro(){
-        // Phase 1 — lightning strike drops in (180ms)
-        await new Promise(r=>setTimeout(r,120));
+        // Force a paint before animating
+        loader.style.opacity='1';
+        bolt.style.opacity='0';
+        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+        await new Promise(r=>setTimeout(r,200));
         set(strike,{transition:'height 0.18s ease-in, opacity 0s',opacity:'1',height:'45%'});
         await new Promise(r=>setTimeout(r,180));
 
@@ -4323,13 +4349,14 @@ function saveScoreCard(){
         set(strike,{opacity:'0',height:'0'});
 
         // Phase 3 — bolt slams down
-        set(bolt,{transition:'none'});
+        bolt.style.transition='none';
+        bolt.style.transform='translateY(-120px) scale(0.4)';
+        bolt.style.opacity='0';
+        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
         await new Promise(r=>setTimeout(r,10));
-        set(bolt,{
-            transition:'opacity 0.12s ease, transform 0.22s cubic-bezier(0.22,1,0.36,1)',
-            opacity:'1',
-            transform:'translateY(0) scale(1.2)'
-        });
+        bolt.style.transition='opacity 0.12s ease, transform 0.22s cubic-bezier(0.22,1,0.36,1)';
+        bolt.style.opacity='1';
+        bolt.style.transform='translateY(0) scale(1.2)';
         await new Promise(r=>setTimeout(r,200));
         set(bolt,{
             transition:'transform 0.18s ease',
