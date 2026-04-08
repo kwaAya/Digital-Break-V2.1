@@ -912,7 +912,7 @@
         transform:translate(-50%,-50%);
         z-index:0;
     ">DIGITAL BREAK</div>
-    
+
     <div id="introTitle" style="
         font-family:'Orbitron',monospace;
         font-size:clamp(28px,7vw,56px);
@@ -1961,19 +1961,18 @@ const difficultySettings={
 
 // ── LEVEL PROGRESSION ──
 const LEVELS=[
-    // lv, time, target, obstacles, hasPowerups, hasBoss, panicAt, note
-    {lv:1,  time:30, target:300,  obstacles:0, powerups:false, boss:false, panicAt:10, speedRamp:0.4, note:"Basics only — hit glowing targets"},
-    {lv:2,  time:35, target:450,  obstacles:0, powerups:false, boss:false, panicAt:10, speedRamp:0.4, note:"Gold targets appear — worth 3x!"},
-    {lv:3,  time:40, target:600,  obstacles:1, powerups:false, boss:false, panicAt:10, speedRamp:0.5, note:"First obstacle — watch out!"},
-    {lv:4,  time:45, target:800,  obstacles:2, powerups:true,  boss:false, panicAt:10, speedRamp:0.5, note:"Power-ups unlocked — collect green circles"},
-    {lv:5,  time:50, target:1000, obstacles:2, powerups:true,  boss:true,  panicAt:10, speedRamp:0.6, note:"Boss target appears — hit it 3 times!"},
-    {lv:6,  time:50, target:1200, obstacles:3, powerups:true,  boss:true,  panicAt:10, speedRamp:0.6, note:"More obstacles, faster targets"},
-    {lv:7,  time:55, target:1400, obstacles:3, powerups:true,  boss:true,  panicAt:10, speedRamp:0.7, note:"Two bosses possible — stay sharp"},
-    {lv:8,  time:55, target:1600, obstacles:4, powerups:true,  boss:true,  panicAt:10, speedRamp:0.7, note:"Targets are smaller — precision required"},
-    {lv:9,  time:60, target:1900, obstacles:4, powerups:true,  boss:true,  panicAt:10, speedRamp:0.9, note:"Speed ramps harder as time runs out"},
-    {lv:10, time:60, target:2200, obstacles:4, powerups:true,  boss:true,  panicAt:15, speedRamp:0.9, note:"Panic starts earlier — 15 seconds!"},
-    {lv:11, time:65, target:2600, obstacles:5, powerups:true,  boss:true,  panicAt:15, speedRamp:1.0, note:"Obstacles speed up — full pressure"},
-    {lv:12, time:70, target:3000, obstacles:5, powerups:true,  boss:true,  panicAt:15, speedRamp:1.0, note:"Full chaos. This is it."},
+    {lv:1,  time:50, target:220,  obstacles:0, powerups:false, boss:false, panicAt:7,  speedRamp:0.15, note:"Basics only — hit glowing targets"},
+    {lv:2,  time:50, target:360,  obstacles:0, powerups:false, boss:false, panicAt:7,  speedRamp:0.2,  note:"Gold targets appear — worth 3x!"},
+    {lv:3,  time:55, target:520,  obstacles:1, powerups:false, boss:false, panicAt:8,  speedRamp:0.28, note:"First obstacle — watch out!"},
+    {lv:4,  time:55, target:700,  obstacles:2, powerups:true,  boss:false, panicAt:8,  speedRamp:0.35, note:"Power-ups unlocked — collect green circles"},
+    {lv:5,  time:60, target:900,  obstacles:2, powerups:true,  boss:true,  panicAt:10, speedRamp:0.42, note:"Boss target appears — hit it 3 times!"},
+    {lv:6,  time:60, target:1100, obstacles:3, powerups:true,  boss:true,  panicAt:10, speedRamp:0.50, note:"More obstacles, faster targets"},
+    {lv:7,  time:65, target:1320, obstacles:3, powerups:true,  boss:true,  panicAt:10, speedRamp:0.58, note:"Two bosses possible — stay sharp"},
+    {lv:8,  time:65, target:1540, obstacles:4, powerups:true,  boss:true,  panicAt:10, speedRamp:0.65, note:"Targets are smaller — precision required"},
+    {lv:9,  time:70, target:1800, obstacles:4, powerups:true,  boss:true,  panicAt:12, speedRamp:0.75, note:"Speed ramps harder as time runs out"},
+    {lv:10, time:70, target:2100, obstacles:4, powerups:true,  boss:true,  panicAt:12, speedRamp:0.82, note:"Panic starts earlier — 12 seconds!"},
+    {lv:11, time:75, target:2450, obstacles:5, powerups:true,  boss:true,  panicAt:13, speedRamp:0.90, note:"Obstacles speed up — full pressure"},
+    {lv:12, time:80, target:2850, obstacles:5, powerups:true,  boss:true,  panicAt:15, speedRamp:1.0,  note:"Full chaos. This is it."},
 ];
 
 // current level state — these sit alongside existing vars
@@ -2514,7 +2513,8 @@ function draw(){
         updateAndDisplayTargets(); updateAndDisplayObstacles();
         updateAndDisplayPowerups(); updateAndDisplayBoss();
         updateAndDisplayParticles();
-        if(frameCount%70===0)createTarget();
+        const spawnRate = currentLevel<=3 ? 55 : currentLevel<=6 ? 65 : 75;
+        if(frameCount%spawnRate===0)createTarget();
         if(frameCount%180===0&&obstacles.length<levelData.obstacles)createObstacle();
         if(levelData.powerups&&frameCount%240===0&&Math.random()<.7)createPowerup();
         trySpawnBoss();
@@ -2550,7 +2550,8 @@ function updateAndDisplayTargets(){
         if(t.x<30||t.x>width-30)t.vx*=-1;if(t.y<30||t.y>height-30)t.vy*=-1;
         t.x=constrain(t.x,30,width-30);t.y=constrain(t.y,30,height-30);
         t.phase+=.08;
-        if(!t.active&&Math.random()<(currentLevel>=9?.012:.008)){t.active=true;t.activeTime=0;}
+        const activationRate = currentLevel<=2 ? 0.016 : currentLevel<=4 ? 0.013 : currentLevel>=9 ? 0.012 : 0.010;
+if(!t.active&&Math.random()<activationRate){t.active=true;t.activeTime=0;}
         if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
         push();translate(t.x,t.y);
         if(t.active){
