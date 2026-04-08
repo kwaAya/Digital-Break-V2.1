@@ -1097,6 +1097,20 @@
         <span style="font-size:9px;opacity:0.6;">Tap a level to preview it — progress unlocks as you play</span>
     </div>
 
+    <!-- Leaderboard -->
+    <div style="margin-bottom:14px;">
+        <button onclick="showStandaloneLeaderboard()"
+            style="width:100%;padding:13px;
+            background:rgba(0,255,255,0.04);
+            border:1px solid rgba(0,255,255,0.2);
+            color:rgba(0,255,255,0.6);
+            font-size:11px;font-weight:900;letter-spacing:3px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:12px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+            🏆 GLOBAL LEADERBOARD</button>
+    </div>
+
     <!-- Music toggle -->
     <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;">
         <button id="musicToggleBtn" class="btn"
@@ -4391,6 +4405,86 @@ function saveScoreCard(){
         window.addEventListener('load', runIntro);
     }
 })();
+
+function showStandaloneLeaderboard(){
+    const el=document.createElement('div');
+    el.id='standaloneLb';
+    el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.94);z-index:1200;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:30px 15px 60px;font-family:Orbitron,monospace;text-align:center;color:#fff;box-sizing:border-box;';
+    el.innerHTML=`
+        <div style="max-width:480px;margin:0 auto;">
+            <div style="font-size:9px;letter-spacing:5px;color:rgba(0,255,255,0.4);margin-bottom:8px;">DIGITAL BREAK V2.1</div>
+            <div style="font-size:22px;font-weight:900;letter-spacing:4px;
+                background:linear-gradient(135deg,#00ffff,#ff1493);
+                -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                background-clip:text;margin-bottom:6px;">HALL OF FAME</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:2px;margin-bottom:24px;">
+                TOP PLAYERS GLOBALLY
+            </div>
+
+            <div style="
+                background:linear-gradient(160deg,#05050f,#0a1520,#050f1a);
+                border:1px solid rgba(0,255,255,0.2);
+                border-radius:18px;padding:20px 16px;
+                margin-bottom:18px;
+                box-shadow:0 0 40px rgba(0,255,255,0.08);
+            ">
+                <div id="standaloneLbRows">
+                    <div style="font-size:9px;color:rgba(0,255,255,0.3);letter-spacing:2px;padding:20px 0;">
+                        LOADING GLOBAL SCORES...
+                    </div>
+                </div>
+            </div>
+
+            <div style="font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:1px;
+                margin-bottom:20px;line-height:1.8;">
+                Play and complete levels to appear here.<br>
+                <span style="color:rgba(255,215,0,0.4);">Top score across all levels wins.</span>
+            </div>
+
+            <button onclick="document.getElementById('standaloneLb').remove();"
+                style="width:100%;padding:14px;
+                background:rgba(255,255,255,0.04);
+                border:1px solid rgba(255,255,255,0.12);
+                color:rgba(255,255,255,0.4);
+                font-size:11px;font-weight:900;letter-spacing:3px;
+                font-family:Orbitron,monospace;
+                cursor:pointer;border-radius:12px;
+                touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+                ↩ BACK</button>
+        </div>`;
+    document.body.appendChild(el);
+
+    // Load scores
+    fetchOnlineLeaderboard().then(rows=>{
+        const container=document.getElementById('standaloneLbRows');
+        if(!container)return;
+        if(!rows||!rows.length){
+            container.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No scores yet — be the first to breach!</div>`;
+            return;
+        }
+        const medals=['🥇','🥈','🥉'];
+        container.innerHTML=rows.map((e,i)=>`
+            <div style="display:flex;align-items:center;gap:8px;
+                padding:10px 12px;border-radius:10px;margin-bottom:6px;
+                background:rgba(255,255,255,0.03);
+                border:1px solid rgba(0,255,255,${i===0?'0.2':'0.07'});
+                ${i===0?'box-shadow:0 0 14px rgba(0,255,255,0.08);':''}
+                font-family:Orbitron,monospace;">
+                <span style="width:28px;font-size:${i<3?'16':'12'}px;">${i<3?medals[i]:'#'+(i+1)}</span>
+                <span style="flex:1;text-align:left;font-size:11px;
+                    color:${i===0?'rgba(255,215,0,0.9)':'rgba(0,255,255,0.8)'};
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${e.player_name}</span>
+                <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-right:6px;">
+                    LV${e.level_reached}</span>
+                <span style="font-size:9px;color:rgba(255,255,255,0.25);margin-right:6px;">
+                    ${e.accuracy}% acc</span>
+                <span style="font-weight:900;font-size:12px;
+                    color:${i===0?'#ffd700':'#ff1493'};">
+                    ${e.score.toLocaleString()}</span>
+            </div>`).join('');
+    });
+}
 
 // ══════════════════════════════════════════
 //  INTRO LOADER ANIMATION
