@@ -902,12 +902,17 @@
         pointer-events:none;
     "></div>
     <div id="introBolt" style="
-        font-size:80px;
         opacity:0;
         transform:translateY(-120px) scale(0.4);
         filter:drop-shadow(0 0 40px #ffd700) drop-shadow(0 0 80px #ff8800);
         transition:none;
-    ">⚡</div>
+        width:90px;height:90px;
+        display:flex;align-items:center;justify-content:center;
+    ">
+        <svg viewBox="0 0 24 24" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill="#ffd700" stroke="#ff8800" stroke-width="0.5"/>
+        </svg>
+    </div>
 
     <div id="introTitle" style="
         font-family:'Orbitron',monospace;
