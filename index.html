@@ -905,23 +905,9 @@
         font-size:80px;
         opacity:0;
         transform:translateY(-120px) scale(0.4);
+        filter:drop-shadow(0 0 40px #ffd700) drop-shadow(0 0 80px #ff8800);
         transition:none;
-        line-height:1;
-        font-family:Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif;
     ">⚡</div>
-    <div id="introTitleText" style="
-        position:absolute;
-        font-family:'Orbitron',monospace;
-        font-size:clamp(28px,7vw,56px);
-        font-weight:900;
-        letter-spacing:8px;
-        color:rgba(255,215,0,0.15);
-        pointer-events:none;
-        white-space:nowrap;
-        top:50%;left:50%;
-        transform:translate(-50%,-50%);
-        z-index:0;
-    ">DIGITAL BREAK</div>
 
     <div id="introTitle" style="
         font-family:'Orbitron',monospace;
@@ -4220,8 +4206,54 @@ function saveScoreCard(){
         set(strike,{transition:'height 0.18s ease-in, opacity 0s',opacity:'1',height:'45%'});
         await new Promise(r=>setTimeout(r,180));
 
-        // Phase 2 — flash
+        // Phase 2 — flash + lightning sound
         set(flash,{transition:'opacity 0.06s ease',opacity:'0.85'});
+
+        // Lightning strike sound
+        try{
+            const ac=new(window.AudioContext||window.webkitAudioContext)();
+            const t=ac.currentTime;
+
+            // Crack
+            const crack=ac.createBufferSource();
+            const cb=ac.createBuffer(1,ac.sampleRate*0.12,ac.sampleRate);
+            const cd=cb.getChannelData(0);
+            for(let i=0;i<cd.length;i++)cd[i]=(Math.random()*2-1);
+            crack.buffer=cb;
+            const cf=ac.createBiquadFilter();
+            cf.type='highpass';cf.frequency.value=1800;
+            const cg=ac.createGain();
+            cg.gain.setValueAtTime(1.1,t);
+            cg.gain.exponentialRampToValueAtTime(0.0001,t+0.1);
+            crack.connect(cf);cf.connect(cg);cg.connect(ac.destination);
+            crack.start(t);
+
+            // Zap drop
+            const zap=ac.createOscillator();
+            const zg=ac.createGain();
+            zap.type='sawtooth';
+            zap.frequency.setValueAtTime(260,t);
+            zap.frequency.exponentialRampToValueAtTime(26,t+0.32);
+            zg.gain.setValueAtTime(0.5,t);
+            zg.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+            zap.connect(zg);zg.connect(ac.destination);
+            zap.start(t);zap.stop(t+0.38);
+
+            // Thunder rumble
+            const rumble=ac.createBufferSource();
+            const rb=ac.createBuffer(1,ac.sampleRate*1.6,ac.sampleRate);
+            const rd=rb.getChannelData(0);
+            for(let i=0;i<rd.length;i++)rd[i]=(Math.random()*2-1);
+            rumble.buffer=rb;
+            const rf=ac.createBiquadFilter();
+            rf.type='lowpass';rf.frequency.value=160;rf.Q.value=2;
+            const rg=ac.createGain();
+            rg.gain.setValueAtTime(0.6,t+0.05);
+            rg.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
+            rumble.connect(rf);rf.connect(rg);rg.connect(ac.destination);
+            rumble.start(t+0.05);
+        }catch{}
+
         await new Promise(r=>setTimeout(r,60));
         set(flash,{transition:'opacity 0.22s ease',opacity:'0'});
         set(strike,{opacity:'0',height:'0'});
