@@ -1172,11 +1172,18 @@
 
         <!-- Message -->
         <div id="loseMessage" style="
-            font-size:11px;color:rgba(255,100,120,0.8);
-            font-style:italic;margin-bottom:16px;
-            font-family:'Orbitron',monospace;
-            letter-spacing:0.5px;line-height:1.6;
-        ">Nice try though...</div>
+        font-size:12px;
+        line-height:1.8;
+        color:rgba(255,100,100,0.9);
+        font-style:italic;
+        letter-spacing:0.5px;
+        background:rgba(255,0,60,0.06);
+        border:1px solid rgba(255,0,60,0.18);
+        border-radius:12px;
+        padding:14px 16px;
+        margin:0 0 14px;
+        font-family:'Orbitron',monospace;
+    ">Nice try though...</div>
 
         <!-- Score badge -->
         <div id="loseScore" style="
@@ -1713,16 +1720,31 @@ function renderLeaderboard(lb,playerScore){
 //  ROASTS
 // ══════════════════════════════════════════
 const roasts=[
-    "Okay... you barely made it. My nan clicks faster.",
-    "Congrats. The bar was on the floor and you stepped over it. Barely.",
-    "You hacked the system. The system is embarrassed.",
-    "Took you long enough. Were you playing with your elbows?",
-    "System breached! Congra mfwethu. But also... did you even try??",
-    "Wow. A win. Somebody tell your mum.",
-    "You did it! Now go touch some grass. Immediately.",
-    "The targets felt sorry for you and let you hit them. Just saying.",
-    "Congrats champ 🏆 The trophies are on aisle 'it doesn't matter'.",
-    "You passed! Aya is lowkey impressed. Don't screenshot this part.",
+    "You died. The game is embarrassed for you. I'm embarrassed for you. Log off. 💀",
+    "Respectfully? That was tragic. The cringe is immeasurable. Try again I guess.",
+    "POV: you failed so hard the simulation felt secondhand embarrassment. Touch grass. Then touch the retry button. 🌿",
+    "Skill issue. And not even a cool skill issue. Just sad. Embarrassing for your bloodline.",
+    "You blew it. The ancestors are disappointed. The dev is disappointed. Your future self? Also disappointed.",
+    "That wasn't a loss. That was a public health crisis. Do better bestie. 🚑",
+    "Failed. The bar was on the floor and you brought a shovel. Impressive in the worst way.",
+    "You died. The void is hungry and honestly? You fed it well. Congrats on being useful for once. 🕳️",
+    "Loss. And not the cute 'character development' loss. The 'delete the app and think about your choices' loss.",
+    "Bro really said 'let me fail in the most humiliating way possible' and then COMMITTED. No notes. Just shame.",
+    "You lost. The game isn't even hard. That's the scary part. Seek help or seek the retry button. Your call.",
+    "Game over. The voices are laughing at you. Not the fun voices. The mean ones. 🧠",
+    "Failure. Your reward? Nothing. Not even pity. Get back in the trenches soldier.",
+    "You died. The only thing lower than your score is my will to live. Twins! 🖤",
+    "Lost again. At this point I'm starting to think it's personal. Against you. By you.",
+    "L bozo. Ratio. Also you failed. Also your wifi is probably fine. That was just you. 📉",
+    "Unalived by a game. That's the legacy you're building. Your tombstone: 'tried. failed. cried.' ⚰️",
+    "Fail screen. The game is fine. The problem is between the chair and the screen. That's you btw.",
+    "You lost. Don't blame lag. Don't blame the cat. Blame the mirror bestie.",
+    "Dead. The level ate you and didn't even season you. Tragic. Unflavored. Try again. 🍽️",
+    "Game over. My disappointment is louder than your click. And your click was loud.",
+    "You failed so hard I felt it in my bones. And I don't have bones. I'm code. That's how bad it was. 💻",
+    "Loss. The only thing faster than your failure was your confidence beforehand. Unmatched delusion. Love that for you.",
+    "You died. The afterlife is just replaying this fail screen forever. Welcome to hell bestie. 🔥",
+    "Failed. The algorithm saw that and said 'not even I can save this'. And the algorithm saves EVERYTHING.",
 ];
 function getSavageRoast(sc,target){
     if(sc>=target*1.5)return"Okay fine. That was actually kinda impressive.";
@@ -3235,22 +3257,32 @@ function endGame(){
             `Level ${currentLevel} says no. Need ${shortfall} more.`,
         ];
         document.getElementById('loseMessage').textContent=
-            msgs[Math.floor(Math.random()*msgs.length)];
+            roasts[Math.floor(Math.random()*roasts.length)];
         document.getElementById('loseScore').textContent=
             `${score.toLocaleString()} / ${levelData.target.toLocaleString()} pts needed`;
         document.getElementById('loseAccuracy').textContent=
-            `Accuracy: ${acc}% · ${successfulHits}/${totalClicks} hits`;
-        const lln=document.getElementById('loseLevelNum');
-        if(lln)lln.textContent=currentLevel;
-        // Contextual tip based on how they failed
+            `Accuracy: ${acc}% · ${successfulHits} hits / ${totalClicks} taps`;
+        const llEl=document.getElementById('loseLevelNum');
+        if(llEl)llEl.textContent=currentLevel;
+
+        // Level tip
         const tips=[
-            acc<40?'💡 Try tapping faster — targets only score when active (glowing bright).':
-            lives<=0?'💡 Avoid the red spinning hazards — tapping them costs a life.':
-            `💡 You need ${levelData.target-score} more points. Focus on gold targets — they\'re worth 3x.`,
+            `Tap targets just before they fade for a 2x bonus.`,
+            `Gold targets are worth 3x — always prioritise them.`,
+            `Your combo resets when you miss. Stay accurate.`,
+            `Power-ups can save you — grab the green circles first.`,
+            `Every 10 hits in a row earns a streak bonus.`,
+            `Speed increases as time runs out — stay calm.`,
+            `Hit the boss 3 times to slay it and earn massive points.`,
+            `Shield power-up blocks obstacle damage completely.`,
+            `Slow-Mo power-up makes everything easier for a few seconds.`,
+            `Score multiplier doubles all points — grab it when low on time.`,
         ];
         const tipEl=document.getElementById('loseTip');
-        if(tipEl)tipEl.textContent=tips[0];
+        if(tipEl)tipEl.textContent=`💡 TIP: ${tips[Math.floor(Math.random()*tips.length)]}`;
+
         document.getElementById('losePopup').style.display='block';
+        document.getElementById('losePopup').scrollTop=0;
         playSound('fail');
         switchMusicTo('lose');
     }
