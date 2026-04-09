@@ -15,13 +15,19 @@
     <title>Digital Break V2.1 - by Aya</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Digital Break" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <!--<link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffd700">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Digital Break">
+    <meta name="apple-mobile-web-app-title" content="Digital Break"> -->
     <meta property="og:title" content="Digital Break V2.1 — Can you breach the system?">
     <meta property="og:description" content="Hit targets, dodge hazards, unlock secrets. Made by Ayabukwa.">
     <meta property="og:url" content="https://digitalbreak.netlify.app">
@@ -1066,7 +1072,15 @@
 
 <div id="startBorderWrap" class="popup-border-wrap">
     <div class="popup-border-inner"></div>
+    <canvas id="borderGlowCanvas" style="
+        position:absolute;inset:0;
+        width:100%;height:100%;
+        border-radius:24px;
+        pointer-events:none;
+        z-index:2;
+    "></canvas>
 </div>
+
 <div id="startPopup" class="popup">
     <div class="card-topline"></div>
 
@@ -4572,6 +4586,88 @@ function runIntroLoader(){
         loader.style.display='none';
     },3200);
 }
+
+// ══════════════════════════════════════════
+//  BORDER GLOW TRAVELLER
+// ══════════════════════════════════════════
+(function(){
+    function initBorderGlow(){
+        const canvas=document.getElementById('borderGlowCanvas');
+        if(!canvas)return;
+        const wrap=document.getElementById('startBorderWrap');
+        const ctx=canvas.getContext('2d');
+        let W,H,perim,pos=0;
+        const SPEED=0.6; // px per frame — tweak to taste
+        const TAIL=120;  // glow trail length in px
+
+        function resize(){
+            const r=wrap.getBoundingClientRect();
+            W=r.width; H=r.height;
+            canvas.width=W; canvas.height=H;
+            perim=2*(W+H);
+        }
+
+        // Convert perimeter distance to x,y on the rectangle edge
+        function perimToXY(d){
+            d=((d%perim)+perim)%perim;
+            if(d<W)          return[d,0];
+            else if(d<W+H)   return[W,d-W];
+            else if(d<2*W+H) return[W-(d-W-H),H];
+            else              return[0,H-(d-2*W-H)];
+        }
+
+        function drawFrame(){
+            ctx.clearRect(0,0,W,H);
+            pos=(pos+SPEED)%perim;
+
+            // Draw tail as a series of small glowing dots fading out
+            const steps=80;
+            for(let i=0;i<steps;i++){
+                const t=i/steps; // 0=tail end, 1=head
+                const d=((pos-TAIL*(1-t))+perim)%perim;
+                const [x,y]=perimToXY(d);
+                const alpha=t*t; // quadratic — bright at head
+                const size=t*10+2;
+
+                // Outer glow
+                ctx.beginPath();
+                ctx.arc(x,y,size*2,0,Math.PI*2);
+                ctx.fillStyle=`rgba(255,215,0,${alpha*0.08})`;
+                ctx.fill();
+
+                // Inner core
+                ctx.beginPath();
+                ctx.arc(x,y,size*0.6,0,Math.PI*2);
+                ctx.fillStyle=`rgba(255,235,120,${alpha*0.9})`;
+                ctx.fill();
+            }
+
+            // Bright head spark
+            const [hx,hy]=perimToXY(pos);
+            const spark=ctx.createRadialGradient(hx,hy,0,hx,hy,22);
+            spark.addColorStop(0,'rgba(255,255,200,0.95)');
+            spark.addColorStop(0.3,'rgba(255,215,0,0.7)');
+            spark.addColorStop(1,'rgba(255,160,0,0)');
+            ctx.beginPath();
+            ctx.arc(hx,hy,22,0,Math.PI*2);
+            ctx.fillStyle=spark;
+            ctx.fill();
+
+            requestAnimationFrame(drawFrame);
+        }
+
+        resize();
+        window.addEventListener('resize',resize);
+        drawFrame();
+    }
+
+    // Run after DOM is ready
+    if(document.readyState==='loading'){
+        document.addEventListener('DOMContentLoaded',initBorderGlow);
+    } else {
+        initBorderGlow();
+    }
+})();
 
 </script>
 </body>
