@@ -2597,7 +2597,6 @@ function playSound(type){
                 zap.start(t);zap.stop(t+0.4);
             },
             fail:()=>{
-                // Descending thud — game over feel
                 [300,200,120,60].forEach((freq,i)=>{
                     const o=ctx.createOscillator();
                     const g=ctx.createGain();
@@ -2610,21 +2609,17 @@ function playSound(type){
                     o.start(t+i*0.12);o.stop(t+i*0.12+0.25);
                 });
             },
-        };
-
-        lightning:()=>{
-                // Electric crack — sharp and dramatic
-                const noise=ac.createBufferSource();
+            lightning:()=>{
+                const noise=ctx.createBufferSource();
                 const nf=ac.createBiquadFilter();
                 nf.type='bandpass';nf.frequency.value=1800;nf.Q.value=0.4;
                 const ng=ac.createGain();
-                noise.buffer=getCachedNoise(ac,0.18);
+                noise.buffer=getCachedNoise(ctx,0.18);
                 ng.gain.setValueAtTime(0,t);
                 ng.gain.linearRampToValueAtTime(0.6,t+0.004);
                 ng.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
                 noise.connect(nf);nf.connect(ng);ng.connect(ctx.destination);
                 noise.start(t);
-                // Low thud underneath
                 const o=ac.createOscillator();
                 const g=ac.createGain();
                 o.type='sine';
@@ -2634,21 +2629,54 @@ function playSound(type){
                 g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
                 o.connect(g);g.connect(ctx.destination);
                 o.start(t);o.stop(t+0.2);
-                // High crackle
-                const c=ac.createBufferSource();
+                const c=ctx.createBufferSource();
                 const cf=ac.createBiquadFilter();
                 cf.type='highpass';cf.frequency.value=8000;
                 const cg=ac.createGain();
-                c.buffer=getCachedNoise(ac,0.08);
+                c.buffer=getCachedNoise(ctx,0.08);
                 cg.gain.setValueAtTime(0.35,t+0.01);
                 cg.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
                 c.connect(cf);cf.connect(cg);cg.connect(ctx.destination);
                 c.start(t+0.01);
-                nodes.push(noise,nf,ng,o,g,c,cf,cg);
             },
-
-        sounds[type]&&sounds[type]();
-    }catch(e){}
+            thunder:()=>{
+                const noise=ctx.createBufferSource();
+                const nf1=ac.createBiquadFilter();
+                nf1.type='lowpass';nf1.frequency.value=180;
+                const nf2=ac.createBiquadFilter();
+                nf2.type='peaking';nf2.frequency.value=80;nf2.gain.value=12;
+                const ng=ac.createGain();
+                noise.buffer=getCachedNoise(ctx,2.2);
+                ng.gain.setValueAtTime(0,t);
+                ng.gain.linearRampToValueAtTime(0.7,t+0.08);
+                ng.gain.setValueAtTime(0.7,t+0.3);
+                ng.gain.exponentialRampToValueAtTime(0.0001,t+2.0);
+                noise.connect(nf1);nf1.connect(nf2);nf2.connect(ng);ng.connect(ctx.destination);
+                noise.start(t);
+                const o=ac.createOscillator();
+                const og=ac.createGain();
+                o.type='sine';
+                o.frequency.setValueAtTime(55,t);
+                o.frequency.exponentialRampToValueAtTime(28,t+1.8);
+                og.gain.setValueAtTime(0,t);
+                og.gain.linearRampToValueAtTime(0.4,t+0.1);
+                og.gain.exponentialRampToValueAtTime(0.0001,t+1.8);
+                o.connect(og);og.connect(ctx.destination);
+                o.start(t);o.stop(t+2.0);
+                const o2=ac.createOscillator();
+                const og2=ac.createGain();
+                o2.type='sawtooth';
+                o2.frequency.setValueAtTime(38,t);
+                o2.frequency.exponentialRampToValueAtTime(22,t+1.2);
+                og2.gain.setValueAtTime(0,t);
+                og2.gain.linearRampToValueAtTime(0.18,t+0.06);
+                og2.gain.exponentialRampToValueAtTime(0.0001,t+1.4);
+                o2.connect(og2);og2.connect(ctx.destination);
+                o2.start(t);o2.stop(t+1.5);
+            },
+        };
+        (sounds[type]||sounds.hit)();
+    }catch{}
 }
 
 // ══════════════════════════════════════════
@@ -4670,7 +4698,7 @@ function runIntroLoader(){
         flash.style.transition='opacity 0.05s ease-in';
         flash.style.opacity='1';
         strike.style.opacity='0';
-        if(sfxCtx&&sfxCtx.state==='running')playSound('lightning');
+        if(sfxCtx&&sfxCtx.state==='running'){playSound('lightning');playSound('thunder');}
 
         // Bolt slams in with bounce
         bolt.style.transition='transform 0.28s cubic-bezier(0.34,1.8,0.64,1), opacity 0.1s ease';
@@ -4741,7 +4769,7 @@ function runIntroLoader(){
     setTimeout(()=>{
         flash.style.transition='opacity 0.04s ease-in';
         flash.style.opacity='0.35';
-        if(sfxCtx&&sfxCtx.state==='running')playSound('lightning');
+        if(sfxCtx&&sfxCtx.state==='running'){playSound('lightning');playSound('thunder');}
     },1900);
     setTimeout(()=>{
         flash.style.transition='opacity 0.2s ease-out';
