@@ -468,6 +468,12 @@
             0%,100%{transform:translateY(0) scale(1)}
             50%{transform:translateY(-6px) scale(1.08)}
         }
+
+        @keyframes introPulse {
+            0%,100%{opacity:0.4;transform:translate(-50%,-50%) scale(1)}
+            50%{opacity:0.9;transform:translate(-50%,-50%) scale(1.08)}
+        }
+
         .popup-border-wrap {
             position:fixed;top:8px;left:50%;transform:translateX(-50%);
             width:calc(92vw + 6px);max-width:486px;
@@ -925,14 +931,94 @@
         pointer-events:none;
     "></div>
     <div id="introBolt" style="
-        width:90px;height:90px;
-        display:flex;align-items:center;justify-content:center;
         opacity:0;
-        transform:translateY(-80px) scale(0.3);
+        transform:translateY(-120px) scale(0.4);
+        transition:none;
+        position:relative;
+        z-index:2;
     ">
-        <svg viewBox="0 0 24 24" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill="#ffd700" stroke="#ff8800" stroke-width="0.5"/>
+        <svg width="90" height="140" viewBox="0 0 90 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Outer glow layer -->
+            <filter id="boltGlow">
+                <feGaussianBlur stdDeviation="6" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="boltGlowStrong">
+                <feGaussianBlur stdDeviation="12" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+
+            <!-- Deep glow shadow -->
+            <polygon points="52,0 18,58 40,58 22,140 75,48 50,48 72,0"
+                fill="rgba(255,140,0,0.25)"
+                filter="url(#boltGlowStrong)"
+                transform="scale(1.18) translate(-7,-8)"
+            />
+
+            <!-- Mid glow -->
+            <polygon points="52,0 18,58 40,58 22,140 75,48 50,48 72,0"
+                fill="rgba(255,200,0,0.45)"
+                filter="url(#boltGlow)"
+                transform="scale(1.08) translate(-3,-4)"
+            />
+
+            <!-- Core bolt — gradient fill -->
+            <defs>
+                <linearGradient id="boltGrad" x1="60" y1="0" x2="25" y2="140" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="30%" stop-color="#ffe566"/>
+                    <stop offset="65%" stop-color="#ffaa00"/>
+                    <stop offset="100%" stop-color="#ff6600"/>
+                </linearGradient>
+                <linearGradient id="shineGrad" x1="35" y1="10" x2="55" y2="80" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="rgba(255,255,255,0.7)"/>
+                    <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Main bolt shape -->
+            <polygon points="52,0 18,58 40,58 22,140 75,48 50,48 72,0"
+                fill="url(#boltGrad)"
+                filter="url(#boltGlow)"
+            />
+
+            <!-- Shine overlay — left edge highlight -->
+            <polygon points="52,0 18,58 40,58 22,140 75,48 50,48 72,0"
+                fill="url(#shineGrad)"
+                opacity="0.55"
+            />
+
+            <!-- Inner bright core line -->
+            <polyline points="56,4 26,54 44,54"
+                stroke="rgba(255,255,255,0.9)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                fill="none"
+            />
         </svg>
+
+        <!-- Electric ring behind bolt -->
+        <div style="
+            position:absolute;
+            top:50%;left:50%;
+            transform:translate(-50%,-50%);
+            width:130px;height:130px;
+            border-radius:50%;
+            border:1.5px solid rgba(255,215,0,0.25);
+            box-shadow:0 0 20px rgba(255,215,0,0.15),inset 0 0 20px rgba(255,215,0,0.08);
+            animation:introPulse 1.8s ease-in-out infinite;
+            z-index:-1;
+        "></div>
+        <div style="
+            position:absolute;
+            top:50%;left:50%;
+            transform:translate(-50%,-50%);
+            width:170px;height:170px;
+            border-radius:50%;
+            border:1px solid rgba(255,140,0,0.12);
+            animation:introPulse 1.8s ease-in-out infinite 0.3s;
+            z-index:-1;
+        "></div>
     </div>
 
     <div id="introTitle" style="
