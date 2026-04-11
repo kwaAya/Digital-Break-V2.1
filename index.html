@@ -1738,10 +1738,12 @@ const SEED_PLAYERS = [
     {name:"404_Skillz_Azikho",   score:1420,diff:"easy"},
     {name:"TryHard99",    score:1280,diff:"easy"},
 ];
+
 function getLeaderboard(){
     try{const r=localStorage.getItem(LEADERBOARD_KEY);return r?JSON.parse(r):[...SEED_PLAYERS];}
     catch{return[...SEED_PLAYERS];}
 }
+
 function saveLeaderboard(lb){try{localStorage.setItem(LEADERBOARD_KEY,JSON.stringify(lb));}catch{}}
 function addToLeaderboard(sc,diff){
     const adjs=["Sweaty","Trembling","Lucky","Desperate","Average","Mid-tier","Shaking","Confused"];
@@ -1754,6 +1756,7 @@ function addToLeaderboard(sc,diff){
     saveLeaderboard(lb.map(e=>({...e,isNew:false})));
     return lb;
 }
+
 function renderLeaderboard(lb,playerScore){
     const c=document.getElementById('leaderboardRows');
     c.innerHTML='';
@@ -3389,7 +3392,7 @@ function restartGame(){
     document.getElementById('startBorderWrap').style.display='block';
     updateStartButton();
     renderLevelPills();
-    document.getElementById('shareConfirm').textContent='';
+    try{localStorage.removeItem(LEADERBOARD_KEY);}catch{}
     document.getElementById('confettiCanvas').style.display='none';
     document.getElementById('gameContainer').classList.remove('panic');
     document.getElementById('streakToast').classList.remove('show');
@@ -4523,67 +4526,162 @@ function runIntroLoader(){
     const flash=document.getElementById('introFlash');
     const bolt=document.getElementById('introBolt');
     const title=document.getElementById('introTitle');
+    const titleText=document.getElementById('introTitleText');
     const sub=document.getElementById('introSub');
     const bar=document.getElementById('introBar');
     const strike=document.getElementById('introStrike1');
 
-    // Phase 1 — strike drops down
+    // Add particle canvas to loader
+    const pc=document.createElement('canvas');
+    pc.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;';
+    loader.appendChild(pc);
+    pc.width=window.screen.width;pc.height=window.screen.height;
+    const ctx=pc.getContext('2d');
+
+    // Floating particle field
+    const pts=[];
+    for(let i=0;i<60;i++)pts.push({
+        x:Math.random()*pc.width,y:Math.random()*pc.height,
+        vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,
+        size:Math.random()*1.8+.4,
+        opacity:Math.random()*.4+.1,
+        gold:Math.random()<.35
+    });
+    let particleAlpha=0,particleFading=false;
+    let rafId=requestAnimationFrame(function animPts(){
+        ctx.clearRect(0,0,pc.width,pc.height);
+        if(particleFading)particleAlpha=Math.max(0,particleAlpha-.018);
+        else particleAlpha=Math.min(1,particleAlpha+.012);
+        pts.forEach(p=>{
+            p.x+=p.vx;p.y+=p.vy;
+            if(p.x<0||p.x>pc.width)p.vx*=-1;
+            if(p.y<0||p.y>pc.height)p.vy*=-1;
+            ctx.beginPath();
+            ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+            ctx.fillStyle=p.gold?
+                `rgba(255,215,0,${p.opacity*particleAlpha})`:
+                `rgba(200,220,255,${p.opacity*particleAlpha})`;
+            ctx.fill();
+        });
+        if(particleAlpha>0||!particleFading)rafId=requestAnimationFrame(animPts);
+        else{ctx.clearRect(0,0,pc.width,pc.height);}
+    });
+
+    // Ghost title — always visible faintly behind
+    titleText.style.transition='opacity 0.6s ease';
+    titleText.style.opacity='0.08';
+
+    // Phase 1 — particles fade in + strike charges
     setTimeout(()=>{
-        strike.style.transition='height 0.18s ease-in, opacity 0.1s';
+        strike.style.transition='height 0.22s cubic-bezier(0.4,0,1,1), opacity 0.08s';
         strike.style.height='100%';
         strike.style.opacity='1';
-    },200);
+    },300);
 
-    // Phase 2 — flash + bolt appears + sound
+    // Phase 2 — IMPACT
     setTimeout(()=>{
-        flash.style.transition='opacity 0.06s ease-in';
-        flash.style.opacity='0.92';
+        // White flash
+        flash.style.transition='opacity 0.05s ease-in';
+        flash.style.opacity='1';
         strike.style.opacity='0';
-        playSound('lightning');
+        if(sfxCtx&&sfxCtx.state==='running')playSound('lightning');
 
-        // Bolt slams in
-        bolt.style.transition='transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.12s ease';
+        // Bolt slams in with bounce
+        bolt.style.transition='transform 0.28s cubic-bezier(0.34,1.8,0.64,1), opacity 0.1s ease';
         bolt.style.opacity='1';
-        bolt.style.transform='translateY(0px) scale(1.15)';
-    },380);
+        bolt.style.transform='translateY(0px) scale(1.4)';
+        bolt.style.filter='drop-shadow(0 0 30px #ffd700) drop-shadow(0 0 60px #ff8800)';
 
-    // Phase 3 — flash fades, bolt settles
+        // Screen shake via loader transform
+        loader.style.transition='transform 0.06s ease';
+        loader.style.transform='translate(6px,-4px)';
+    },500);
+
+    // Phase 3 — settle
     setTimeout(()=>{
-        flash.style.transition='opacity 0.3s ease-out';
+        flash.style.transition='opacity 0.25s ease-out';
         flash.style.opacity='0';
-        bolt.style.transition='transform 0.3s ease-out';
+        bolt.style.transition='transform 0.4s cubic-bezier(0.34,1.2,0.64,1), filter 0.6s ease';
         bolt.style.transform='translateY(0px) scale(1)';
-    },460);
+        bolt.style.filter='drop-shadow(0 0 16px #ffd700)';
+        loader.style.transform='translate(-4px,3px)';
+    },560);
 
-    // Phase 4 — title zooms in
     setTimeout(()=>{
-        title.style.transition='opacity 0.35s ease, transform 0.45s cubic-bezier(0.34,1.2,0.64,1)';
+        loader.style.transform='translate(2px,-2px)';
+    },610);
+
+    setTimeout(()=>{
+        loader.style.transform='translate(0,0)';
+        loader.style.transition='transform 0.2s ease';
+    },660);
+
+    // Phase 4 — ghost title brightens
+    setTimeout(()=>{
+        titleText.style.opacity='0.18';
+        titleText.style.transition='opacity 0.5s ease, letter-spacing 0.8s ease';
+        titleText.style.letterSpacing='14px';
+    },700);
+
+    // Phase 5 — main title crashes in
+    setTimeout(()=>{
+        title.style.transition='opacity 0.3s ease, transform 0.5s cubic-bezier(0.34,1.3,0.64,1), text-shadow 0.4s ease';
         title.style.opacity='1';
         title.style.transform='scale(1)';
-    },680);
+        title.style.textShadow='0 0 60px rgba(255,215,0,1), 0 0 120px rgba(255,140,0,0.6), 0 0 200px rgba(255,20,147,0.3)';
+    },820);
 
-    // Phase 5 — subtitle fades in
+    // Phase 6 — title glow settles
     setTimeout(()=>{
-        sub.style.transition='opacity 0.4s ease, transform 0.4s ease';
+        title.style.transition='text-shadow 0.8s ease';
+        title.style.textShadow='0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,140,0,0.3)';
+    },1100);
+
+    // Phase 7 — subtitle slides up
+    setTimeout(()=>{
+        sub.style.transition='opacity 0.5s ease, transform 0.5s ease, letter-spacing 0.6s ease';
         sub.style.opacity='1';
         sub.style.transform='translateY(0px)';
-    },920);
+        sub.style.letterSpacing='8px';
+    },1100);
 
-    // Phase 6 — progress bar fills
+    // Phase 8 — progress bar fills with glow pulse
     setTimeout(()=>{
         bar.style.width='100%';
-    },1000);
+        bar.style.boxShadow='0 0 20px rgba(255,215,0,0.9), 0 0 40px rgba(255,140,0,0.5)';
+    },1200);
 
-    // Phase 7 — fade out loader
+    // Phase 9 — second lightning strike for drama
     setTimeout(()=>{
-        loader.style.transition='opacity 0.5s ease';
-        loader.style.opacity='0';
-    },2700);
+        flash.style.transition='opacity 0.04s ease-in';
+        flash.style.opacity='0.35';
+        if(sfxCtx&&sfxCtx.state==='running')playSound('lightning');
+    },1900);
+    setTimeout(()=>{
+        flash.style.transition='opacity 0.2s ease-out';
+        flash.style.opacity='0';
+    },1950);
 
-    // Phase 8 — remove loader completely
+    // Phase 10 — particles start fading
+    setTimeout(()=>{
+        particleFading=true;
+    },2200);
+
+    // Phase 11 — everything fades out
+    setTimeout(()=>{
+        loader.style.transition='opacity 0.6s ease';
+        loader.style.opacity='0';
+    },2800);
+
+    // Phase 12 — remove
+    setTimeout(()=>{
+        loader.style.pointerEvents='none';
+    },2800);
     setTimeout(()=>{
         loader.style.display='none';
-    },3200);
+        cancelAnimationFrame(rafId);
+        pc.remove();
+    },3400);
 }
 
 // ══════════════════════════════════════════
