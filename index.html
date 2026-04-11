@@ -50,6 +50,23 @@
             -webkit-user-select: none;
             user-select: none;
         }
+        body::before {
+            content:'';
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(255,140,0,0.07) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 80%, rgba(255,20,147,0.07) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 50%, rgba(80,0,180,0.08) 0%, transparent 65%);
+            animation:bgShift 12s ease-in-out infinite alternate;
+            pointer-events:none;
+            z-index:0;
+        }
+        @keyframes bgShift {
+            0%  { opacity:1; transform:scale(1) rotate(0deg); }
+            33% { opacity:0.8; transform:scale(1.05) rotate(1deg); }
+            66% { opacity:1; transform:scale(0.98) rotate(-1deg); }
+            100%{ opacity:0.85; transform:scale(1.03) rotate(0.5deg); }
+        }
 
         #gameContainer {
             border-radius: 16px;
@@ -79,9 +96,9 @@
             position: fixed;
             top: 10px;
             left: 50%;
-            background: rgba(8,4,18,0.75);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
+            background: rgba(6,2,14,0.55);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
             padding: 28px 22px;
             border-radius: 22px;
             border: 1px solid rgba(255,215,0,0.2);
@@ -477,6 +494,7 @@
         .popup-border-wrap {
             position:fixed;top:8px;left:50%;transform:translateX(-50%);
             width:calc(92vw + 6px);max-width:486px;
+            height:calc(100vh - 16px);
             border-radius:24px;z-index:999;
             background:linear-gradient(270deg,rgba(255,215,0,0.8),rgba(255,140,0,0.6),rgba(255,20,147,0.5),rgba(255,215,0,0.8));
             background-size:400% 400%;
@@ -706,11 +724,34 @@
             margin-bottom:16px;
         }
         .feature-pill {
-            padding:5px 11px;border-radius:20px;
-            font-size:8px;letter-spacing:1px;
-            border:1px solid rgba(255,215,0,0.15);
-            color:rgba(255,215,0,0.45);
-            background:rgba(255,215,0,0.04);
+            padding:8px 14px;border-radius:20px;
+            font-size:8px;letter-spacing:1.5px;
+            border:1px solid rgba(255,215,0,0.18);
+            color:rgba(255,215,0,0.6);
+            background:rgba(255,215,0,0.05);
+            display:flex;align-items:center;gap:6px;
+            transition:all 0.3s ease;
+        }
+        .feature-pill:active {
+            transform:scale(0.95);
+            background:rgba(255,215,0,0.1);
+        }
+        .feature-pill-animated {
+            animation:pillPulse 3s ease-in-out infinite;
+        }
+        .fp-icon { font-size:13px; }
+        .fp-label { font-weight:900; }
+        @keyframes pillPulse {
+            0%,100% {
+                border-color:rgba(255,215,0,0.18);
+                box-shadow:none;
+                color:rgba(255,215,0,0.55);
+            }
+            50% {
+                border-color:rgba(255,215,0,0.45);
+                box-shadow:0 0 12px rgba(255,215,0,0.12);
+                color:rgba(255,215,0,0.9);
+            }
         }
 
         /* Diff desc box */
@@ -1170,15 +1211,76 @@
     <div class="card-topline"></div>
 
     <!-- Logo + title -->
-    <div style="font-size:46px;margin-bottom:6px;filter:drop-shadow(0 0 20px rgba(255,215,0,0.5));animation:floatIcon 3s ease-in-out infinite;">⚡</div>
-    <div class="eyebrow">BY AYABUKWA</div>
-    <h2 style="font-size:22px;letter-spacing:4px;background:linear-gradient(135deg,#fff,rgba(255,215,0,0.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0;animation:glitch 5s infinite;">DIGITAL BREAK</h2>
-    <div style="font-size:8px;letter-spacing:4px;color:rgba(255,215,0,0.35);margin:4px 0 8px;">V2.1 — ULTIMATE EDITION</div>
-    <div class="gold-rule"></div>
+    <div style="
+        position:relative;
+        margin-bottom:4px;
+        display:inline-block;
+    ">
+        <div style="
+            font-size:58px;
+            filter:drop-shadow(0 0 28px rgba(255,215,0,0.7)) drop-shadow(0 0 60px rgba(255,140,0,0.4));
+            animation:floatIcon 3s ease-in-out infinite;
+            line-height:1;
+        ">⚡</div>
+        <!-- Glow ring behind bolt -->
+        <div style="
+            position:absolute;top:50%;left:50%;
+            transform:translate(-50%,-50%);
+            width:70px;height:70px;
+            border-radius:50%;
+            background:radial-gradient(circle,rgba(255,215,0,0.15),transparent 70%);
+            animation:floatIcon 3s ease-in-out infinite;
+            pointer-events:none;
+        "></div>
+    </div>
+
+    <div style="
+        font-size:8px;letter-spacing:6px;
+        color:rgba(255,215,0,0.35);
+        margin-bottom:8px;
+    ">BY AYABUKWA</div>
+
+    <div style="
+        font-size:clamp(26px,7vw,36px);
+        font-weight:900;
+        letter-spacing:6px;
+        background:linear-gradient(135deg,#ffffff,rgba(255,215,0,0.95),#fff);
+        -webkit-background-clip:text;
+        -webkit-text-fill-color:transparent;
+        background-clip:text;
+        margin-bottom:0;
+        animation:glitch 5s infinite;
+        text-shadow:none;
+        line-height:1.1;
+        font-family:'Orbitron',monospace;
+    ">DIGITAL BREAK</div>
+
+    <div style="
+        display:inline-flex;align-items:center;gap:8px;
+        margin:6px 0 12px;
+    ">
+        <div style="width:20px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.4));"></div>
+        <div style="font-size:8px;letter-spacing:4px;color:rgba(255,215,0,0.4);">V2.1 ULTIMATE EDITION</div>
+        <div style="width:20px;height:1px;background:linear-gradient(90deg,rgba(255,215,0,0.4),transparent);"></div>
+    </div>
 
     <!-- Personal best -->
-    <div style="margin-bottom:14px;">
-        <div id="personalBest">🏆 BEST: <span id="pbDisplay">0</span> PTS</div>
+    <div style="margin-bottom:18px;">
+        <div style="font-size:8px;letter-spacing:4px;color:rgba(255,215,0,0.35);margin-bottom:6px;">YOUR BEST RUN</div>
+        <div id="personalBest" style="
+            display:inline-flex;align-items:center;gap:10px;
+            background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,140,0,0.05));
+            border:1px solid rgba(255,215,0,0.35);
+            border-radius:16px;padding:10px 22px;
+            box-shadow:0 0 24px rgba(255,215,0,0.1),inset 0 1px 0 rgba(255,215,0,0.15);
+            animation:breachGlow 3s ease-in-out infinite;
+        ">
+            <span style="font-size:20px;filter:drop-shadow(0 0 8px rgba(255,215,0,0.8));">🏆</span>
+            <div style="text-align:left;">
+                <div style="font-size:8px;letter-spacing:2px;color:rgba(255,215,0,0.5);margin-bottom:2px;">PERSONAL BEST</div>
+                <div style="font-size:20px;font-weight:900;color:rgba(255,215,0,0.95);letter-spacing:2px;font-family:'Orbitron',monospace;"><span id="pbDisplay">0</span> <span style="font-size:11px;opacity:0.7;">PTS</span></div>
+            </div>
+        </div>
     </div>
 
     <!-- Challenge line -->
@@ -1192,10 +1294,18 @@
 
     <!-- Feature pills -->
     <div class="feature-row">
-        <div class="feature-pill">🎯 Power-ups</div>
-        <div class="feature-pill">👑 Bosses</div>
-        <div class="feature-pill">🔥 Streaks</div>
-        <div class="feature-pill">⚡ Speed</div>
+        <div class="feature-pill feature-pill-animated" style="animation-delay:0s">
+            <span class="fp-icon">🎯</span><span class="fp-label">POWER-UPS</span>
+        </div>
+        <div class="feature-pill feature-pill-animated" style="animation-delay:0.3s">
+            <span class="fp-icon">👑</span><span class="fp-label">BOSSES</span>
+        </div>
+        <div class="feature-pill feature-pill-animated" style="animation-delay:0.6s">
+            <span class="fp-icon">🔥</span><span class="fp-label">STREAKS</span>
+        </div>
+        <div class="feature-pill feature-pill-animated" style="animation-delay:0.9s">
+            <span class="fp-icon">⚡</span><span class="fp-label">SPEED</span>
+        </div>
     </div>
 
     <!-- Level progression preview -->
