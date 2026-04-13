@@ -208,13 +208,7 @@ function savePersonalBest(sc,lv){
         if(sc>prev)localStorage.setItem(PB_KEY,sc);
     }catch{}
 }
-function updatePersonalBestDisplay(){
-    const pb=getPersonalBest();
-    const el=document.getElementById('pbDisplay');
-    const hud=document.getElementById('personalBestHUD');
-    if(el)el.textContent=pb.toLocaleString();
-    if(hud)hud.textContent=pb.toLocaleString();
-}
+
 function checkNewPersonalBest(sc){
     const pb=getPersonalBest(null);
     if(sc>pb){
@@ -909,6 +903,7 @@ function applyCanvasStyle(){
 }
 
 function setup(){
+    loadProgress();
     const{w,h}=getCanvasSize();
     let canvas=createCanvas(w,h);
     canvas.parent('gameContainer');
@@ -1463,6 +1458,17 @@ function loadLevel(lv){
 
     gameState='playing';
     score=0;
+        // If we are starting from a saved progress, make sure totalLevelScore is restored
+    if (totalLevelScore === 0) {
+        const raw = localStorage.getItem('digitalBreakV21_progress');
+        if (raw) {
+            const data = JSON.parse(raw);
+            if (data.totalLevelScore) {
+                totalLevelScore = data.totalLevelScore;
+            }
+        }
+    }
+
     timeLeft=levelData.time;
     combo=1;lives=3;totalClicks=0;successfulHits=0;
     shieldTime=0;slowTime=0;multiTime=0;
@@ -1537,26 +1543,28 @@ function endGame(){
     });
 
         if(passed){
-        totalLevelScore += score;
-        clearedLevels.add(currentLevel);
-        saveProgress(); // Saves total score and cleared levels
-        
-        // 1. Save Level-Specific High Score
-        const levelPB = getPersonalBest(currentLevel);
-        if(score > levelPB) {
-            savePersonalBest(score, currentLevel);
-        }
+            totalLevelScore += score;
+            clearedLevels.add(currentLevel);
+            saveProgress(); // Saves total score and cleared levels
 
-        // 2. Real-time Online Leaderboard Update
-        const playerName = localStorage.getItem('digitalBreak_playerName') || "PLAYER";
-        submitOnlineScore(playerName, totalLevelScore, currentLevel, bestStreak, acc);
+            updatePersonalBestDisplay();
+            
+            // 1. Save Level-Specific High Score
+            const levelPB = getPersonalBest(currentLevel);
+            if(score > levelPB) {
+                savePersonalBest(score, currentLevel);
+            }
 
-        if(currentLevel >= LEVELS.length){
-            runHackLoader(()=>showEpicGameComplete(totalLevelScore, totalClicks, successfulHits));
-        } else {
-            showLevelComplete(currentLevel, score, acc);
+            // 2. Real-time Online Leaderboard Update
+            const playerName = localStorage.getItem('digitalBreak_playerName') || "PLAYER";
+            submitOnlineScore(playerName, totalLevelScore, currentLevel, bestStreak, acc);
+
+            if(currentLevel >= LEVELS.length){
+                runHackLoader(()=>showEpicGameComplete(totalLevelScore, totalClicks, successfulHits));
+            } else {
+                showLevelComplete(currentLevel, score, acc);
+            }
         }
-    }
     
     else {
         // ── FAILED — retry same level

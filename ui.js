@@ -61,24 +61,6 @@ const SECRET_MESSAGES = [
 const PB_KEY='digitalBreakV21_pb';
 const PROGRESS_KEY='digitalBreakV21_progress';
 
-function saveProgress(){
-    try{
-        const data={
-            clearedLevels:[...clearedLevels],
-            highestUnlocked:Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length)
-        };
-        localStorage.setItem(PROGRESS_KEY,JSON.stringify(data));
-    }catch{}
-}
-
-function loadProgress(){
-    try{
-        const raw=localStorage.getItem(PROGRESS_KEY);
-        if(!raw)return;
-        const data=JSON.parse(raw);
-        if(data.clearedLevels)data.clearedLevels.forEach(lv=>clearedLevels.add(lv));
-    }catch{}
-}
 
 function clearProgress(){
     try{localStorage.removeItem(PROGRESS_KEY);}catch{}
@@ -104,12 +86,19 @@ function savePersonalBest(sc,lv){
     }catch{}
 }
 function updatePersonalBestDisplay(){
-    const pb=getPersonalBest();
-    const el=document.getElementById('pbDisplay');
-    const hud=document.getElementById('personalBestHUD');
-    if(el)el.textContent=pb.toLocaleString();
-    if(hud)hud.textContent=pb.toLocaleString();
+    const pb = getPersonalBest();
+    // Use the global totalLevelScore from game.js
+    const total = (typeof totalLevelScore !== 'undefined') ? totalLevelScore : 0; 
+    
+    const pbEl = document.getElementById('pbDisplay');
+    const totalEl = document.getElementById('totalScoreDisplay'); 
+    const hud = document.getElementById('personalBestHUD');
+    
+    if(pbEl) pbEl.textContent = pb.toLocaleString();
+    if(totalEl) totalEl.textContent = total.toLocaleString();
+    if(hud) hud.textContent = pb.toLocaleString();
 }
+
 function checkNewPersonalBest(sc){
     const pb=getPersonalBest(null);
     if(sc>pb){
@@ -320,9 +309,41 @@ function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
     const lvReached = Math.max(...[...clearedLevels, currentLevel]);
     const avgAcc = totalClicksAllLevels>0?Math.round((totalHitsAllLevels/totalClicksAllLevels)*100):0;
     const avgStreak = levelsCompleted>0?Math.round(totalStreakAllLevels/levelsCompleted):bestStreak;
-    promptPlayerName(name=>{
-        submitOnlineScore(name, totalLevelScore||finalScore, lvReached, avgStreak, avgAcc);
-    });
+    // Name prompt for the home screen
+function promptPlayerName(callback){
+    const existing = localStorage.getItem('digitalBreak_playerName');
+    if(existing){ if(callback) callback(existing); return; }
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'namePromptOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
+    overlay.innerHTML=`
+        <div style="background:linear-gradient(160deg, #0a0512, #1a0a2e);border:2px solid #ffd700;border-radius:24px;padding:35px 25px;width:100%;max-width:400px;text-align:center;font-family:Orbitron,monospace;box-shadow:0 0 50px rgba(255,215,0,0.2);">
+            <div style="font-size:30px;margin-bottom:15px;">⚡</div>
+            <div style="font-size:16px;font-weight:900;color:#ffd700;letter-spacing:4px;margin-bottom:10px;text-transform:uppercase;">Identify Yourself</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1px;margin-bottom:25px;line-height:1.6;">Enter your hacker alias to track your progress on the global leaderboard.</div>
+            <input id="_nameInput" maxlength="15" placeholder="ALIAS..."
+                autocomplete="off" style="width:100%;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.3);
+                border-radius:12px;padding:15px;color:#ffd700;font-family:Orbitron,monospace;
+                font-size:18px;letter-spacing:3px;text-align:center;outline:none;margin-bottom:20px;">
+            <button id="_nameSubmit" style="width:100%;background:linear-gradient(45deg, #ffd700, #ff8800);
+                border:none;color:#000;padding:16px;border-radius:12px;font-family:Orbitron,monospace;
+                font-size:14px;font-weight:900;letter-spacing:3px;cursor:pointer;box-shadow:0 10px 20px rgba(255,136,0,0.3);">INITIALIZE SESSION</button>
+        </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#_nameInput');
+    setTimeout(()=>input.focus(), 500);
+    
+    overlay.querySelector('#_nameSubmit').onclick = ()=>{
+        const name = input.value.trim().toUpperCase() || "ANONYMOUS";
+        localStorage.setItem('digitalBreak_playerName', name);
+        overlay.style.opacity = '0';
+        setTimeout(()=>overlay.remove(), 500);
+        if(callback) callback(name);
+    };
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') overlay.querySelector('#_nameSubmit').click(); });
+}
+
     // Render online board into existing container
     document.getElementById('leaderboardRows').innerHTML='';
     renderOnlineLeaderboard('leaderboardRows', finalScore);
@@ -546,10 +567,10 @@ function showEpicGameComplete(finalScore,tc,sh){
     const lvReached = 12;
     const avgAcc = totalClicksAllLevels>0?Math.round((totalHitsAllLevels/totalClicksAllLevels)*100):acc;
     const avgStreak = levelsCompleted>0?Math.round(totalStreakAllLevels/levelsCompleted):bestStreak;
-    promptPlayerName(name=>{
-        submitOnlineScore(name, finalScore, lvReached, avgStreak, avgAcc);
-        renderOnlineLeaderboard('epicLbRows', finalScore);
-    });
+    //promptPlayerName(name=>{
+        //submitOnlineScore(name, finalScore, lvReached, avgStreak, avgAcc);
+       // renderOnlineLeaderboard('epicLbRows', finalScore);
+   // });
     startConfetti();
     switchMusicTo('win');
     playSound('newbest');
