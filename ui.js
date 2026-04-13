@@ -171,42 +171,6 @@ function renderLeaderboard(rows, playerScore) {
     });
 }
 
-
-function renderLevelPills() {
-    const container = document.getElementById('levelGrid');
-    if (!container) return;
-    
-    container.innerHTML = '';
-
-    // Use the LEVELS array from game.js
-    if (typeof LEVELS === 'undefined') return;
-
-    LEVELS.forEach(l => {
-        // Calculate if unlocked based on clearedLevels (from game.js)
-        const isUnlocked = l.lv <= (Math.max(...[...clearedLevels, 0]) + 1);
-        const isCleared = clearedLevels.has(l.lv);
-        
-        const pill = document.createElement('div');
-        pill.className = `level-pill ${isUnlocked ? 'unlocked' : 'locked'} ${isCleared ? 'cleared' : ''}`;
-        
-        // Add the level number
-        pill.innerHTML = `<span>${l.lv}</span>`;
-        
-        // Only allow clicking if unlocked
-        if (isUnlocked) {
-            pill.onclick = () => {
-                if(typeof playSound === 'function') playSound('click');
-                loadLevel(l.lv);
-            };
-        }
-        
-        container.appendChild(pill);
-    });
-}
-
-
-
-
 // ══════════════════════════════════════════
 //  ROASTS
 // ══════════════════════════════════════════

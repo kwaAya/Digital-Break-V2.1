@@ -910,11 +910,13 @@ function applyCanvasStyle(){
 
 function setup(){
     loadProgress();
+
     const{w,h}=getCanvasSize();
     let canvas=createCanvas(w,h);
     canvas.parent('gameContainer');
     p5Canvas=canvas.elt;
     applyCanvasStyle();
+
     // Dreamy subtle stars — always moving, never fade
     for(let i=0;i<130;i++)stars.push({
         x:random(width),y:random(height),
@@ -923,6 +925,7 @@ function setup(){
         drift:random(-.025,.025)
     });
     fixScrolling();
+
     // Visual viewport resize (handles browser chrome show/hide on mobile)
     if(window.visualViewport){
         window.visualViewport.addEventListener('resize',()=>{
@@ -931,9 +934,9 @@ function setup(){
             applyCanvasStyle();
         });
     }
-
+    renderLevelPills();
     // --- ADDED FOR PROGRESS & NAME PROMPT ---
-    loadProgress();
+    //loadProgress();
     updatePersonalBestDisplay();
     setTimeout(() => promptPlayerName(), 1000); 
 }
