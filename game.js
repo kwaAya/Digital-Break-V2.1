@@ -64,53 +64,41 @@ async function renderOnlineLeaderboard(containerId, playerScore){
     }).join('');
 }
 
-// Name prompt before submitting
+// Name prompt for the home screen
 function promptPlayerName(callback){
     const existing = localStorage.getItem('digitalBreak_playerName');
-    if(existing){ callback(existing); return; }
+    if(existing){ if(callback) callback(existing); return; }
+    
     const overlay = document.createElement('div');
-    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:1300;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.id = 'namePromptOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
     overlay.innerHTML=`
-        <div style="background:rgba(8,4,18,0.95);border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:28px 24px;width:100%;max-width:360px;text-align:center;font-family:Orbitron,monospace;">
-            <div style="font-size:22px;margin-bottom:10px;">🏆</div>
-            <div style="font-size:13px;font-weight:900;color:rgba(255,215,0,0.9);letter-spacing:3px;margin-bottom:6px;">ENTER YOUR NAME</div>
-            <div style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:18px;">This goes on the global leaderboard</div>
-            <input id="_nameInput" maxlength="20" placeholder="Your name..."
-                autocomplete="off" autocorrect="off" autocapitalize="off"
-                inputmode="text"
-                style="width:100%;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.3);
-                border-radius:10px;padding:12px 14px;color:rgba(255,215,0,0.9);font-family:Orbitron,monospace;
-                font-size:16px;letter-spacing:2px;text-align:center;outline:none;margin-bottom:14px;
-                -webkit-appearance:none;appearance:none;
-                touch-action:manipulation;cursor:text;">
-            <div style="display:flex;gap:10px;justify-content:center;">
-                <button id="_nameSubmit" style="background:linear-gradient(135deg,rgba(255,215,0,0.18),rgba(255,140,0,0.08));
-                    border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);
-                    padding:12px 22px;border-radius:12px;font-family:Orbitron,monospace;
-                    font-size:11px;font-weight:900;letter-spacing:3px;cursor:pointer;">⚡ SUBMIT</button>
-                <button id="_nameSkip" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
-                    color:rgba(255,255,255,0.3);padding:12px 18px;border-radius:12px;
-                    font-family:Orbitron,monospace;font-size:9px;cursor:pointer;letter-spacing:2px;">SKIP</button>
-            </div>
+        <div style="background:linear-gradient(160deg, #0a0512, #1a0a2e);border:2px solid #ffd700;border-radius:24px;padding:35px 25px;width:100%;max-width:400px;text-align:center;font-family:Orbitron,monospace;box-shadow:0 0 50px rgba(255,215,0,0.2);">
+            <div style="font-size:30px;margin-bottom:15px;">⚡</div>
+            <div style="font-size:16px;font-weight:900;color:#ffd700;letter-spacing:4px;margin-bottom:10px;text-transform:uppercase;">Identify Yourself</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1px;margin-bottom:25px;line-height:1.6;">Enter your hacker alias to track your progress on the global leaderboard.</div>
+            <input id="_nameInput" maxlength="15" placeholder="ALIAS..."
+                autocomplete="off" style="width:100%;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.3);
+                border-radius:12px;padding:15px;color:#ffd700;font-family:Orbitron,monospace;
+                font-size:18px;letter-spacing:3px;text-align:center;outline:none;margin-bottom:20px;">
+            <button id="_nameSubmit" style="width:100%;background:linear-gradient(45deg, #ffd700, #ff8800);
+                border:none;color:#000;padding:16px;border-radius:12px;font-family:Orbitron,monospace;
+                font-size:14px;font-weight:900;letter-spacing:3px;cursor:pointer;box-shadow:0 10px 20px rgba(255,136,0,0.3);">INITIALIZE SESSION</button>
         </div>`;
     document.body.appendChild(overlay);
     const input = overlay.querySelector('#_nameInput');
-    // Delay focus so iOS registers the tap gesture first
-    setTimeout(()=>{
-        input.focus();
-        input.click();
-    }, 300);
-    const adjs=['Sweaty','Lucky','Shaking','Elite','Mid-tier','Confused','Trembling'];
-    const nouns=['Gamer','Clicker','Legend','Tryhard','NPC','Bot','President'];
-    const randomName = adjs[Math.floor(Math.random()*adjs.length)]+' '+nouns[Math.floor(Math.random()*nouns.length)];
+    setTimeout(()=>input.focus(), 500);
+    
     overlay.querySelector('#_nameSubmit').onclick = ()=>{
-        const name = (input.value.trim()||randomName).slice(0,20);
+        const name = input.value.trim().toUpperCase() || "ANONYMOUS";
         localStorage.setItem('digitalBreak_playerName', name);
-        overlay.remove(); callback(name);
+        overlay.style.opacity = '0';
+        setTimeout(()=>overlay.remove(), 500);
+        if(callback) callback(name);
     };
-    overlay.querySelector('#_nameSkip').onclick = ()=>{ overlay.remove(); callback(randomName); };
     input.addEventListener('keydown', e=>{ if(e.key==='Enter') overlay.querySelector('#_nameSubmit').click(); });
 }
+
 
 // ══════════════════════════════════════════
 //  LEADERBOARD
@@ -178,7 +166,8 @@ function saveProgress(){
     try{
         const data={
             clearedLevels:[...clearedLevels],
-            highestUnlocked:Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length)
+            highestUnlocked:Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length),
+            totalLevelScore: totalLevelScore
         };
         localStorage.setItem(PROGRESS_KEY,JSON.stringify(data));
     }catch{}
@@ -187,17 +176,20 @@ function saveProgress(){
 function loadProgress(){
     try{
         const raw=localStorage.getItem(PROGRESS_KEY);
-        if(!raw)return;
+        if(!raw) return;
         const data=JSON.parse(raw);
-        if(data.clearedLevels)data.clearedLevels.forEach(lv=>clearedLevels.add(lv));
+        if(data.clearedLevels) data.clearedLevels.forEach(lv=>clearedLevels.add(lv));
+        if(data.totalLevelScore) totalLevelScore = data.totalLevelScore;
     }catch{}
 }
 
 function clearProgress(){
     try{localStorage.removeItem(PROGRESS_KEY);}catch{}
     clearedLevels=new Set();
+    totalLevelScore = 0;
     renderLevelPills();
 }
+
 function getPersonalBest(lv){
     try{
         const key=lv?`${PB_KEY}_lv${lv}`:PB_KEY;
@@ -938,7 +930,13 @@ function setup(){
             applyCanvasStyle();
         });
     }
+
+    // --- ADDED FOR PROGRESS & NAME PROMPT ---
+    loadProgress();
+    updatePersonalBestDisplay();
+    setTimeout(() => promptPlayerName(), 1000); 
 }
+
 
 function windowResized(){
     const{w,h}=getCanvasSize();
@@ -1538,23 +1536,29 @@ function endGame(){
         best_streak:bestStreak
     });
 
-    if(passed){
-        totalLevelScore+=score;
-        totalClicksAllLevels+=totalClicks;
-        totalHitsAllLevels+=successfulHits;
-        totalStreakAllLevels+=bestStreak;
-        levelsCompleted++;
-        checkNewPersonalBest(totalLevelScore);
-        savePersonalBest(score,currentLevel);
-
-        if(currentLevel>=LEVELS.length){
-            // ── GAME COMPLETE — all 12 levels cleared
-            runHackLoader(()=>showEpicGameComplete(totalLevelScore,totalClicks,successfulHits));
-        } else {
-            // ── LEVEL COMPLETE — show interstitial then load next
-            showLevelComplete(currentLevel,score,acc);
+        if(passed){
+        totalLevelScore += score;
+        clearedLevels.add(currentLevel);
+        saveProgress(); // Saves total score and cleared levels
+        
+        // 1. Save Level-Specific High Score
+        const levelPB = getPersonalBest(currentLevel);
+        if(score > levelPB) {
+            savePersonalBest(score, currentLevel);
         }
-    } else {
+
+        // 2. Real-time Online Leaderboard Update
+        const playerName = localStorage.getItem('digitalBreak_playerName') || "PLAYER";
+        submitOnlineScore(playerName, totalLevelScore, currentLevel, bestStreak, acc);
+
+        if(currentLevel >= LEVELS.length){
+            runHackLoader(()=>showEpicGameComplete(totalLevelScore, totalClicks, successfulHits));
+        } else {
+            showLevelComplete(currentLevel, score, acc);
+        }
+    }
+    
+    else {
         // ── FAILED — retry same level
         const shortfall=levelData.target-score;
         const msgs=[
@@ -1633,4 +1637,3 @@ function restartGame(){
     if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
 }
 
- 
