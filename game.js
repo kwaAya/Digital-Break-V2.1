@@ -1378,20 +1378,36 @@ function updateStartButton(){
     }
 }
 
-function renderLevelPills(){
-    const grid=document.getElementById('levelPillGrid');
-    if(!grid)return;
-    grid.innerHTML='';
-    LEVELS.forEach((lv,i)=>{
-        const pill=document.createElement('div');
-        pill.className='level-pill'+(clearedLevels.has(lv.lv)?' cleared':'');
-        pill.innerHTML=`<div class="level-pill-num">${lv.lv}</div>
-            <div class="level-pill-check">✓</div>`;
-        pill.addEventListener('click',()=>previewLevel(lv.lv));
-        pill.addEventListener('touchstart',()=>previewLevel(lv.lv),{passive:true});
-        grid.appendChild(pill);
+function renderLevelPills() {
+    const container = document.getElementById('levelGrid');
+    if (!container) return;
+    
+    container.innerHTML = '';
+
+    // Use the LEVELS array defined at the top of your game.js
+    LEVELS.forEach(l => {
+        // Calculate if unlocked based on clearedLevels
+        const isUnlocked = l.lv <= (Math.max(...[...clearedLevels, 0]) + 1);
+        const isCleared = clearedLevels.has(l.lv);
+        
+        const pill = document.createElement('div');
+        pill.className = `level-pill ${isUnlocked ? 'unlocked' : 'locked'} ${isCleared ? 'cleared' : ''}`;
+        
+        // Add the level number
+        pill.innerHTML = `<span>${l.lv}</span>`;
+        
+        // Only allow clicking if unlocked
+        if (isUnlocked) {
+            pill.onclick = () => {
+                if(typeof playSound === 'function') playSound('click');
+                loadLevel(l.lv);
+            };
+        }
+        
+        container.appendChild(pill);
     });
 }
+
 
 function previewLevel(lv){
     playSound('select');
