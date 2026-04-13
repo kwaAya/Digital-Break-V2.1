@@ -1633,3 +1633,4 @@ function restartGame(){
     if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
 }
 
+ 
