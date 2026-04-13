@@ -1,0 +1,563 @@
+
+// ══════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════
+const LEADERBOARD_KEY = 'digitalBreakV21_lb';
+const SECRET_MESSAGES = [
+    "Suggest more secret messages you'd like the gave to have, via my contact details below! 📩",
+    "Well Done! 6 7!!😛",
+    "Why is 6 afraid of 7? Because 7, 8, 9. But why was 7 afraid tho? Because 7 knew that 6, 8, 9 too 💀",
+    //"You understood the assignment periodt. We don't make the rules, you just followed them perfectly.",
+    //"POV: you just violated the algorithm and the algorithm is embarrassed 🤖",
+    //"Respectfully... you ate and left absolutely no crumbs. The plate is clean. 🍽️",
+    "Oh you played so well, you're the birthday game winner",
+    "The audacity to WIN?? In THIS economy?? We love to see it bestie 😭",
+    "You won. Cool. Anyway, my therapist says I need to stop attaching my self-worth to your performance. Congrats I guess. 🖤",
+    "Level cleared. That's one more small victory before the void consumes us all. Treat yourself. ☠️",
+    "POV: you succeeded and honestly? That's suspicious. What are you hiding?",
+    "You did it. The voices are quiet. For now. 🧠",
+    "Another win. Another day further from God. Let's go bestie. ⛓️",
+    "Congratulations. You are now statistically less likely to uninstall out of shame. Progress.",
+    "You cleared the level. The level did not clear you. This time. 🔪",
+    "My disappointment is immeasurable and my day is… actually okay because you won. Don't get used to it.",
+    "You passed. The bar was in hell but you limbo'd under it anyway. 🔥",
+    "Winning is fun they said. Nobody mentions the crushing weight of expectation for the next level. Anyway here's your dopamine. 💊",
+    "Level complete. Your reward? Slightly less existential dread. Spend it wisely.",
+    "You won. The game is embarrassed. I am tired. We are all feeling things. Let's move on.",
+    "Congratulations. You have temporarily delayed my villain arc. Appreciate it.",
+    "You cleared it. The funeral is tomorrow. Bring snacks. ⚰️",
+    "Another win. The cemetery of failed attempts grows fuller. Rest in peace to them. Not you though. You're too annoying to die.",
+    "You did the thing. The thing is done. Now we both pretend this fixes anything.",
+    "Level cleared. My will to live has increased by 3%. That's not nothing.",
+    "Congratulations. You are now contractually obligated to keep playing. Read the fine print. (There is no fine print. I'm just lonely.)",
+    "You won. Donate to my therapy fund or don't. Either way the level is over.",
+    "Shout out to my South African players. Wozo'thathu kiss.💋💋💋",
+    //"Main character behaviour fully detected. Stay built different 💅",
+    //"IYKYK. And you clearly knew. The rest of them don't. Keep it that way 🤫",
+    //"You're giving 'I don't miss' energy and honestly the game felt it 🎯",
+    "On to the next. But first screenshot this because nobody is going to believe you 📸",
+    //"The devs are shaking. (hi it's Aya. I'm shaking. Congrats bestie 💋)",
+    "Girl math: spending 60 seconds on this game = certified that girl energy ✨",
+    //"Lowkey ate. Highkey ate. Midkey absolutely demolished it 🔥",
+    //"The haters said you couldn't. The haters were statistically incorrect 📊",
+    "This is your sign to quit while you're ahead. But we both know you won’t. Onto the next level.",
+    "Objectively: slay. Subjectively: also slay. Spiritually: you need help but congrats.",
+    "Lock in? No chomam you welded the doors shut. That's different.",
+    "You just did something that made the dev open their laptop again.",
+    //"The game's code is crying. You love to see it. 💻😭",
+    "That wasn't a level clear. That was a level MURDER. And you got away with it.",
+    "Udlalile mfwethu. I hope bazokushada one day. 🙏🏽💋",
+    "Real ones finish. You? Certified real one. The simulation acknowledges you fr.",
+    "POV: it's 3am, your eyes hurt, your thumb is sore, and you WON. No notes. 🌙",
+    "This is your villain origin story except you're the hero actually. Or maybe both 😈",
+    //"NPC behaviour? Not today. Main character only. Congrats on existing correctly 💅",
+    "Bro really said 'let me speedrun this' and then DID IT. Unhinged. Iconic. 🏃",
+    //"The way you ate this game up... it's giving chosen one energy and I don't say that lightly.",
+    "Touch grass? Maybe. But first savour this W because you earned it bestie 🌿",
+    //"You just broke the matrix and the matrix is embarrassed. The glitch in the system is you. 🕶️",
+    //"Not to flex but you just did a thing that was supposed to be hard and made it look easy. The audacity. The simulation is reeling. 🌀",
+    "I hope ungumntu oOn ebomini.",
+];
+const PB_KEY='digitalBreakV21_pb';
+const PROGRESS_KEY='digitalBreakV21_progress';
+
+function saveProgress(){
+    try{
+        const data={
+            clearedLevels:[...clearedLevels],
+            highestUnlocked:Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length)
+        };
+        localStorage.setItem(PROGRESS_KEY,JSON.stringify(data));
+    }catch{}
+}
+
+function loadProgress(){
+    try{
+        const raw=localStorage.getItem(PROGRESS_KEY);
+        if(!raw)return;
+        const data=JSON.parse(raw);
+        if(data.clearedLevels)data.clearedLevels.forEach(lv=>clearedLevels.add(lv));
+    }catch{}
+}
+
+function clearProgress(){
+    try{localStorage.removeItem(PROGRESS_KEY);}catch{}
+    clearedLevels=new Set();
+    renderLevelPills();
+}
+function getPersonalBest(lv){
+    try{
+        const key=lv?`${PB_KEY}_lv${lv}`:PB_KEY;
+        return parseInt(localStorage.getItem(key))||0;
+    }catch{return 0;}
+}
+function savePersonalBest(sc,lv){
+    try{
+        if(lv){
+            const key=`${PB_KEY}_lv${lv}`;
+            const prev=getPersonalBest(lv);
+            if(sc>prev)localStorage.setItem(key,sc);
+        }
+        // Also save overall best
+        const prev=getPersonalBest();
+        if(sc>prev)localStorage.setItem(PB_KEY,sc);
+    }catch{}
+}
+function updatePersonalBestDisplay(){
+    const pb=getPersonalBest();
+    const el=document.getElementById('pbDisplay');
+    const hud=document.getElementById('personalBestHUD');
+    if(el)el.textContent=pb.toLocaleString();
+    if(hud)hud.textContent=pb.toLocaleString();
+}
+function checkNewPersonalBest(sc){
+    const pb=getPersonalBest(null);
+    if(sc>pb){
+        savePersonalBest(sc);
+        updatePersonalBestDisplay();
+        const t=document.getElementById('newBestToast');
+        t.classList.add('show');
+        setTimeout(()=>t.classList.remove('show'),2200);
+        playSound('newbest');
+        return true;
+    }
+    return false;
+}
+//xX_H4ck3r_Xx
+
+const SEED_PLAYERS = [
+    {name:"ndinguBeyonce",score:1820,diff:"normal"},
+    {name:"umamakho_wifi",score:1650,diff:"normal"},
+    {name:"404_Skillz_Azikho",   score:1420,diff:"easy"},
+    {name:"TryHard99",    score:1280,diff:"easy"},
+];
+
+function getLeaderboard(){
+    try{const r=localStorage.getItem(LEADERBOARD_KEY);return r?JSON.parse(r):[...SEED_PLAYERS];}
+    catch{return[...SEED_PLAYERS];}
+}
+
+function saveLeaderboard(lb){try{localStorage.setItem(LEADERBOARD_KEY,JSON.stringify(lb));}catch{}}
+function addToLeaderboard(sc,diff){
+    const adjs=["Sweaty","Trembling","Lucky","Desperate","Average","Mid-tier","Shaking","Confused"];
+    const nouns=["Gamer","Clicker","Tryhard","Keyboard","Legend","Potato","NPC","Bot", "Big Boss", "President General among amazwe"];
+    const name=adjs[Math.floor(Math.random()*adjs.length)]+" "+nouns[Math.floor(Math.random()*nouns.length)];
+    let lb=getLeaderboard();
+    lb.push({name,score:sc,diff,isNew:true});
+    lb.sort((a,b)=>b.score-a.score);
+    lb=lb.slice(0,7);
+    saveLeaderboard(lb.map(e=>({...e,isNew:false})));
+    return lb;
+}
+
+function renderLeaderboard(lb,playerScore){
+    const c=document.getElementById('leaderboardRows');
+    c.innerHTML='';
+    const medals=['🥇','🥈','🥉'];
+    lb.forEach((e,i)=>{
+        const isMe=e.score===playerScore&&e.isNew;
+        const row=document.createElement('div');
+        row.className='lb-row'+(isMe?' new-entry':'');
+        row.style.animationDelay=`${i*.07}s`;
+        const dl={easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'}[e.diff]||'';
+        row.innerHTML=`<span class="lb-rank">${i<3?medals[i]:'#'+(i+1)}</span>
+            <span class="lb-name">${isMe?'⚡ YOU':e.name}</span>
+            <span class="lb-score">${e.score.toLocaleString()}</span>
+            <span class="lb-diff">${dl}</span>`;
+        c.appendChild(row);
+    });
+}
+
+
+// ══════════════════════════════════════════
+//  ROASTS
+// ══════════════════════════════════════════
+const roasts=[
+    "You died. The game is embarrassed for you. I'm embarrassed for you. Log off. 💀",
+    "Respectfully? That was tragic. The cringe is immeasurable. Try again I guess.",
+    "POV: you failed so hard the simulation felt secondhand embarrassment. Touch grass. Then touch the retry button. 🌿",
+    "Skill issue. And not even a cool skill issue. Just sad. Embarrassing for your bloodline.",
+    "You blew it. The ancestors are disappointed. The dev is disappointed. Your future self? Also disappointed.",
+    "That wasn't a loss. That was a public health crisis. Do better bestie. 🚑",
+    "Failed. The bar was on the floor and you brought a shovel. Impressive in the worst way.",
+    "You died. The void is hungry and honestly? You fed it well. Congrats on being useful for once. 🕳️",
+    "Loss. And not the cute 'character development' loss. The 'delete the app and think about your choices' loss.",
+    "Bro really said 'let me fail in the most humiliating way possible' and then COMMITTED. No notes. Just shame.",
+    "You lost. The game isn't even hard. That's the scary part. Seek help or seek the retry button. Your call.",
+    "Game over. The voices are laughing at you. Not the fun voices. The mean ones. 🧠",
+    "Failure. Your reward? Nothing. Not even pity. Get back in the trenches soldier.",
+    "You died. The only thing lower than your score is my will to live. Twins! 🖤",
+    "Lost again. At this point I'm starting to think it's personal. Against you. By you.",
+    "L bozo. Ratio. Also you failed. Also your wifi is probably fine. That was just you. 📉",
+    "Unalived by a game. That's the legacy you're building. Your tombstone: 'tried. failed. cried.' ⚰️",
+    "Fail screen. The game is fine. The problem is between the chair and the screen. That's you btw.",
+    "You lost. Don't blame lag. Don't blame the cat. Blame the mirror bestie.",
+    "Dead. The level ate you and didn't even season you. Tragic. Unflavored. Try again. 🍽️",
+    "Game over. My disappointment is louder than your click. And your click was loud.",
+    "You failed so hard I felt it in my bones. And I don't have bones. I'm code. That's how bad it was. 💻",
+    "Loss. The only thing faster than your failure was your confidence beforehand. Unmatched delusion. Love that for you.",
+    "You died. The afterlife is just replaying this fail screen forever. Welcome to hell bestie. 🔥",
+    "Failed. The algorithm saw that and said 'not even I can save this'. And the algorithm saves EVERYTHING.",
+];
+function getSavageRoast(sc,target){
+    if(sc>=target*1.5)return"Okay fine. That was actually kinda impressive.";
+    if(sc>=target*1.25)return"Not bad. Not good either. But... not bad.";
+    return roasts[Math.floor(Math.random()*roasts.length)];
+}
+
+
+// ══════════════════════════════════════════
+//  CONFETTI
+// ══════════════════════════════════════════
+let confettiPieces=[],confettiAnimId=null;
+function startConfetti(){
+    const canvas=document.getElementById('confettiCanvas');
+    canvas.style.display='block';
+    canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+    const ctx=canvas.getContext('2d');
+    const colors=['#ff1493','#00ffff','#ffdd00','#00ff00','#ff6b00','#ff69b4','#fff'];
+    confettiPieces=[];
+    for(let i=0;i<120;i++)confettiPieces.push({
+        x:Math.random()*canvas.width,y:-10-Math.random()*200,
+        w:6+Math.random()*8,h:3+Math.random()*5,
+        color:colors[Math.floor(Math.random()*colors.length)],
+        speed:1.5+Math.random()*3,angle:Math.random()*Math.PI*2,
+        spin:(Math.random()-.5)*.2,drift:(Math.random()-.5)*1.5,opacity:.9
+    });
+    function animate(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        let alive=false;
+        confettiPieces.forEach(p=>{
+            p.y+=p.speed;p.x+=p.drift;p.angle+=p.spin;p.opacity-=.003;
+            if(p.y<canvas.height+20&&p.opacity>0)alive=true;
+            ctx.save();ctx.globalAlpha=Math.max(0,p.opacity);
+            ctx.translate(p.x,p.y);ctx.rotate(p.angle);
+            ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+            ctx.restore();
+        });
+        if(alive)confettiAnimId=requestAnimationFrame(animate);
+        else canvas.style.display='none';
+    }
+    if(confettiAnimId)cancelAnimationFrame(confettiAnimId);
+    animate();
+}
+
+
+// ══════════════════════════════════════════
+//  SHARE
+// ══════════════════════════════════════════
+function shareScore(){
+    const text=`🔥 I just cleared Level ${currentLevel} of Digital Break V2.1! Total score: ${totalLevelScore.toLocaleString()} pts · Best streak: ${bestStreak} 🔥 Can you beat me? ⚡`;
+    if(navigator.share)navigator.share({title:'Digital Break V2.1',text}).catch(()=>copyFallback(text));
+    else copyFallback(text);
+}
+function copyFallback(text){
+    try{navigator.clipboard.writeText(text).then(()=>{
+        document.getElementById('shareConfirm').textContent='✅ Copied!';
+        setTimeout(()=>document.getElementById('shareConfirm').textContent='',3000);
+    });}catch{document.getElementById('shareConfirm').textContent='⚠️ Could not copy';}
+}
+
+
+// ══════════════════════════════════════════
+//  WIN SCREEN
+// ══════════════════════════════════════════
+let countdownInterval=null;
+
+function runHackLoader(callback){
+    const loader=document.getElementById('hackLoader');
+    const bolt=document.getElementById('hackBolt');
+    const lines=[
+        document.getElementById('hline1'),
+        document.getElementById('hline2'),
+        document.getElementById('hline3'),
+        document.getElementById('hline4'),
+    ];
+    // Reset all lines
+    lines.forEach(l=>{l.style.width='0';l.style.transition='none';});
+    bolt.style.opacity='0';
+    loader.classList.add('active');
+
+    // Stagger each line typing in
+    const delays=[0, 700, 1400, 2000];
+    const durations=[600, 600, 500, 500];
+    lines.forEach((l,i)=>{
+        setTimeout(()=>{
+            l.style.transition=`width ${durations[i]}ms steps(28)`;
+            l.style.width='100%';
+        },delays[i]);
+    });
+
+    // Bolt fades in after lines
+    setTimeout(()=>{ bolt.style.opacity='1'; playSound('lightning'); },2200);
+
+    // Done — hide loader and fire callback
+    setTimeout(()=>{
+        loader.classList.remove('active');
+        bolt.style.opacity='0';
+        callback();
+    },3200);
+}
+
+function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
+    document.getElementById('winScoreBadge').textContent=`${finalScore.toLocaleString()} PTS`;
+    document.getElementById('winStreakBadge').textContent=`🔥 Best Streak: ${bestStreak} hits`;
+    const acc=tc>0?Math.round((sh/tc)*100):0;
+    const accLine=
+        acc>=95?"Surgical precision. You don't miss. Period.":
+        acc>=85?"Elite accuracy. The targets didn't stand a chance.":
+        acc>=75?"Solid aim — clean and composed under pressure.":
+        acc>=65?"Good accuracy. You kept it together when it counted.":
+        acc>=55?"Decent aim. A few misses but the W is still the W.":
+        acc>=45?"A little shaky but you got the job done regardless.":
+        "Listen... the aim needs work. But the heart was there 💀";
+    document.getElementById('winAccuracy').textContent=`Accuracy: ${acc}% — ${accLine}`;
+    document.getElementById('roastText').textContent=
+        isNewBest ? '🏆 NEW PERSONAL BEST! You actually outdid yourself. Respect.' :
+        getSavageRoast(finalScore,targetSc);
+
+    // Submit to online leaderboard
+    const lvReached = Math.max(...[...clearedLevels, currentLevel]);
+    const avgAcc = totalClicksAllLevels>0?Math.round((totalHitsAllLevels/totalClicksAllLevels)*100):0;
+    const avgStreak = levelsCompleted>0?Math.round(totalStreakAllLevels/levelsCompleted):bestStreak;
+    promptPlayerName(name=>{
+        submitOnlineScore(name, totalLevelScore||finalScore, lvReached, avgStreak, avgAcc);
+    });
+    // Render online board into existing container
+    document.getElementById('leaderboardRows').innerHTML='';
+    renderOnlineLeaderboard('leaderboardRows', finalScore);
+
+    document.getElementById('secretText').textContent=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
+    document.getElementById('countdownSection').style.display='block';
+    document.getElementById('secretReveal').style.display='none';
+
+    const overlay=document.getElementById('winOverlay');
+    overlay.style.display='block';overlay.scrollTop=0;
+    startConfetti();
+    switchMusicTo('win');
+
+    let count=5;
+    document.getElementById('countdownNum').textContent=count;
+    if(countdownInterval)clearInterval(countdownInterval);
+    countdownInterval=setInterval(()=>{
+        count--;
+        if(count<=0){
+            clearInterval(countdownInterval);
+            document.getElementById('countdownSection').style.display='none';
+            document.getElementById('secretReveal').style.display='block';
+            startConfetti();
+        }else{
+            document.getElementById('countdownNum').textContent=count;
+        }
+    },1000);
+}
+
+function showLevelComplete(lv,lvScore,acc){
+    clearedLevels.add(lv);
+    saveProgress();
+    renderLevelPills();
+    updateStartButton();
+
+    // 2s transition loader
+    const tl=document.createElement('div');
+    tl.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:1200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:Orbitron,monospace;';
+    tl.innerHTML=`
+        <div id="_tlCheck" style="font-size:52px;opacity:0;transform:scale(0.4) translateY(-20px);transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);">✅</div>
+        <div style="font-size:10px;letter-spacing:5px;color:rgba(0,255,136,0.7);opacity:0;transition:opacity 0.4s ease 0.25s;" id="_tlText">LEVEL ${lv} CLEARED</div>
+        <div style="width:140px;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;overflow:hidden;">
+            <div id="_tlBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00ff88,#00ffff);transition:width 1.7s ease;box-shadow:0 0 8px rgba(0,255,136,0.6);"></div>
+        </div>`;
+    document.body.appendChild(tl);
+    setTimeout(()=>{
+        const c=document.getElementById('_tlCheck'),t=document.getElementById('_tlText'),b=document.getElementById('_tlBar');
+        if(c){c.style.opacity='1';c.style.transform='scale(1) translateY(0)';}
+        if(t)t.style.opacity='1';
+        if(b)b.style.width='100%';
+    },60);
+    setTimeout(()=>{
+        tl.style.transition='opacity 0.35s ease';
+        tl.style.opacity='0';
+        setTimeout(()=>{tl.remove();_showLevelCompleteInner(lv,lvScore,acc);},360);
+    },1800);
+}
+
+function _showLevelCompleteInner(lv,lvScore,acc){
+    const overlay=document.getElementById('levelCompleteOverlay');
+    if(!overlay)return;
+    const lcPbw=document.getElementById('progressBarWrap');
+    if(lcPbw)lcPbw.style.display='none';
+
+    // Populate content
+    document.getElementById('lcLevel').textContent=`LEVEL ${lv} CLEARED`;
+    document.getElementById('lcScore').textContent=`${lvScore.toLocaleString()} PTS`;
+    const accComment=
+        acc>=95?'Surgical. You do not miss.':
+        acc>=85?'Elite aim — clean and composed.':
+        acc>=75?'Solid accuracy. Kept it together.':
+        acc>=65?'Good aim. Held it when it counted.':
+        acc>=50?'Decent. A few misses but the W counts.':
+        acc>=35?'Shaky aim but the heart was there 💀':
+        'Listen... the accuracy needs work. But you still cleared it somehow 😭';
+    document.getElementById('lcAccuracy').textContent=`Accuracy: ${acc}% — ${accComment}`;
+    document.getElementById('lcTotal').textContent=
+        `Total so far: ${totalLevelScore.toLocaleString()} pts`;
+
+    // Teaser for next level
+    const next=LEVELS[lv]; // lv is 1-indexed, array is 0-indexed so lv = next level's index
+    document.getElementById('lcNextNote').textContent=
+        next ? `Level ${lv+1}: ${next.note}` : '';
+
+    // Random message for this level
+    const lcMsg=document.getElementById('lcMessage');
+    if(lcMsg)lcMsg.textContent=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
+
+    overlay.style.display='block';
+    overlay.scrollTop=0;
+    setTimeout(()=>{ overlay.scrollTop=0; },50);
+    startConfetti();
+    switchMusicTo('win');
+    playSound('levelcomplete');
+}
+
+function goToNextLevel(){
+    currentLevel++;
+    levelData=LEVELS[currentLevel-1];
+    const overlay=document.getElementById('levelCompleteOverlay');
+    if(overlay)overlay.style.display='none';
+    document.getElementById('confettiCanvas').style.display='none';
+    if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
+    loadLevel(currentLevel);
+}
+
+function showEpicGameComplete(finalScore,tc,sh){
+    const acc=tc>0?Math.round((sh/tc)*100):0;
+    clearedLevels.add(12);
+    saveProgress();
+    renderLevelPills();
+    updateStartButton();
+    checkNewPersonalBest(finalScore);
+
+    // Build the overlay
+    const el=document.createElement('div');
+    el.id='epicCompleteOverlay';
+    el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:1000;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding:30px 15px 80px;font-family:Orbitron,monospace;text-align:center;color:#fff;';
+
+    const msg=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
+    const lbHtml = `<div id="epicLbRows"><div style="font-size:9px;color:rgba(255,215,0,0.4);letter-spacing:2px;">LOADING GLOBAL SCORES...</div></div>`;
+
+    el.innerHTML=`
+    <div style="max-width:480px;margin:0 auto;">
+        <div style="font-size:11px;letter-spacing:6px;color:rgba(255,215,0,0.4);margin-bottom:10px;">ALL 12 LEVELS</div>
+        <div style="font-size:clamp(22px,6vw,38px);font-weight:900;letter-spacing:4px;
+            background:linear-gradient(135deg,#ffd700,#ff8800,#ff1493,#ffd700);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;margin-bottom:6px;
+            animation:flicker 2.5s infinite;">
+            ⚡ SYSTEM FULLY BREACHED ⚡
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;margin-bottom:8px;">YOU ARE THE 1%</div>
+        <div style="font-size:9px;color:rgba(255,215,0,0.35);letter-spacing:2px;margin-bottom:24px;
+            background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.1);
+            border-radius:8px;padding:6px 14px;display:inline-block;">
+            ⚡ MORE LEVELS DROPPING SOON — STAY READY
+        </div>
+
+        <div style="background:linear-gradient(135deg,rgba(255,215,0,0.14),rgba(255,140,0,0.06));
+            border:2px solid rgba(255,215,0,0.6);border-radius:18px;padding:22px 18px;
+            margin-bottom:18px;box-shadow:0 0 60px rgba(255,215,0,0.2);">
+            <div style="font-size:11px;letter-spacing:3px;color:rgba(255,215,0,0.5);margin-bottom:8px;">TOTAL SCORE</div>
+            <div style="font-size:clamp(32px,8vw,52px);font-weight:900;color:#ffd700;
+                text-shadow:0 0 30px rgba(255,215,0,0.6);letter-spacing:3px;">${finalScore.toLocaleString()}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px;">PTS · ${acc}% accuracy · ${bestStreak} best streak</div>
+        </div>
+
+        <div style="background:rgba(0,255,100,0.06);border:1px solid rgba(0,255,136,0.25);
+            border-radius:14px;padding:16px 18px;margin-bottom:18px;">
+            <div style="font-size:9px;letter-spacing:3px;color:rgba(0,255,136,0.5);margin-bottom:8px;">🔓 CLASSIFIED TRANSMISSION</div>
+            <div style="font-size:13px;color:#00ff88;line-height:1.7;letter-spacing:0.5px;
+                animation:glow 2s ease-in-out infinite alternate;">${msg}</div>
+        </div>
+
+        <div style="margin-bottom:18px;">
+            <div style="font-size:10px;letter-spacing:3px;color:rgba(255,215,0,0.4);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.3));"></span>
+                HALL OF FAME
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,215,0,0.3),transparent);"></span>
+            </div>
+            ${lbHtml}
+        </div>
+
+        <div style="
+            font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px;
+            line-height:1.9;margin:0 0 16px;
+            background:rgba(255,215,0,0.05);
+            border:1px solid rgba(255,215,0,0.15);
+            border-radius:10px;padding:12px 16px;">
+            📸 You cleared all 12 levels — screenshot this & post it!<br>
+            Tag <span style="color:rgba(255,215,0,0.8);font-weight:900;">@ayabukwaaaa</span> on IG & TikTok &nbsp;·&nbsp;
+            <span style="color:rgba(255,215,0,0.8);font-weight:900;">@cachemeoutside.dev</span> on TikTok<br>
+            <span style="color:rgba(0,255,136,0.7);font-weight:900;">let's make digital break trend ⚡</span>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;">
+            <button onclick="shareScore()" style="
+                background:linear-gradient(45deg,#1da1f2,#0d8fd4);color:#fff;border:none;
+                padding:13px 22px;border-radius:30px;font-family:Orbitron,monospace;
+                font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
+                min-height:46px;touch-action:manipulation;">📤 SHARE YOUR WIN</button>
+            <button onclick="saveScoreCard()" style="
+                background:linear-gradient(45deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border:none;
+                padding:13px 22px;border-radius:30px;font-family:Orbitron,monospace;
+                font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
+                min-height:46px;touch-action:manipulation;">📸 SAVE FOR STORY</button>
+        </div>
+        <div id="shareConfirm" style="font-size:11px;color:#00ff00;min-height:16px;letter-spacing:1px;margin-bottom:10px;"></div>
+        
+        <button onclick="document.getElementById('epicCompleteOverlay').remove();loadLevel(12);"
+            style="width:100%;padding:14px;
+            background:rgba(255,215,0,0.05);
+            border:1px solid rgba(255,215,0,0.2);color:rgba(255,215,0,0.5);
+            font-size:11px;font-weight:900;letter-spacing:3px;
+            font-family:Orbitron,monospace;
+            cursor:pointer;border-radius:14px;margin-bottom:10px;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+            🔁 REPLAY LEVEL 12
+        </button>
+
+        <button onclick="document.getElementById('epicCompleteOverlay').remove();restartGame();"
+            style="width:100%;padding:16px;
+            background:linear-gradient(135deg,rgba(255,215,0,0.14),rgba(255,140,0,0.07));
+            border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);
+            font-size:12px;font-weight:900;letter-spacing:4px;font-family:Orbitron,monospace;
+            cursor:pointer;border-radius:14px;margin-bottom:16px;
+            animation:breachGlow 2.5s ease-in-out infinite;touch-action:manipulation;">
+            ⚡ PLAY AGAIN FROM START</button>
+
+        <div style="font-size:8px;color:rgba(255,255,255,0.15);letter-spacing:1px;line-height:2;margin-top:10px;">
+            Geniusly created by <span style="color:rgba(255,215,0,0.4);">Ayabukwa🌟</span><br>
+            <a href="tel:0845067825" style="color:rgba(255,215,0,0.3);text-decoration:none;">084 506 7825</a>
+            &nbsp;·&nbsp;
+            <a href="mailto:unakomtumtum0@gmail.com" style="color:rgba(255,215,0,0.3);text-decoration:none;">unakomtumtum0@gmail.com</a>
+        </div>
+    </div>`;
+
+    document.body.appendChild(el);
+    // Submit and load online leaderboard
+    const lvReached = 12;
+    const avgAcc = totalClicksAllLevels>0?Math.round((totalHitsAllLevels/totalClicksAllLevels)*100):acc;
+    const avgStreak = levelsCompleted>0?Math.round(totalStreakAllLevels/levelsCompleted):bestStreak;
+    promptPlayerName(name=>{
+        submitOnlineScore(name, finalScore, lvReached, avgStreak, avgAcc);
+        renderOnlineLeaderboard('epicLbRows', finalScore);
+    });
+    startConfetti();
+    switchMusicTo('win');
+    playSound('newbest');
+
+    // Fix the shareConfirm reference — point to the one inside epic overlay
+    setTimeout(()=>{
+        const eb=el.querySelector('#shareConfirm');
+        if(eb)eb.id='shareConfirmEpic';
+    },100);
+}
+
