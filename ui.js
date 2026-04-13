@@ -140,7 +140,7 @@ function addToLeaderboard(sc,diff){
 }
 
 function renderLeaderboard(rows, playerScore) {
-    const container = document.getElementById('leaderboardRows'); // Or your containerId
+    const container = document.getElementById('leaderboardRows');
     if (!container) return;
     
     container.innerHTML = '';
@@ -154,14 +154,11 @@ function renderLeaderboard(rows, playerScore) {
     const myName = localStorage.getItem('digitalBreak_playerName');
 
     rows.forEach((e, i) => {
-        // Check if this row belongs to the current player by name
         const isMe = e.player_name === myName;
-        
         const row = document.createElement('div');
         row.className = 'lb-row' + (isMe ? ' new-entry' : '');
         row.style.animationDelay = `${i * 0.07}s`;
         
-        // Format the level display
         const levelText = e.level_reached === "SURVIVAL" ? "SURVIVAL" : `LV ${e.level_reached}`;
 
         row.innerHTML = `
@@ -173,6 +170,42 @@ function renderLeaderboard(rows, playerScore) {
         container.appendChild(row);
     });
 }
+
+
+function renderLevelPills() {
+    const container = document.getElementById('levelGrid');
+    if (!container) return;
+    
+    container.innerHTML = '';
+
+    // Use the LEVELS array from game.js
+    if (typeof LEVELS === 'undefined') return;
+
+    LEVELS.forEach(l => {
+        // Calculate if unlocked based on clearedLevels (from game.js)
+        const isUnlocked = l.lv <= (Math.max(...[...clearedLevels, 0]) + 1);
+        const isCleared = clearedLevels.has(l.lv);
+        
+        const pill = document.createElement('div');
+        pill.className = `level-pill ${isUnlocked ? 'unlocked' : 'locked'} ${isCleared ? 'cleared' : ''}`;
+        
+        // Add the level number
+        pill.innerHTML = `<span>${l.lv}</span>`;
+        
+        // Only allow clicking if unlocked
+        if (isUnlocked) {
+            pill.onclick = () => {
+                if(typeof playSound === 'function') playSound('click');
+                loadLevel(l.lv);
+            };
+        }
+        
+        container.appendChild(pill);
+    });
+}
+
+
+
 
 // ══════════════════════════════════════════
 //  ROASTS
