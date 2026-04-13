@@ -37,32 +37,20 @@ async function fetchOnlineLeaderboard(){
     return sbFetch('leaderboard?select=*&order=score.desc&limit=10');
 }
 
-async function renderOnlineLeaderboard(containerId, playerScore){
+async function renderOnlineLeaderboard(containerId, playerScore) {
     const container = document.getElementById(containerId);
-    if(!container) return;
-    container.innerHTML = `<div style="font-size:9px;color:rgba(255,215,0,0.4);letter-spacing:2px;margin-bottom:8px;">LOADING ONLINE SCORES...</div>`;
+    if (!container) return;
+    
+    container.innerHTML = `<div style="font-size:9px;color:rgba(255,215,0,0.4);letter-spacing:2px;margin-bottom:8px;text-align:center;">LOADING ONLINE SCORES...</div>`;
+    
     const rows = await fetchOnlineLeaderboard();
-    if(!rows || !rows.length){
-        container.innerHTML = `<div style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">No scores yet — be the first!</div>`;
-        return;
+    
+    // Instead of drawing the HTML here, we call the UI function in ui.js
+    if (typeof renderLeaderboard === 'function') {
+        renderLeaderboard(rows, playerScore);
     }
-    const medals = ['🥇','🥈','🥉'];
-    container.innerHTML = rows.map((e,i)=>{
-        const isMe = e.score === playerScore;
-        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;
-            border-radius:10px;margin-bottom:5px;font-size:11px;
-            background:${isMe?'rgba(255,215,0,0.1)':'rgba(255,255,255,0.03)'};
-            border:1px solid ${isMe?'rgba(255,215,0,0.4)':'rgba(255,255,255,0.06)'};
-            ${isMe?'box-shadow:0 0 12px rgba(255,215,0,0.2);':''}">
-            <span style="width:26px;">${i<3?medals[i]:'#'+(i+1)}</span>
-            <span style="flex:1;text-align:left;color:${isMe?'rgba(255,215,0,0.95)':'rgba(0,255,255,0.9)'};
-                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${isMe?'⚡ YOU':e.player_name}</span>
-            <span style="color:rgba(255,255,255,0.4);font-size:9px;margin-right:4px;">LV${e.level_reached}</span>
-            <span style="font-weight:900;color:${isMe?'#ffd700':'#ff1493'};">${e.score.toLocaleString()}</span>
-        </div>`;
-    }).join('');
 }
+
 
 // Name prompt for the home screen
 function promptPlayerName(callback){
@@ -249,23 +237,41 @@ function addToLeaderboard(sc,diff){
     return lb;
 }
 
-function renderLeaderboard(lb,playerScore){
-    const c=document.getElementById('leaderboardRows');
-    c.innerHTML='';
-    const medals=['🥇','🥈','🥉'];
-    lb.forEach((e,i)=>{
-        const isMe=e.score===playerScore&&e.isNew;
-        const row=document.createElement('div');
-        row.className='lb-row'+(isMe?' new-entry':'');
-        row.style.animationDelay=`${i*.07}s`;
-        const dl={easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'}[e.diff]||'';
-        row.innerHTML=`<span class="lb-rank">${i<3?medals[i]:'#'+(i+1)}</span>
-            <span class="lb-name">${isMe?'⚡ YOU':e.name}</span>
+function renderLeaderboard(rows, playerScore) {
+    const container = document.getElementById('leaderboardRows');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!rows || rows.length === 0) {
+        container.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,0.2);text-align:center;padding:20px;">NO DATA BREACHED YET...</div>`;
+        return;
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const myName = localStorage.getItem('digitalBreak_playerName');
+
+    rows.forEach((e, i) => {
+        // Check if this row belongs to the current player
+        const isMe = e.player_name === myName;
+        
+        const row = document.createElement('div');
+        row.className = 'lb-row' + (isMe ? ' new-entry' : '');
+        row.style.animationDelay = `${i * 0.07}s`;
+        
+        // Use the level_reached from Supabase
+        const levelText = e.level_reached === "SURVIVAL" ? "SURVIVAL" : `LV ${e.level_reached}`;
+
+        row.innerHTML = `
+            <span class="lb-rank">${i < 3 ? medals[i] : '#' + (i + 1)}</span>
+            <span class="lb-name" style="color: ${isMe ? '#ffd700' : '#00ffff'}">${isMe ? '⚡ YOU' : e.player_name}</span>
             <span class="lb-score">${e.score.toLocaleString()}</span>
-            <span class="lb-diff">${dl}</span>`;
-        c.appendChild(row);
+            <span class="lb-diff" style="font-size: 8px; opacity: 0.6;">${levelText}</span>
+        `;
+        container.appendChild(row);
     });
 }
+
 
 // ══════════════════════════════════════════
 //  ROASTS

@@ -139,24 +139,40 @@ function addToLeaderboard(sc,diff){
     return lb;
 }
 
-function renderLeaderboard(lb,playerScore){
-    const c=document.getElementById('leaderboardRows');
-    c.innerHTML='';
-    const medals=['🥇','🥈','🥉'];
-    lb.forEach((e,i)=>{
-        const isMe=e.score===playerScore&&e.isNew;
-        const row=document.createElement('div');
-        row.className='lb-row'+(isMe?' new-entry':'');
-        row.style.animationDelay=`${i*.07}s`;
-        const dl={easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'}[e.diff]||'';
-        row.innerHTML=`<span class="lb-rank">${i<3?medals[i]:'#'+(i+1)}</span>
-            <span class="lb-name">${isMe?'⚡ YOU':e.name}</span>
+function renderLeaderboard(rows, playerScore) {
+    const container = document.getElementById('leaderboardRows'); // Or your containerId
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!rows || rows.length === 0) {
+        container.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,0.2);text-align:center;padding:20px;">NO DATA BREACHED YET...</div>`;
+        return;
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const myName = localStorage.getItem('digitalBreak_playerName');
+
+    rows.forEach((e, i) => {
+        // Check if this row belongs to the current player by name
+        const isMe = e.player_name === myName;
+        
+        const row = document.createElement('div');
+        row.className = 'lb-row' + (isMe ? ' new-entry' : '');
+        row.style.animationDelay = `${i * 0.07}s`;
+        
+        // Format the level display
+        const levelText = e.level_reached === "SURVIVAL" ? "SURVIVAL" : `LV ${e.level_reached}`;
+
+        row.innerHTML = `
+            <span class="lb-rank">${i < 3 ? medals[i] : '#' + (i + 1)}</span>
+            <span class="lb-name" style="color: ${isMe ? '#ffd700' : '#00ffff'}">${isMe ? '⚡ YOU' : e.player_name}</span>
             <span class="lb-score">${e.score.toLocaleString()}</span>
-            <span class="lb-diff">${dl}</span>`;
-        c.appendChild(row);
+            <span class="lb-diff" style="font-size: 8px; opacity: 0.6;">${levelText}</span>
+        `;
+        container.appendChild(row);
     });
 }
-
 
 // ══════════════════════════════════════════
 //  ROASTS
@@ -581,4 +597,13 @@ function showEpicGameComplete(finalScore,tc,sh){
         if(eb)eb.id='shareConfirmEpic';
     },100);
 }
+
+// Ensure levels render as soon as the window finishes loading
+window.addEventListener('load', () => {
+    if (typeof renderLevelPills === 'function') {
+        renderLevelPills();
+        updatePersonalBestDisplay();
+    }
+});
+
 
