@@ -2,65 +2,6 @@
 // ══════════════════════════════════════════
 //  LEADERBOARD
 // ══════════════════════════════════════════
-const LEADERBOARD_KEY = 'digitalBreakV21_lb';
-const SECRET_MESSAGES = [
-    "Suggest more secret messages you'd like the gave to have, via my contact details below! 📩",
-    "Well Done! 6 7!!😛",
-    "Why is 6 afraid of 7? Because 7, 8, 9. But why was 7 afraid tho? Because 7 knew that 6, 8, 9 too 💀",
-    //"You understood the assignment periodt. We don't make the rules, you just followed them perfectly.",
-    //"POV: you just violated the algorithm and the algorithm is embarrassed 🤖",
-    //"Respectfully... you ate and left absolutely no crumbs. The plate is clean. 🍽️",
-    "Oh you played so well, you're the birthday game winner",
-    "The audacity to WIN?? In THIS economy?? We love to see it bestie 😭",
-    "You won. Cool. Anyway, my therapist says I need to stop attaching my self-worth to your performance. Congrats I guess. 🖤",
-    "Level cleared. That's one more small victory before the void consumes us all. Treat yourself. ☠️",
-    "POV: you succeeded and honestly? That's suspicious. What are you hiding?",
-    "You did it. The voices are quiet. For now. 🧠",
-    "Another win. Another day further from God. Let's go bestie. ⛓️",
-    "Congratulations. You are now statistically less likely to uninstall out of shame. Progress.",
-    "You cleared the level. The level did not clear you. This time. 🔪",
-    "My disappointment is immeasurable and my day is… actually okay because you won. Don't get used to it.",
-    "You passed. The bar was in hell but you limbo'd under it anyway. 🔥",
-    "Winning is fun they said. Nobody mentions the crushing weight of expectation for the next level. Anyway here's your dopamine. 💊",
-    "Level complete. Your reward? Slightly less existential dread. Spend it wisely.",
-    "You won. The game is embarrassed. I am tired. We are all feeling things. Let's move on.",
-    "Congratulations. You have temporarily delayed my villain arc. Appreciate it.",
-    "You cleared it. The funeral is tomorrow. Bring snacks. ⚰️",
-    "Another win. The cemetery of failed attempts grows fuller. Rest in peace to them. Not you though. You're too annoying to die.",
-    "You did the thing. The thing is done. Now we both pretend this fixes anything.",
-    "Level cleared. My will to live has increased by 3%. That's not nothing.",
-    "Congratulations. You are now contractually obligated to keep playing. Read the fine print. (There is no fine print. I'm just lonely.)",
-    "You won. Donate to my therapy fund or don't. Either way the level is over.",
-    "Shout out to my South African players. Wozo'thathu kiss.💋💋💋",
-    //"Main character behaviour fully detected. Stay built different 💅",
-    //"IYKYK. And you clearly knew. The rest of them don't. Keep it that way 🤫",
-    //"You're giving 'I don't miss' energy and honestly the game felt it 🎯",
-    "On to the next. But first screenshot this because nobody is going to believe you 📸",
-    //"The devs are shaking. (hi it's Aya. I'm shaking. Congrats bestie 💋)",
-    "Girl math: spending 60 seconds on this game = certified that girl energy ✨",
-    //"Lowkey ate. Highkey ate. Midkey absolutely demolished it 🔥",
-    //"The haters said you couldn't. The haters were statistically incorrect 📊",
-    "This is your sign to quit while you're ahead. But we both know you won’t. Onto the next level.",
-    "Objectively: slay. Subjectively: also slay. Spiritually: you need help but congrats.",
-    "Lock in? No chomam you welded the doors shut. That's different.",
-    "You just did something that made the dev open their laptop again.",
-    //"The game's code is crying. You love to see it. 💻😭",
-    "That wasn't a level clear. That was a level MURDER. And you got away with it.",
-    "Udlalile mfwethu. I hope bazokushada one day. 🙏🏽💋",
-    "Real ones finish. You? Certified real one. The simulation acknowledges you fr.",
-    "POV: it's 3am, your eyes hurt, your thumb is sore, and you WON. No notes. 🌙",
-    "This is your villain origin story except you're the hero actually. Or maybe both 😈",
-    //"NPC behaviour? Not today. Main character only. Congrats on existing correctly 💅",
-    "Bro really said 'let me speedrun this' and then DID IT. Unhinged. Iconic. 🏃",
-    //"The way you ate this game up... it's giving chosen one energy and I don't say that lightly.",
-    "Touch grass? Maybe. But first savour this W because you earned it bestie 🌿",
-    //"You just broke the matrix and the matrix is embarrassed. The glitch in the system is you. 🕶️",
-    //"Not to flex but you just did a thing that was supposed to be hard and made it look easy. The audacity. The simulation is reeling. 🌀",
-    "I hope ungumntu oOn ebomini.",
-];
-const PB_KEY='digitalBreakV21_pb';
-const PROGRESS_KEY='digitalBreakV21_progress';
-
 
 function clearProgress(){
     try{localStorage.removeItem(PROGRESS_KEY);}catch{}
@@ -113,13 +54,6 @@ function checkNewPersonalBest(sc){
     return false;
 }
 //xX_H4ck3r_Xx
-
-const SEED_PLAYERS = [
-    {name:"ndinguBeyonce",score:1820,diff:"normal"},
-    {name:"umamakho_wifi",score:1650,diff:"normal"},
-    {name:"404_Skillz_Azikho",   score:1420,diff:"easy"},
-    {name:"TryHard99",    score:1280,diff:"easy"},
-];
 
 function getLeaderboard(){
     try{const r=localStorage.getItem(LEADERBOARD_KEY);return r?JSON.parse(r):[...SEED_PLAYERS];}
@@ -174,33 +108,7 @@ function renderLeaderboard(rows, playerScore) {
 // ══════════════════════════════════════════
 //  ROASTS
 // ══════════════════════════════════════════
-const roasts=[
-    "You died. The game is embarrassed for you. I'm embarrassed for you. Log off. 💀",
-    "Respectfully? That was tragic. The cringe is immeasurable. Try again I guess.",
-    "POV: you failed so hard the simulation felt secondhand embarrassment. Touch grass. Then touch the retry button. 🌿",
-    "Skill issue. And not even a cool skill issue. Just sad. Embarrassing for your bloodline.",
-    "You blew it. The ancestors are disappointed. The dev is disappointed. Your future self? Also disappointed.",
-    "That wasn't a loss. That was a public health crisis. Do better bestie. 🚑",
-    "Failed. The bar was on the floor and you brought a shovel. Impressive in the worst way.",
-    "You died. The void is hungry and honestly? You fed it well. Congrats on being useful for once. 🕳️",
-    "Loss. And not the cute 'character development' loss. The 'delete the app and think about your choices' loss.",
-    "Bro really said 'let me fail in the most humiliating way possible' and then COMMITTED. No notes. Just shame.",
-    "You lost. The game isn't even hard. That's the scary part. Seek help or seek the retry button. Your call.",
-    "Game over. The voices are laughing at you. Not the fun voices. The mean ones. 🧠",
-    "Failure. Your reward? Nothing. Not even pity. Get back in the trenches soldier.",
-    "You died. The only thing lower than your score is my will to live. Twins! 🖤",
-    "Lost again. At this point I'm starting to think it's personal. Against you. By you.",
-    "L bozo. Ratio. Also you failed. Also your wifi is probably fine. That was just you. 📉",
-    "Unalived by a game. That's the legacy you're building. Your tombstone: 'tried. failed. cried.' ⚰️",
-    "Fail screen. The game is fine. The problem is between the chair and the screen. That's you btw.",
-    "You lost. Don't blame lag. Don't blame the cat. Blame the mirror bestie.",
-    "Dead. The level ate you and didn't even season you. Tragic. Unflavored. Try again. 🍽️",
-    "Game over. My disappointment is louder than your click. And your click was loud.",
-    "You failed so hard I felt it in my bones. And I don't have bones. I'm code. That's how bad it was. 💻",
-    "Loss. The only thing faster than your failure was your confidence beforehand. Unmatched delusion. Love that for you.",
-    "You died. The afterlife is just replaying this fail screen forever. Welcome to hell bestie. 🔥",
-    "Failed. The algorithm saw that and said 'not even I can save this'. And the algorithm saves EVERYTHING.",
-];
+
 function getSavageRoast(sc,target){
     if(sc>=target*1.5)return"Okay fine. That was actually kinda impressive.";
     if(sc>=target*1.25)return"Not bad. Not good either. But... not bad.";
