@@ -945,6 +945,21 @@
         #levelCompleteOverlay::-webkit-scrollbar-track{background:rgba(0,255,136,0.04);border-radius:4px}
         #levelCompleteOverlay::-webkit-scrollbar-thumb{background:rgba(0,255,136,0.25);border-radius:4px}
 
+        #endlessTimerBar {
+            position:absolute;
+            bottom:0;left:0;right:0;
+            height:3px;
+            background:rgba(255,255,255,0.05);
+            z-index:101;
+            display:none;
+        }
+        #endlessTimerFill {
+            height:100%;width:0%;
+            background:linear-gradient(90deg,#b400ff,#ff1493,#cc66ff);
+            box-shadow:0 0 6px rgba(180,0,255,0.7);
+            transition:width 1s linear;
+        }
+
         @media (max-width:480px) {
             .popup{padding:16px 13px}
             .popup h2{font-size:19px}
@@ -1107,6 +1122,16 @@
         <div class="hud-score">⚡ <span id="scoreCount">0</span></div>
         <div class="hud-time"><span id="timeLeft">60</span>s</div>
         <div class="hud-lives"><span id="livesCount">❤️❤️❤️</span></div>
+        <button id="pauseBtn" onclick="togglePause()" style="
+            display:none;
+            background:rgba(255,255,255,0.06);
+            border:1px solid rgba(255,255,255,0.15);
+            color:rgba(255,255,255,0.6);
+            font-size:9px;font-weight:900;letter-spacing:1px;
+            font-family:'Orbitron',monospace;
+            padding:4px 10px;border-radius:8px;cursor:pointer;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+            min-height:28px;pointer-events:all;">⏸</button>
     </div>
     <!-- Progress bar sits just below the HUD strip -->
     <div id="progressBarWrap" style="
@@ -1116,6 +1141,9 @@
         z-index:101;
         display:none;
     ">
+    <div id="endlessTimerBar">
+        <div id="endlessTimerFill"></div>
+    </div>
         <div id="progressBar" style="
             height:100%;width:0%;
             background:linear-gradient(90deg,#00ff88,#00ffff);
@@ -1185,6 +1213,16 @@
         </div>
         <div class="pp-tap">TAP ANYWHERE TO START</div>
         <div class="pp-tap-hint">speed increases as time runs out</div>
+        <button onclick="handlePrePlayHome()" style="
+            margin-top:14px;padding:9px 22px;border-radius:12px;
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.1);
+            color:rgba(255,255,255,0.3);
+            font-size:9px;font-weight:900;letter-spacing:2px;
+            font-family:'Orbitron',monospace;cursor:pointer;
+            touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+            ↩ HOME
+        </button>
     </div>
 </div>
 
@@ -1239,6 +1277,15 @@
         color:rgba(255,215,0,0.35);
         margin-bottom:8px;
     ">BY AYABUKWA</div>
+    <div id="welcomeGreeting" style="
+        display:none;
+        font-size:11px;color:rgba(255,255,255,0.55);
+        letter-spacing:1px;line-height:1.7;
+        background:rgba(255,215,0,0.05);
+        border:1px solid rgba(255,215,0,0.12);
+        border-radius:10px;padding:8px 16px;
+        margin-bottom:10px;font-style:italic;
+    "></div>
 
     <div style="
         font-size:clamp(26px,7vw,36px);
@@ -1291,6 +1338,19 @@
     <!-- BREACH BUTTON — top priority -->
     <button class="breach-btn"
         onclick="playSound('breach');startGame()">⚡ BREACH THE SYSTEM</button>
+
+    <button onclick="playSound('breach');startEndless()" style="
+        width:100%;padding:12px;
+        background:linear-gradient(135deg,rgba(180,0,255,0.14),rgba(100,0,200,0.07));
+        border:1px solid rgba(180,0,255,0.45);
+        color:rgba(200,100,255,0.95);
+        font-size:11px;font-weight:900;letter-spacing:4px;
+        font-family:'Orbitron',monospace;
+        cursor:pointer;border-radius:14px;margin-bottom:14px;
+        touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+        animation:breachGlow 2.5s ease-in-out infinite;">
+        ∞ ENDLESS MODE
+    </button>
 
     <!-- Feature pills -->
     <div class="feature-row">
@@ -1729,6 +1789,24 @@ async function submitOnlineScore(playerName, score, levelReached, streak, accura
             accuracy
         })
     });
+}
+
+async function submitEndlessScore(playerName, score, waveReached, streak, accuracy){
+    return sbFetch('endless_leaderboard', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: JSON.stringify({
+            player_name: playerName,
+            score,
+            wave_reached: waveReached,
+            best_streak: streak,
+            accuracy
+        })
+    });
+}
+
+async function fetchEndlessLeaderboard(){
+    return sbFetch('endless_leaderboard?select=*&order=score.desc&limit=10');
 }
 
 async function fetchOnlineLeaderboard(){
@@ -2366,6 +2444,115 @@ function showEpicGameComplete(finalScore,tc,sh){
     },100);
 }
 
+function showEndlessResults(finalScore, wave, acc){
+    isEndlessMode=false;
+    const el=document.createElement('div');
+    el.id='endlessResultsOverlay';
+    el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:1000;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding:28px 14px 80px;font-family:Orbitron,monospace;text-align:center;color:#fff;box-sizing:border-box;';
+
+    const msg=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
+
+    el.innerHTML=`
+    <div style="max-width:480px;margin:0 auto;">
+        <div style="font-size:10px;letter-spacing:5px;color:rgba(180,100,255,0.5);margin-bottom:8px;">ENDLESS MODE</div>
+        <div style="font-size:clamp(20px,5vw,32px);font-weight:900;letter-spacing:4px;
+            background:linear-gradient(135deg,#b400ff,#ff1493,#ffd700);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;margin-bottom:6px;animation:flicker 2.5s infinite;">
+            ∞ SIGNAL LOST ∞
+        </div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-bottom:20px;">
+            YOU REACHED WAVE ${wave}
+        </div>
+
+        <div style="background:linear-gradient(135deg,rgba(180,0,255,0.14),rgba(100,0,200,0.06));
+            border:2px solid rgba(180,0,255,0.55);border-radius:18px;padding:20px 16px;
+            margin-bottom:16px;box-shadow:0 0 50px rgba(180,0,255,0.2);">
+            <div style="font-size:10px;letter-spacing:3px;color:rgba(180,100,255,0.55);margin-bottom:6px;">TOTAL SCORE</div>
+            <div style="font-size:clamp(36px,9vw,58px);font-weight:900;color:#cc66ff;
+                text-shadow:0 0 28px rgba(180,0,255,0.7);letter-spacing:3px;">${finalScore.toLocaleString()}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:6px;">
+                ${acc}% accuracy · ${bestStreak} best streak
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+            ${[['WAVE',wave],['STREAK',bestStreak],['ACCURACY',acc+'%']].map(([k,v])=>`
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(180,0,255,0.2);
+                border-radius:12px;padding:12px 6px;">
+                <div style="font-size:8px;color:rgba(180,100,255,0.55);letter-spacing:1px;margin-bottom:4px;">${k}</div>
+                <div style="font-size:18px;font-weight:900;color:#fff;">${v}</div>
+            </div>`).join('')}
+        </div>
+
+        <div style="background:rgba(180,0,255,0.06);border:1px solid rgba(180,0,255,0.2);
+            border-radius:14px;padding:14px;margin-bottom:16px;">
+            <div style="font-size:9px;letter-spacing:3px;color:rgba(180,100,255,0.5);margin-bottom:8px;">🔓 CLASSIFIED</div>
+            <div style="font-size:12px;color:#cc66ff;line-height:1.7;animation:glow 2s ease-in-out infinite alternate;">${msg}</div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <div style="font-size:10px;letter-spacing:3px;color:rgba(180,100,255,0.4);margin-bottom:10px;
+                display:flex;align-items:center;justify-content:center;gap:8px;">
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(180,0,255,0.3));"></span>
+                ENDLESS HALL OF FAME
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(180,0,255,0.3),transparent);"></span>
+            </div>
+            <div id="endlessLbRows"><div style="font-size:9px;color:rgba(180,100,255,0.3);letter-spacing:2px;">LOADING...</div></div>
+        </div>
+
+        <button onclick="document.getElementById('endlessResultsOverlay').remove();startEndless();"
+            style="width:100%;padding:15px;
+            background:linear-gradient(135deg,rgba(180,0,255,0.18),rgba(100,0,200,0.08));
+            border:1px solid rgba(180,0,255,0.5);
+            color:rgba(200,100,255,0.96);
+            font-size:12px;font-weight:900;letter-spacing:4px;
+            font-family:'Orbitron',monospace;
+            cursor:pointer;border-radius:14px;margin-bottom:10px;
+            animation:breachGlow 2.5s ease-in-out infinite;
+            touch-action:manipulation;">∞ PLAY ENDLESS AGAIN</button>
+
+        <button onclick="document.getElementById('endlessResultsOverlay').remove();restartGame();"
+            style="width:100%;padding:11px;
+            background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+            color:rgba(255,255,255,0.3);font-size:10px;font-weight:900;letter-spacing:2px;
+            font-family:'Orbitron',monospace;cursor:pointer;border-radius:12px;margin-bottom:18px;
+            touch-action:manipulation;">↩ BACK TO START</button>
+    </div>`;
+
+    document.body.appendChild(el);
+
+    const _pn=localStorage.getItem('digitalBreak_playerName')||'Anonymous';
+    submitEndlessScore(_pn, finalScore, wave, bestStreak, acc);
+
+    // Load endless leaderboard
+    fetchEndlessLeaderboard().then(rows=>{
+        const c=document.getElementById('endlessLbRows');
+        if(!c)return;
+        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">No endless scores yet — you're the first!</div>`;return;}
+        const medals=['🥇','🥈','🥉'];
+        c.innerHTML=rows.map((e,i)=>{
+            const isMe=e.player_name===_pn&&e.score===finalScore;
+            return`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;
+                border-radius:10px;margin-bottom:5px;font-size:11px;
+                background:${isMe?'rgba(180,0,255,0.12)':'rgba(255,255,255,0.03)'};
+                border:1px solid ${isMe?'rgba(180,0,255,0.4)':'rgba(255,255,255,0.06)'};
+                font-family:Orbitron,monospace;">
+                <span style="width:26px;">${i<3?medals[i]:'#'+(i+1)}</span>
+                <span style="flex:1;text-align:left;color:${isMe?'rgba(200,100,255,0.95)':'rgba(180,100,255,0.85)'};
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${isMe?'⚡ YOU':e.player_name}</span>
+                <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-right:4px;">W${e.wave_reached}</span>
+                <span style="font-weight:900;color:#cc66ff;">${e.score.toLocaleString()}</span>
+            </div>`;
+        }).join('');
+    });
+
+    startConfetti();
+    switchMusicTo('lose');
+    playSound('fail');
+}
+
 // ══════════════════════════════════════════
 //  GAME STATE
 // ══════════════════════════════════════════
@@ -2391,6 +2578,14 @@ let lastInputTS=0;
 let gameStartTime=0,gameDuration=0;
 let inputLock=false;
 let isPaused=false;
+let pauseBtn = null;
+let isEndlessMode=false;
+let endlessWave=1;
+let endlessWaveScore=0;    // score at start of current wave
+let endlessWaveTime=0;     // seconds elapsed in current wave
+let endlessWaveTimer=null;
+const ENDLESS_WAVE_SCORE=600;
+const ENDLESS_WAVE_TIME=45;
 
 const difficultySettings={
     easy:  {time:45,targetScore:600, obstacleCount:2,description:"45 seconds, fewer obstacles, forgiving gameplay"},
@@ -2413,6 +2608,20 @@ const LEVELS=[
     {lv:11, time:75, target:2450, obstacles:5, powerups:true,  boss:true,  panicAt:13, speedRamp:0.90, note:"Obstacles speed up — full pressure"},
     {lv:12, time:80, target:2850, obstacles:5, powerups:true,  boss:true,  panicAt:15, speedRamp:1.0,  note:"Full chaos. This is it."},
 ];
+
+function getEndlessConfig(wave){
+    return {
+        obstacles: Math.min(1+Math.floor(wave/2), 6),
+        powerups: wave>=3,
+        boss: wave>=5,
+        speedRamp: Math.min(0.15+wave*0.08, 1.4),
+        panicAt: wave>=10 ? 999 : 12, // permanent panic from wave 10
+        targetSizeMin: wave>=7 ? 28 : 38,
+        targetSizeMax: wave>=7 ? 52 : 70,
+        bonusChance: Math.min(0.10+wave*0.01, 0.22),
+        maxTargets: Math.min(3+Math.floor(wave/3), 9),
+    };
+}
 
 // current level state — these sit alongside existing vars
 let currentLevel=1;
@@ -2871,11 +3080,17 @@ function hitBoss(tx,ty){
 //  SPEED & PANIC
 // ══════════════════════════════════════════
 function getSpeedMultiplier(){
+    if(isEndlessMode){
+        return 1+Math.min((endlessWave-1)*0.12, 1.4)*levelData.speedRamp;
+    }
     const total=levelData.time;
     return 1+Math.min((total-timeLeft)/total,1)*levelData.speedRamp;
 }
-function updateSpeedIndicator(){} // speed now felt, not shown
+
+function updateSpeedIndicator(){}
+ // speed now felt, not shown
 function updatePanicMode(){
+    if(isEndlessMode)return;
     const should=timeLeft<=levelData.panicAt&&timeLeft>0;
     if(should&&!isPanic){
         isPanic=true;
@@ -3037,8 +3252,10 @@ function draw(){
         });
     }
 
+    //i miss my ex so much dawg yoh
+
     // ── GAME ELEMENTS
-    if(gameState==='playing'){
+    if(gameState==='playing'&&!isPaused){
         updatePowerUps();
         updateAndDisplayTargets(); updateAndDisplayObstacles();
         updateAndDisplayPowerups(); updateAndDisplayBoss();
@@ -3214,6 +3431,20 @@ function beginFromPrePlay(){
     gameDuration=levelData.time*1000;
     let lastBeepSecond=-1;
     clearInterval(gameTimer);
+    if(isEndlessMode){
+        gameStartTime=Date.now();
+        gameTimer=setInterval(()=>{
+            if(gameState!=='playing'||isPaused)return;
+            endlessWaveTime++;
+            updateEndlessWave();
+            document.getElementById('timeLeft').textContent=`W${endlessWave}`;
+            // Update wave timer bar
+            const pct=Math.min((endlessWaveTime/ENDLESS_WAVE_TIME)*100,100);
+            const etf=document.getElementById('endlessTimerFill');
+            if(etf)etf.style.width=pct+'%';
+        },1000);
+        return;
+    }
     gameTimer=setInterval(()=>{
         if(gameState!=='playing')return;
         const elapsed=Date.now()-gameStartTime;
@@ -3229,7 +3460,7 @@ function beginFromPrePlay(){
 }
 
 function handleInput(tx,ty){
-    if(inputLock)return;
+    if(inputLock||isPaused)return;
     inputLock=true;setTimeout(()=>{inputLock=false;},150);
     totalClicks++;let hit=false;
     if(hitBoss(tx,ty)){hit=true;}
@@ -3307,6 +3538,63 @@ function updateDisplay(){
     if(lvBadge)lvBadge.textContent=`LV ${currentLevel}`;
 }
 
+function togglePause(){
+    if(!isEndlessMode||gameState==='preplay')return;
+    isPaused=!isPaused;
+    const btn=document.getElementById('pauseBtn');
+    if(isPaused){
+        clearInterval(gameTimer);
+        if(btn)btn.textContent='▶';
+        // Dim the canvas
+        if(p5Canvas)p5Canvas.style.opacity='0.3';
+        // Show pause overlay
+        const po=document.createElement('div');
+        po.id='pauseOverlay';
+        po.style.cssText='position:absolute;inset:0;z-index:160;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:Orbitron,monospace;background:rgba(4,1,14,0.75);backdrop-filter:blur(8px);border-radius:13px;';
+        po.innerHTML=`
+            <div style="font-size:8px;letter-spacing:5px;color:rgba(255,215,0,0.4);margin-bottom:6px;">PAUSED</div>
+            <div style="font-size:28px;font-weight:900;color:rgba(255,255,255,0.9);letter-spacing:3px;margin-bottom:4px;">∞ WAVE ${endlessWave}</div>
+            <div style="font-size:32px;font-weight:900;color:rgba(200,100,255,0.95);letter-spacing:2px;margin-bottom:20px;">${score.toLocaleString()} <span style="font-size:14px;opacity:0.6;">PTS</span></div>
+            <div style="width:80%;height:1px;background:rgba(180,0,255,0.2);margin-bottom:20px;"></div>
+            <button onclick="togglePause()" style="
+                width:200px;padding:13px 28px;border-radius:12px;
+                background:linear-gradient(135deg,rgba(180,0,255,0.25),rgba(100,0,200,0.12));
+                border:1px solid rgba(180,0,255,0.6);
+                color:rgba(200,100,255,0.95);
+                font-size:13px;font-weight:900;letter-spacing:3px;
+                font-family:Orbitron,monospace;cursor:pointer;margin-bottom:10px;
+                touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                display:block;">▶ RESUME</button>
+            <button onclick="isPaused=false;if(p5Canvas)p5Canvas.style.opacity='1';const po=document.getElementById('pauseOverlay');if(po)po.remove();restartGame();" style="
+                width:200px;padding:10px;border-radius:12px;
+                background:rgba(255,255,255,0.04);
+                border:1px solid rgba(255,255,255,0.1);
+                color:rgba(255,255,255,0.3);
+                font-size:9px;font-weight:900;letter-spacing:2px;
+                font-family:Orbitron,monospace;cursor:pointer;
+                touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                display:block;">↩ QUIT TO HOME</button>`;
+
+        document.getElementById('gameContainer').appendChild(po);
+        switchMusicTo('landing'); // soft music while paused
+    } else {
+        // Resume
+        if(btn)btn.textContent='⏸';
+        if(p5Canvas)p5Canvas.style.opacity='1';
+        const po=document.getElementById('pauseOverlay');
+        if(po)po.remove();
+        switchMusicTo(endlessWave>=10?'panic':'gameplay');
+        // Restart wave timer
+        gameStartTime=Date.now();
+        gameTimer=setInterval(()=>{
+            if(gameState!=='playing')return;
+            endlessWaveTime++;
+            updateEndlessWave();
+            document.getElementById('timeLeft').textContent=`W${endlessWave}`;
+        },1000);
+    }
+}
+
 // ══════════════════════════════════════════
 //  GAME FLOW
 // ══════════════════════════════════════════
@@ -3317,12 +3605,17 @@ function showPrePlay(){
 
     // Only show rows relevant to this level — prevents overflow/overlap
     const rows=document.querySelectorAll('.pp-row');
+
+    const hint=document.getElementById('ppTapHint');
+    if(hint)hint.textContent=isEndlessMode?'speed increases every wave':'speed increases as time runs out';
     // index: 0=targets, 1=gold, 2=hazards, 3=streak, 4=boss, 5=powerups
-    const show=[
+    const show= isEndlessMode ? [
+        true, true, true, true, true, true  // show everything in endless
+    ] : [
         true,                        // targets — always
         currentLevel>=2,             // gold
         currentLevel>=3,             // hazards
-        currentLevel>=3,             // streak (show once obstacles are in play)
+        currentLevel>=3,             // streak
         currentLevel>=5,             // boss
         currentLevel>=4,             // power-ups
     ];
@@ -3345,6 +3638,24 @@ function hidePrePlay(){
     el.classList.remove('show');
 }
 
+function handlePrePlayHome(){
+    hidePrePlay();
+    gameState='start';
+    isEndlessMode=false;
+    clearInterval(gameTimer);
+    targets=[];obstacles=[];powerups=[];particles=[];
+    bossTarget=null;isPanic=false;
+    document.getElementById('gameHUD').classList.remove('active');
+    document.getElementById('gameSubHUD').classList.remove('active');
+    const pbw=document.getElementById('progressBarWrap');if(pbw)pbw.style.display='none';
+    document.getElementById('gameContainer').classList.remove('panic');
+    const pb3=document.getElementById('pauseBtn');if(pb3)pb3.style.display='none';
+    document.getElementById('startPopup').style.display='block';
+    document.getElementById('startBorderWrap').style.display='block';
+    if(p5Canvas)p5Canvas.style.pointerEvents='none';
+    switchMusicTo('landing');
+}
+
 // Wire music button
 document.addEventListener('DOMContentLoaded',()=>{
     musicBtn=document.getElementById('musicToggleBtn');
@@ -3354,6 +3665,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     updateStartButton();
     runIntroLoader();
     setTimeout(()=>switchMusicTo('landing'),2800);
+    showWelcomeGreeting();
 });
 
 function replayLevel(lv){
@@ -3440,6 +3752,62 @@ function previewLevel(lv){
     });
 }
 
+function showWelcomeGreeting(){
+    const name = localStorage.getItem('digitalBreak_playerName');
+    const el = document.getElementById('welcomeGreeting');
+    if(!el) return;
+
+    const pb = getPersonalBest();
+    const isReturning = !!name;
+    const hasPlayed = pb > 0;
+    const clearedCount = clearedLevels.size;
+
+    const firstTimers = [
+        "yo you're actually here 😭 let's get it",
+        "new player detected. the game is shaking fr 👀",
+        "oh you're new here? the targets are already nervous ngl",
+        "welcome bestie, try not to cry on the first level 💀",
+        "fresh meat has entered the system ⚡",
+        "the game didn't think you'd show up. prove it wrong.",
+    ];
+
+    const returners = [
+        `welcome back ${name} 👀 the leaderboard missed you`,
+        `${name}!! you actually came back, not surprised you're addicted`,
+        `oh so ${name} said 'one more round' again huh 😭`,
+        `bestie ${name} is back and the targets are already scared`,
+        `${name} has logged on. somebody alert the algorithm ⚡`,
+        `ayo ${name}! your score is still mid, fix that 💀`,
+        `${name} back again?? okay okay we see you fr`,
+        `the wifi knew you were coming back ${name} ngl`,
+        `${name} said sleep is overrated and honestly same 🌙`,
+        `back again ${name}? the game respects the dedication tbh`,
+    ];
+
+    const highScorerExtras = [
+        ` your ${pb.toLocaleString()}pt record is giving main character energy btw`,
+        ` ${pb.toLocaleString()} pts on the board already? lowkey scary`,
+        ` that ${pb.toLocaleString()}pt score is still living rent free on the board`,
+    ];
+
+    const levelExtras = [
+        ` ${clearedCount} level${clearedCount!==1?'s':''} cleared and you're still here? unhinged. iconic.`,
+        ` ${clearedCount}/${LEVELS.length} levels breached so far. the grind is real.`,
+    ];
+
+    let pool = isReturning ? returners : firstTimers;
+    let msg = pool[Math.floor(Math.random() * pool.length)];
+
+    // Tack on a stat quip sometimes
+    if(isReturning && hasPlayed && Math.random() < 0.45){
+        const extras = clearedCount > 0 ? [...highScorerExtras, ...levelExtras] : highScorerExtras;
+        msg += extras[Math.floor(Math.random() * extras.length)];
+    }
+
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
 let startLock=false;
 
 // Call this when starting fresh from level 1 (from start screen)
@@ -3459,6 +3827,126 @@ function startGame(){
         levelsCompleted=0;
         loadLevel(currentLevel);
     });
+}
+
+function startEndless(){
+    if(startLock||gameState==='playing')return;
+    startLock=true;setTimeout(()=>{startLock=false;},600);
+    promptPlayerName(()=>{ loadEndless(); });
+}
+
+function loadEndless(){
+    isEndlessMode=true;
+    endlessWave=1;
+    endlessWaveScore=0;
+    endlessWaveTime=0;
+    const cfg=getEndlessConfig(1);
+
+    // Hijack levelData with wave 1 config
+    levelData={
+        lv:'∞', time:999, target:0, note:'Survive as long as you can',
+        obstacles:cfg.obstacles, powerups:cfg.powerups, boss:cfg.boss,
+        panicAt:cfg.panicAt, speedRamp:cfg.speedRamp,
+    };
+
+    gameState='playing';
+    score=0; combo=1; lives=3; totalClicks=0; successfulHits=0;
+    shieldTime=0; slowTime=0; multiTime=0;
+    currentStreak=0; bestStreak=0;
+    bossTarget=null; isPanic=false;
+    targets=[]; obstacles=[]; powerups=[]; particles=[];
+
+    for(let i=0;i<5;i++)createTarget();
+    for(let i=0;i<cfg.obstacles;i++)createObstacle();
+
+    document.getElementById('startPopup').style.display='none';
+    document.getElementById('startBorderWrap').style.display='none';
+    document.getElementById('losePopup').style.display='none';
+    const wo=document.getElementById('winOverlay');wo.style.display='none';
+    const lc=document.getElementById('levelCompleteOverlay');if(lc)lc.style.display='none';
+
+    if(p5Canvas)p5Canvas.style.pointerEvents='auto';
+    document.getElementById('gameHUD').classList.add('active');
+    const pb2=document.getElementById('pauseBtn');
+    if(pb2)pb2.style.display='block';
+    document.getElementById('gameSubHUD').classList.add('active');
+    const pb=document.getElementById('progressBarWrap');
+    if(pb){pb.style.display='none';} // hide score progress bar in endless
+    const etb=document.getElementById('endlessTimerBar');
+    if(etb)etb.style.display='block';
+    const etf=document.getElementById('endlessTimerFill');
+    if(etf)etf.style.width='0%';
+    document.getElementById('progressBar').style.width='0%';
+    document.getElementById('gameContainer').classList.remove('panic');
+
+    const lvBadge=document.getElementById('hudLevel');
+    if(lvBadge)lvBadge.textContent='∞ W1';
+
+    // Show pre-play with endless instructions
+    gameState='preplay';
+    showPrePlay();
+    // Override the badge text for endless
+    const badge=document.getElementById('ppDiffBadge');
+    if(badge)badge.textContent='ENDLESS MODE — SURVIVE UNTIL YOU DROP';
+    switchMusicTo('preplay');
+    updateDisplay();
+    document.getElementById('timeLeft').textContent='∞';
+
+    // Endless uses its own timer
+    clearInterval(gameTimer);
+    gameTimer=setInterval(()=>{
+        if(gameState!=='playing')return;
+        endlessWaveTime++;
+        updateEndlessWave();
+        document.getElementById('timeLeft').textContent=`W${endlessWave}`;
+    },1000);
+}
+
+function updateEndlessWave(){
+    const cfg=getEndlessConfig(endlessWave);
+    const scoreSinceWave=score-endlessWaveScore;
+    const shouldAdvance=scoreSinceWave>=ENDLESS_WAVE_SCORE||endlessWaveTime>=ENDLESS_WAVE_TIME;
+    if(!shouldAdvance)return;
+
+    endlessWave++;
+    endlessWaveScore=score;
+    endlessWaveTime=0;
+    // Reset wave timer bar
+    const etf=document.getElementById('endlessTimerFill');
+    if(etf){etf.style.transition='none';etf.style.width='0%';setTimeout(()=>{etf.style.transition='width 1s linear';},50);}
+
+    const newCfg=getEndlessConfig(endlessWave);
+    // Update active level config
+    levelData.obstacles=newCfg.obstacles;
+    levelData.powerups=newCfg.powerups;
+    levelData.boss=newCfg.boss;
+    levelData.speedRamp=newCfg.speedRamp;
+    levelData.panicAt=newCfg.panicAt;
+
+    // Spawn new obstacles to match wave
+    while(obstacles.length<newCfg.obstacles)createObstacle();
+
+    // Life reward every 10 waves
+    if(endlessWave%10===0&&lives<5){
+        lives++;
+        updateDisplay();
+        showStreakToast(`❤️ WAVE ${endlessWave} BONUS LIFE!`);
+    } else {
+        showStreakToast(`⚡ WAVE ${endlessWave} — ESCALATING!`);
+    }
+
+    // Trigger permanent panic from wave 10
+    if(endlessWave>=10&&!isPanic){
+        isPanic=true;
+        document.getElementById('gameContainer').classList.add('panic');
+        document.getElementById('gameHUD').classList.add('panic');
+        document.getElementById('timeLeft').classList.add('panic');
+        switchMusicTo('panic');
+    }
+
+    const lvBadge=document.getElementById('hudLevel');
+    if(lvBadge)lvBadge.textContent=`∞ W${endlessWave}`;
+    triggerVibration('streak');
 }
 
 // Call this to initialise any level (fresh or after level complete)
@@ -3531,6 +4019,11 @@ function endGame(){
     if(p5Canvas)p5Canvas.style.pointerEvents='none';
 
     const acc=totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
+    if(isEndlessMode){
+        isEndlessMode=false;
+        showEndlessResults(score,endlessWave,acc);
+        return;
+    }
     const passed=score>=levelData.target;
 
     gtag('event','level_end',{
@@ -3616,7 +4109,9 @@ function restartGame(){
     hidePrePlay();
     switchMusicTo('landing');
     targets=[];obstacles=[];powerups=[];particles=[];
-    bossTarget=null;isPanic=false;currentStreak=0;bestStreak=0;
+    bossTarget=null;isPanic=false;currentStreak=0;bestStreak=0;isEndlessMode=false;endlessWave=1;
+    const pb3=document.getElementById('pauseBtn');if(pb3)pb3.style.display='none';
+    const etb2=document.getElementById('endlessTimerBar');if(etb2)etb2.style.display='none';
     if(countdownInterval)clearInterval(countdownInterval);
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
 
@@ -3627,6 +4122,7 @@ function restartGame(){
     document.getElementById('startBorderWrap').style.display='block';
     updateStartButton();
     renderLevelPills();
+    showWelcomeGreeting();
     try{localStorage.removeItem(LEADERBOARD_KEY);}catch{}
     document.getElementById('confettiCanvas').style.display='none';
     document.getElementById('gameContainer').classList.remove('panic');
@@ -4673,7 +5169,7 @@ function saveScoreCard(){
     }
 })();
 
-function showStandaloneLeaderboard(){
+function showStandaloneLeaderboard(defaultTab='levels'){
     const el=document.createElement('div');
     el.id='standaloneLb';
     el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.94);z-index:1200;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:30px 15px 60px;font-family:Orbitron,monospace;text-align:center;color:#fff;box-sizing:border-box;';
@@ -4683,74 +5179,123 @@ function showStandaloneLeaderboard(){
             <div style="font-size:22px;font-weight:900;letter-spacing:4px;
                 background:linear-gradient(135deg,#00ffff,#ff1493);
                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                background-clip:text;margin-bottom:6px;">HALL OF FAME</div>
-            <div style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:2px;margin-bottom:24px;">
-                TOP PLAYERS GLOBALLY
+                background-clip:text;margin-bottom:18px;">HALL OF FAME</div>
+
+            <!-- TABS -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:18px;">
+                <button id="tabLevels" onclick="switchLbTab('levels')" style="
+                    padding:11px;border-radius:12px;font-family:Orbitron,monospace;
+                    font-size:10px;font-weight:900;letter-spacing:2px;cursor:pointer;
+                    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                    background:rgba(0,255,255,0.1);border:1px solid rgba(0,255,255,0.5);
+                    color:rgba(0,255,255,0.95);">
+                    🎯 LEVELS
+                </button>
+                <button id="tabEndless" onclick="switchLbTab('endless')" style="
+                    padding:11px;border-radius:12px;font-family:Orbitron,monospace;
+                    font-size:10px;font-weight:900;letter-spacing:2px;cursor:pointer;
+                    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+                    background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);
+                    color:rgba(255,255,255,0.3);">
+                    ∞ ENDLESS
+                </button>
             </div>
 
-            <div style="
+            <!-- LEVELS PANEL -->
+            <div id="lbPanelLevels" style="
                 background:linear-gradient(160deg,#05050f,#0a1520,#050f1a);
-                border:1px solid rgba(0,255,255,0.2);
-                border-radius:18px;padding:20px 16px;
-                margin-bottom:18px;
-                box-shadow:0 0 40px rgba(0,255,255,0.08);
-            ">
+                border:1px solid rgba(0,255,255,0.2);border-radius:18px;
+                padding:20px 16px;margin-bottom:18px;
+                box-shadow:0 0 40px rgba(0,255,255,0.08);">
+                <div style="font-size:8px;letter-spacing:3px;color:rgba(0,255,255,0.4);margin-bottom:12px;">TOP LEVEL SCORES</div>
                 <div id="standaloneLbRows">
-                    <div style="font-size:9px;color:rgba(0,255,255,0.3);letter-spacing:2px;padding:20px 0;">
-                        LOADING GLOBAL SCORES...
-                    </div>
+                    <div style="font-size:9px;color:rgba(0,255,255,0.3);letter-spacing:2px;padding:20px 0;">LOADING...</div>
                 </div>
             </div>
 
-            <div style="font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:1px;
-                margin-bottom:20px;line-height:1.8;">
+            <!-- ENDLESS PANEL -->
+            <div id="lbPanelEndless" style="display:none;
+                background:linear-gradient(160deg,#0a0514,#140520,#0a0514);
+                border:1px solid rgba(180,0,255,0.2);border-radius:18px;
+                padding:20px 16px;margin-bottom:18px;
+                box-shadow:0 0 40px rgba(180,0,255,0.08);">
+                <div style="font-size:8px;letter-spacing:3px;color:rgba(180,100,255,0.4);margin-bottom:12px;">TOP ENDLESS SCORES</div>
+                <div id="standaloneLbEndlessRows">
+                    <div style="font-size:9px;color:rgba(180,100,255,0.3);letter-spacing:2px;padding:20px 0;">LOADING...</div>
+                </div>
+            </div>
+
+            <div style="font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:1px;margin-bottom:20px;line-height:1.8;">
                 Play and complete levels to appear here.<br>
-                <span style="color:rgba(255,215,0,0.4);">Top score across all levels wins.</span>
+                <span style="color:rgba(255,215,0,0.4);">Top cumulative score across all levels wins.</span>
             </div>
 
             <button onclick="document.getElementById('standaloneLb').remove();"
                 style="width:100%;padding:14px;
-                background:rgba(255,255,255,0.04);
-                border:1px solid rgba(255,255,255,0.12);
-                color:rgba(255,255,255,0.4);
-                font-size:11px;font-weight:900;letter-spacing:3px;
-                font-family:Orbitron,monospace;
-                cursor:pointer;border-radius:12px;
-                touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
-                ↩ BACK</button>
+                background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);
+                color:rgba(255,255,255,0.4);font-size:11px;font-weight:900;letter-spacing:3px;
+                font-family:Orbitron,monospace;cursor:pointer;border-radius:12px;
+                touch-action:manipulation;-webkit-tap-highlight-color:transparent;">↩ BACK</button>
         </div>`;
     document.body.appendChild(el);
 
-    // Load scores
+    // Load both boards immediately
     fetchOnlineLeaderboard().then(rows=>{
-        const container=document.getElementById('standaloneLbRows');
-        if(!container)return;
-        if(!rows||!rows.length){
-            container.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No scores yet — be the first to breach!</div>`;
-            return;
-        }
+        const c=document.getElementById('standaloneLbRows');
+        if(!c)return;
+        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No scores yet — be the first to breach!</div>`;return;}
         const medals=['🥇','🥈','🥉'];
-        container.innerHTML=rows.map((e,i)=>`
-            <div style="display:flex;align-items:center;gap:8px;
-                padding:10px 12px;border-radius:10px;margin-bottom:6px;
+        c.innerHTML=rows.map((e,i)=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
+                margin-bottom:6px;font-family:Orbitron,monospace;
                 background:rgba(255,255,255,0.03);
                 border:1px solid rgba(0,255,255,${i===0?'0.2':'0.07'});
-                ${i===0?'box-shadow:0 0 14px rgba(0,255,255,0.08);':''}
-                font-family:Orbitron,monospace;">
+                ${i===0?'box-shadow:0 0 14px rgba(0,255,255,0.08);':''}">
                 <span style="width:28px;font-size:${i<3?'16':'12'}px;">${i<3?medals[i]:'#'+(i+1)}</span>
                 <span style="flex:1;text-align:left;font-size:11px;
                     color:${i===0?'rgba(255,215,0,0.9)':'rgba(0,255,255,0.8)'};
-                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    ${e.player_name}</span>
-                <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-right:6px;">
-                    LV${e.level_reached}</span>
-                <span style="font-size:9px;color:rgba(255,255,255,0.25);margin-right:6px;">
-                    ${e.accuracy}% acc</span>
-                <span style="font-weight:900;font-size:12px;
-                    color:${i===0?'#ffd700':'#ff1493'};">
-                    ${e.score.toLocaleString()}</span>
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.player_name}</span>
+                <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-right:6px;">LV${e.level_reached}</span>
+                <span style="font-size:9px;color:rgba(255,255,255,0.25);margin-right:6px;">${e.accuracy}% acc</span>
+                <span style="font-weight:900;font-size:12px;color:${i===0?'#ffd700':'#ff1493'};">${e.score.toLocaleString()}</span>
             </div>`).join('');
     });
+
+    fetchEndlessLeaderboard().then(rows=>{
+        const c=document.getElementById('standaloneLbEndlessRows');
+        if(!c)return;
+        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No endless scores yet — be the first!</div>`;return;}
+        const medals=['🥇','🥈','🥉'];
+        c.innerHTML=rows.map((e,i)=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
+                margin-bottom:6px;font-family:Orbitron,monospace;
+                background:rgba(255,255,255,0.03);
+                border:1px solid rgba(180,0,255,${i===0?'0.25':'0.08'});
+                ${i===0?'box-shadow:0 0 14px rgba(180,0,255,0.1);':''}">
+                <span style="width:28px;font-size:${i<3?'16':'12'}px;">${i<3?medals[i]:'#'+(i+1)}</span>
+                <span style="flex:1;text-align:left;font-size:11px;
+                    color:${i===0?'rgba(200,150,255,0.95)':'rgba(180,100,255,0.8)'};
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.player_name}</span>
+                <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-right:6px;">W${e.wave_reached}</span>
+                <span style="font-size:9px;color:rgba(255,255,255,0.25);margin-right:6px;">${e.accuracy}% acc</span>
+                <span style="font-weight:900;font-size:12px;color:${i===0?'#cc66ff':'#b400ff'};">${e.score.toLocaleString()}</span>
+            </div>`).join('');
+    });
+
+    // Switch to default tab
+    switchLbTab(defaultTab);
+}
+
+function switchLbTab(tab){
+    const isLevels=tab==='levels';
+    document.getElementById('lbPanelLevels').style.display=isLevels?'block':'none';
+    document.getElementById('lbPanelEndless').style.display=isLevels?'none':'block';
+    document.getElementById('tabLevels').style.background=isLevels?'rgba(0,255,255,0.1)':'rgba(255,255,255,0.03)';
+    document.getElementById('tabLevels').style.border=isLevels?'1px solid rgba(0,255,255,0.5)':'1px solid rgba(255,255,255,0.1)';
+    document.getElementById('tabLevels').style.color=isLevels?'rgba(0,255,255,0.95)':'rgba(255,255,255,0.3)';
+    document.getElementById('tabEndless').style.background=isLevels?'rgba(255,255,255,0.03)':'rgba(180,0,255,0.1)';
+    document.getElementById('tabEndless').style.border=isLevels?'1px solid rgba(255,255,255,0.1)':'1px solid rgba(180,0,255,0.5)';
+    document.getElementById('tabEndless').style.color=isLevels?'rgba(255,255,255,0.3)':'rgba(200,100,255,0.95)';
 }
 
 // ══════════════════════════════════════════
@@ -4761,7 +5306,6 @@ function runIntroLoader(){
     const flash=document.getElementById('introFlash');
     const bolt=document.getElementById('introBolt');
     const title=document.getElementById('introTitle');
-    const titleText=document.getElementById('introTitleText');
     const sub=document.getElementById('introSub');
     const bar=document.getElementById('introBar');
     const strike=document.getElementById('introStrike1');
@@ -4801,10 +5345,6 @@ function runIntroLoader(){
         if(particleAlpha>0||!particleFading)rafId=requestAnimationFrame(animPts);
         else{ctx.clearRect(0,0,pc.width,pc.height);}
     });
-
-    // Ghost title — always visible faintly behind
-    titleText.style.transition='opacity 0.6s ease';
-    titleText.style.opacity='0.08';
 
     // Phase 1 — particles fade in + strike charges
     setTimeout(()=>{
@@ -4850,13 +5390,6 @@ function runIntroLoader(){
         loader.style.transform='translate(0,0)';
         loader.style.transition='transform 0.2s ease';
     },660);
-
-    // Phase 4 — ghost title brightens
-    setTimeout(()=>{
-        titleText.style.opacity='0.18';
-        titleText.style.transition='opacity 0.5s ease, letter-spacing 0.8s ease';
-        titleText.style.letterSpacing='14px';
-    },700);
 
     // Phase 5 — main title crashes in
     setTimeout(()=>{
@@ -4933,7 +5466,9 @@ function runIntroLoader(){
         const TAIL=120;  // glow trail length in px
 
         function resize(){
+            if(!wrap||!wrap.offsetParent&&wrap.style.display==='none') return;
             const r=wrap.getBoundingClientRect();
+            if(!r.width||!r.height) return;
             W=r.width; H=r.height;
             canvas.width=W; canvas.height=H;
             perim=2*(W+H);
@@ -4949,6 +5484,7 @@ function runIntroLoader(){
         }
 
         function drawFrame(){
+            if(!W||!H||!perim) return;
             ctx.clearRect(0,0,W,H);
             pos=(pos+SPEED)%perim;
 
