@@ -15,9 +15,9 @@
     <title>Digital Break V2.1 - by Aya</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-    <link rel="icon" type="image/png" href="favicon\favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="favicon\favicon.ico"/>
-    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg"/>
+    <link rel="shortcut icon" href="favicon/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="favicon\apple-touch-icon.png"/>
     <link rel="manifest" href="manifest.json">
     <!--<link rel="apple-touch-icon" sizes="180x180" href="/favicon_io/apple-touch-icon.png">
@@ -1212,7 +1212,7 @@
             </div>
         </div>
         <div class="pp-tap">TAP ANYWHERE TO START</div>
-        <div class="pp-tap-hint">speed increases as time runs out</div>
+        <div id="ppTapHint" class="pp-tap-hint">speed increases as time runs out</div>
         <button onclick="handlePrePlayHome()" style="
             margin-top:14px;padding:9px 22px;border-radius:12px;
             background:rgba(255,255,255,0.04);
@@ -1891,7 +1891,6 @@ function promptPlayerName(callback){
 // ══════════════════════════════════════════
 //  LEADERBOARD
 // ══════════════════════════════════════════
-const LEADERBOARD_KEY = 'digitalBreakV21_lb';
 const SECRET_MESSAGES = [
     "Suggest more secret messages you'd like the gave to have, via my contact details below! 📩",
     "Well Done! 6 7!!😛",
@@ -2012,50 +2011,6 @@ function checkNewPersonalBest(sc){
     }
     return false;
 }
-//xX_H4ck3r_Xx
-
-const SEED_PLAYERS = [
-    {name:"ndinguBeyonce",score:1820,diff:"normal"},
-    {name:"umamakho_wifi",score:1650,diff:"normal"},
-    {name:"404_Skillz_Azikho",   score:1420,diff:"easy"},
-    {name:"TryHard99",    score:1280,diff:"easy"},
-];
-
-function getLeaderboard(){
-    try{const r=localStorage.getItem(LEADERBOARD_KEY);return r?JSON.parse(r):[...SEED_PLAYERS];}
-    catch{return[...SEED_PLAYERS];}
-}
-
-function saveLeaderboard(lb){try{localStorage.setItem(LEADERBOARD_KEY,JSON.stringify(lb));}catch{}}
-function addToLeaderboard(sc,diff){
-    const adjs=["Sweaty","Trembling","Lucky","Desperate","Average","Mid-tier","Shaking","Confused"];
-    const nouns=["Gamer","Clicker","Tryhard","Keyboard","Legend","Potato","NPC","Bot", "Big Boss", "President General among amazwe"];
-    const name=adjs[Math.floor(Math.random()*adjs.length)]+" "+nouns[Math.floor(Math.random()*nouns.length)];
-    let lb=getLeaderboard();
-    lb.push({name,score:sc,diff,isNew:true});
-    lb.sort((a,b)=>b.score-a.score);
-    lb=lb.slice(0,7);
-    saveLeaderboard(lb.map(e=>({...e,isNew:false})));
-    return lb;
-}
-
-function renderLeaderboard(lb,playerScore){
-    const c=document.getElementById('leaderboardRows');
-    c.innerHTML='';
-    const medals=['🥇','🥈','🥉'];
-    lb.forEach((e,i)=>{
-        const isMe=e.score===playerScore&&e.isNew;
-        const row=document.createElement('div');
-        row.className='lb-row'+(isMe?' new-entry':'');
-        row.style.animationDelay=`${i*.07}s`;
-        const dl={easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'}[e.diff]||'';
-        row.innerHTML=`<span class="lb-rank">${i<3?medals[i]:'#'+(i+1)}</span>
-            <span class="lb-name">${isMe?'⚡ YOU':e.name}</span>
-            <span class="lb-score">${e.score.toLocaleString()}</span>
-            <span class="lb-diff">${dl}</span>`;
-        c.appendChild(row);
-    });
-}
 
 // ══════════════════════════════════════════
 //  ROASTS
@@ -2087,15 +2042,11 @@ const roasts=[
     "You died. The afterlife is just replaying this fail screen forever. Welcome to hell bestie. 🔥",
     "Failed. The algorithm saw that and said 'not even I can save this'. And the algorithm saves EVERYTHING.",
 ];
-function getSavageRoast(sc,target){
-    if(sc>=target*1.5)return"Okay fine. That was actually kinda impressive.";
-    if(sc>=target*1.25)return"Not bad. Not good either. But... not bad.";
-    return roasts[Math.floor(Math.random()*roasts.length)];
-}
 
 // ══════════════════════════════════════════
 //  CONFETTI
 // ══════════════════════════════════════════
+
 let confettiPieces=[],confettiAnimId=null;
 function startConfetti(){
     const canvas=document.getElementById('confettiCanvas');
@@ -2132,16 +2083,17 @@ function startConfetti(){
 // ══════════════════════════════════════════
 //  SHARE
 // ══════════════════════════════════════════
-function shareScore(){
+function shareScore(confirmId='shareConfirm'){
     const text=`🔥 I just cleared Level ${currentLevel} of Digital Break V2.1! Total score: ${totalLevelScore.toLocaleString()} pts · Best streak: ${bestStreak} 🔥 Can you beat me? ⚡`;
-    if(navigator.share)navigator.share({title:'Digital Break V2.1',text}).catch(()=>copyFallback(text));
-    else copyFallback(text);
+    if(navigator.share)navigator.share({title:'Digital Break V2.1',text}).catch(()=>copyFallback(text,confirmId));
+    else copyFallback(text,confirmId);
 }
-function copyFallback(text){
+function copyFallback(text,confirmId='shareConfirm'){
+    const el=document.getElementById(confirmId);
     try{navigator.clipboard.writeText(text).then(()=>{
-        document.getElementById('shareConfirm').textContent='✅ Copied!';
-        setTimeout(()=>document.getElementById('shareConfirm').textContent='',3000);
-    });}catch{document.getElementById('shareConfirm').textContent='⚠️ Could not copy';}
+        if(el)el.textContent='✅ Copied!';
+        setTimeout(()=>{if(el)el.textContent='';},3000);
+    });}catch{if(el)el.textContent='⚠️ Could not copy';}
 }
 
 // ══════════════════════════════════════════
@@ -2182,58 +2134,6 @@ function runHackLoader(callback){
         bolt.style.opacity='0';
         callback();
     },3200);
-}
-
-function showWinScreen(finalScore,tc,sh,diff,targetSc,isNewBest=false){
-    document.getElementById('winScoreBadge').textContent=`${finalScore.toLocaleString()} PTS`;
-    document.getElementById('winStreakBadge').textContent=`🔥 Best Streak: ${bestStreak} hits`;
-    const acc=tc>0?Math.round((sh/tc)*100):0;
-    const accLine=
-        acc>=95?"Surgical precision. You don't miss. Period.":
-        acc>=85?"Elite accuracy. The targets didn't stand a chance.":
-        acc>=75?"Solid aim — clean and composed under pressure.":
-        acc>=65?"Good accuracy. You kept it together when it counted.":
-        acc>=55?"Decent aim. A few misses but the W is still the W.":
-        acc>=45?"A little shaky but you got the job done regardless.":
-        "Listen... the aim needs work. But the heart was there 💀";
-    document.getElementById('winAccuracy').textContent=`Accuracy: ${acc}% — ${accLine}`;
-    document.getElementById('roastText').textContent=
-        isNewBest ? '🏆 NEW PERSONAL BEST! You actually outdid yourself. Respect.' :
-        getSavageRoast(finalScore,targetSc);
-
-    // Submit to online leaderboard
-    const lvReached = Math.max(...[...clearedLevels, currentLevel]);
-    const avgAcc = totalClicksAllLevels>0?Math.round((totalHitsAllLevels/totalClicksAllLevels)*100):0;
-    const avgStreak = levelsCompleted>0?Math.round(totalStreakAllLevels/levelsCompleted):bestStreak;
-    const _pn=localStorage.getItem('digitalBreak_playerName')||'Anonymous';
-    submitOnlineScore(_pn, totalLevelScore||finalScore, lvReached, avgStreak, avgAcc);
-    // Render online board into existing container
-    document.getElementById('leaderboardRows').innerHTML='';
-    renderOnlineLeaderboard('leaderboardRows', finalScore);
-
-    document.getElementById('secretText').textContent=SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
-    document.getElementById('countdownSection').style.display='block';
-    document.getElementById('secretReveal').style.display='none';
-
-    const overlay=document.getElementById('winOverlay');
-    overlay.style.display='block';overlay.scrollTop=0;
-    startConfetti();
-    switchMusicTo('win');
-
-    let count=5;
-    document.getElementById('countdownNum').textContent=count;
-    if(countdownInterval)clearInterval(countdownInterval);
-    countdownInterval=setInterval(()=>{
-        count--;
-        if(count<=0){
-            clearInterval(countdownInterval);
-            document.getElementById('countdownSection').style.display='none';
-            document.getElementById('secretReveal').style.display='block';
-            startConfetti();
-        }else{
-            document.getElementById('countdownNum').textContent=count;
-        }
-    },1000);
 }
 
 function showLevelComplete(lv,lvScore,acc){
@@ -2384,7 +2284,7 @@ function showEpicGameComplete(finalScore,tc,sh){
         </div>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;">
-            <button onclick="shareScore()" style="
+            <button onclick="shareScore('shareConfirmEpic')" style="
                 background:linear-gradient(45deg,#1da1f2,#0d8fd4);color:#fff;border:none;
                 padding:13px 22px;border-radius:30px;font-family:Orbitron,monospace;
                 font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
@@ -2395,7 +2295,7 @@ function showEpicGameComplete(finalScore,tc,sh){
                 font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
                 min-height:46px;touch-action:manipulation;">📸 SAVE FOR STORY</button>
         </div>
-        <div id="shareConfirm" style="font-size:11px;color:#00ff00;min-height:16px;letter-spacing:1px;margin-bottom:10px;"></div>
+        <div id="shareConfirmEpic" style="font-size:11px;color:#00ff00;min-height:16px;letter-spacing:1px;margin-bottom:10px;"></div>
         
         <button onclick="document.getElementById('epicCompleteOverlay').remove();loadLevel(12);"
             style="width:100%;padding:14px;
@@ -2436,12 +2336,6 @@ function showEpicGameComplete(finalScore,tc,sh){
     startConfetti();
     switchMusicTo('win');
     playSound('newbest');
-
-    // Fix the shareConfirm reference — point to the one inside epic overlay
-    setTimeout(()=>{
-        const eb=el.querySelector('#shareConfirm');
-        if(eb)eb.id='shareConfirmEpic';
-    },100);
 }
 
 function showEndlessResults(finalScore, wave, acc){
@@ -2562,7 +2456,6 @@ let shakeX=0,shakeY=0,shakeDuration=0,hitFlashAlpha=0;
 let demoTargets=[],demoFrame=0;
 let score=0,timeLeft=60,combo=1,lives=3;
 let gameTimer,lastHitTime=0;
-let difficulty='normal',targetScore=1500;
 let totalClicks=0,successfulHits=0;
 let shieldTime=0,slowTime=0,multiTime=0;
 let currentStreak=0,bestStreak=0,streakToastTimer=null;
@@ -2587,16 +2480,10 @@ let endlessWaveTimer=null;
 const ENDLESS_WAVE_SCORE=600;
 const ENDLESS_WAVE_TIME=45;
 
-const difficultySettings={
-    easy:  {time:45,targetScore:600, obstacleCount:2,description:"45 seconds, fewer obstacles, forgiving gameplay"},
-    normal:{time:60,targetScore:1200,obstacleCount:4,description:"60 seconds, moving obstacles, power-ups enabled"},
-    insane:{time:75,targetScore:1800,obstacleCount:4,description:"75 seconds, maximum chaos, expert-level challenge"}
-};
-
 // ── LEVEL PROGRESSION ──
 const LEVELS=[
     {lv:1,  time:50, target:220,  obstacles:0, powerups:false, boss:false, panicAt:7,  speedRamp:0.15, note:"Basics only — hit glowing targets"},
-    {lv:2,  time:50, target:360,  obstacles:0, powerups:false, boss:false, panicAt:7,  speedRamp:0.2,  note:"Gold targets appear — worth 3x!"},
+    {lv:2,  time:50, target:300,  obstacles:0, powerups:false, boss:false, panicAt:7,  speedRamp:0.2,  note:"Gold targets appear — worth 3x!"},
     {lv:3,  time:55, target:520,  obstacles:1, powerups:false, boss:false, panicAt:8,  speedRamp:0.28, note:"First obstacle — watch out!"},
     {lv:4,  time:55, target:700,  obstacles:2, powerups:true,  boss:false, panicAt:8,  speedRamp:0.35, note:"Power-ups unlocked — collect green circles"},
     {lv:5,  time:60, target:900,  obstacles:2, powerups:true,  boss:true,  panicAt:10, speedRamp:0.42, note:"Boss target appears — hit it 3 times!"},
@@ -2623,38 +2510,29 @@ function getEndlessConfig(wave){
     };
 }
 
+// Maps whichever mode is active to an equivalent "level" so target size,
+// spawn rate, and gold-chance scale in Endless too — previously these
+// always read currentLevel, which never updates once Endless starts.
+function getEffectiveLevel(){
+    return isEndlessMode ? Math.min(1+Math.floor(endlessWave/1.2), 12) : currentLevel;
+}
+
 // current level state — these sit alongside existing vars
 let currentLevel=1;
 let levelData=LEVELS[0]; // always reflects active level config
 // Tracks which levels the player has cleared this session
 let clearedLevels=new Set();
 
-// Lock prevents ontouchstart + onclick double-fire
-let diffLock=false;
-function selectDifficulty(diff){
-    difficulty=diff;
-    targetScore=difficultySettings[diff].targetScore;
+// Shared audio context — haptics, SFX, and music all reuse ONE context now.
+// Running 3 separate AudioContexts was almost certainly your crackle source:
+// each one spins up its own render thread + node graph on mobile.
+let sharedAC=null;
+function getSharedAC(){
+    if(!sharedAC||sharedAC.state==='closed')sharedAC=new(window.AudioContext||window.webkitAudioContext)();
+    if(sharedAC.state==='suspended')sharedAC.resume();
+    return sharedAC;
 }
-let diffCardLock=false;
-function selectDiffCard(diff){
-    if(diffCardLock)return;
-    diffCardLock=true;setTimeout(()=>{diffCardLock=false;},400);
-    selectDifficulty(diff);
-    document.querySelectorAll('.diff-card').forEach(b=>b.classList.remove('selected'));
-    const card=document.querySelector(`.diff-card[data-difficulty="${diff}"]`);
-    if(card)card.classList.add('selected');
-    const labels={easy:'ROOKIE',normal:'HACKER',insane:'LEGEND'};
-    document.getElementById('difficultyDesc').innerHTML=
-        `<strong style="color:rgba(255,215,0,0.8);">${labels[diff]} MODE:</strong> ${difficultySettings[diff].description}`;
-}
-
-// Audio context for iOS haptic-style feedback
-let audioCtx=null;
-function getAudioCtx(){
-    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended')audioCtx.resume();
-    return audioCtx;
-}
+function getAudioCtx(){ return getSharedAC(); }
 function iosHaptic(type){
     try{
         const ctx=getAudioCtx();
@@ -2706,11 +2584,28 @@ function triggerVibration(type='hit'){
 // ══════════════════════════════════════════
 //  SOUND EFFECTS
 // ══════════════════════════════════════════
-let sfxCtx=null;
-function getSfxCtx(){
-    if(!sfxCtx)sfxCtx=new(window.AudioContext||window.webkitAudioContext)();
-    if(sfxCtx.state==='suspended')sfxCtx.resume();
-    return sfxCtx;
+function getSfxCtx(){ return getSharedAC(); }
+
+// ── FILE-BASED SFX (with synth fallback) ──
+const _sfxBuffers={};
+async function loadSfx(name,url){
+    try{
+        const ctx=getSharedAC();
+        const res=await fetch(url);
+        const arr=await res.arrayBuffer();
+        _sfxBuffers[name]=await ctx.decodeAudioData(arr);
+    }catch(e){ console.warn(`Could not load sfx: ${name}`, e); }
+}
+function playFileSound(name,vol=1){
+    const buf=_sfxBuffers[name];
+    if(!buf)return false; // not loaded yet — caller falls back to synth
+    const ctx=getSharedAC();
+    const src=ctx.createBufferSource();
+    const g=ctx.createGain();
+    src.buffer=buf; g.gain.value=vol;
+    src.connect(g); g.connect(ctx.destination);
+    src.start();
+    return true;
 }
 function playSound(type){
     try{
@@ -2719,6 +2614,7 @@ function playSound(type){
         const t=ctx.currentTime;
         const sounds={
             hit:()=>{
+                if(playFileSound('hit',0.5))return;
                 // Satisfying cyan blip
                 const o=ctx.createOscillator();
                 const g=ctx.createGain();
@@ -2936,17 +2832,17 @@ function playSound(type){
             },
             lightning:()=>{
                 const noise=ctx.createBufferSource();
-                const nf=ac.createBiquadFilter();
+                const nf=ctx.createBiquadFilter();
                 nf.type='bandpass';nf.frequency.value=1800;nf.Q.value=0.4;
-                const ng=ac.createGain();
+                const ng=ctx.createGain();
                 noise.buffer=getCachedNoise(ctx,0.18);
                 ng.gain.setValueAtTime(0,t);
                 ng.gain.linearRampToValueAtTime(0.6,t+0.004);
                 ng.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
                 noise.connect(nf);nf.connect(ng);ng.connect(ctx.destination);
                 noise.start(t);
-                const o=ac.createOscillator();
-                const g=ac.createGain();
+                const o=ctx.createOscillator();
+                const g=ctx.createGain();
                 o.type='sine';
                 o.frequency.setValueAtTime(120,t);
                 o.frequency.exponentialRampToValueAtTime(28,t+0.14);
@@ -2955,9 +2851,9 @@ function playSound(type){
                 o.connect(g);g.connect(ctx.destination);
                 o.start(t);o.stop(t+0.2);
                 const c=ctx.createBufferSource();
-                const cf=ac.createBiquadFilter();
+                const cf=ctx.createBiquadFilter();
                 cf.type='highpass';cf.frequency.value=8000;
-                const cg=ac.createGain();
+                const cg=ctx.createGain();
                 c.buffer=getCachedNoise(ctx,0.08);
                 cg.gain.setValueAtTime(0.35,t+0.01);
                 cg.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
@@ -2966,11 +2862,11 @@ function playSound(type){
             },
             thunder:()=>{
                 const noise=ctx.createBufferSource();
-                const nf1=ac.createBiquadFilter();
+                const nf1=ctx.createBiquadFilter();
                 nf1.type='lowpass';nf1.frequency.value=180;
-                const nf2=ac.createBiquadFilter();
+                const nf2=ctx.createBiquadFilter();
                 nf2.type='peaking';nf2.frequency.value=80;nf2.gain.value=12;
-                const ng=ac.createGain();
+                const ng=ctx.createGain();
                 noise.buffer=getCachedNoise(ctx,2.2);
                 ng.gain.setValueAtTime(0,t);
                 ng.gain.linearRampToValueAtTime(0.7,t+0.08);
@@ -2978,8 +2874,8 @@ function playSound(type){
                 ng.gain.exponentialRampToValueAtTime(0.0001,t+2.0);
                 noise.connect(nf1);nf1.connect(nf2);nf2.connect(ng);ng.connect(ctx.destination);
                 noise.start(t);
-                const o=ac.createOscillator();
-                const og=ac.createGain();
+                const o=ctx.createOscillator();
+                const og=ctx.createGain();
                 o.type='sine';
                 o.frequency.setValueAtTime(55,t);
                 o.frequency.exponentialRampToValueAtTime(28,t+1.8);
@@ -2988,8 +2884,8 @@ function playSound(type){
                 og.gain.exponentialRampToValueAtTime(0.0001,t+1.8);
                 o.connect(og);og.connect(ctx.destination);
                 o.start(t);o.stop(t+2.0);
-                const o2=ac.createOscillator();
-                const og2=ac.createGain();
+                const o2=ctx.createOscillator();
+                const og2=ctx.createGain();
                 o2.type='sawtooth';
                 o2.frequency.setValueAtTime(38,t);
                 o2.frequency.exponentialRampToValueAtTime(22,t+1.2);
@@ -3262,8 +3158,8 @@ function draw(){
         updateAndDisplayParticles();
         //const spawnRate = currentLevel<=3 ? 55 : currentLevel<=6 ? 65 : 75;
         //if(frameCount%spawnRate===0)createTarget();
-        const maxTargets=Math.min(3+Math.floor(currentLevel/2),8);
-        if(targets.filter(t=>t.active).length<maxTargets&&frameCount%Math.max(28,70-currentLevel*3)===0){
+        const maxTargets=Math.min(3+Math.floor(getEffectiveLevel()/2),8);
+        if(targets.filter(t=>t.active).length<maxTargets&&frameCount%Math.max(28,70-getEffectiveLevel()*3)===0){
             createTarget();
         }
         if(frameCount%200===0&&obstacles.length<levelData.obstacles)createObstacle();
@@ -3287,10 +3183,11 @@ function createTarget(){
         attempts++;
     }while(!valid&&attempts<30);
     // Level 8+ targets are smaller — forces precision
-    const sizeMin=currentLevel>=8?32:45;
-    const sizeMax=currentLevel>=8?55:75;
+    const lvl=getEffectiveLevel();
+    const sizeMin=lvl>=8?32:45;
+    const sizeMax=lvl>=8?55:75;
     // Gold targets more common from level 2+
-    const bonusChance=currentLevel>=2?0.14:0.0;
+    const bonusChance=lvl>=2?0.14:0.0;
     targets.push({x,y,vx:random(-3,3),vy:random(-3,3),size:random(sizeMin,sizeMax),phase:0,active:false,activeTime:0,maxActiveTime:random(60,120),points:Math.floor(random(2,6)),type:Math.random()<bonusChance?'bonus':'normal'});
 }
 function updateAndDisplayTargets(){
@@ -3301,9 +3198,9 @@ function updateAndDisplayTargets(){
         if(t.x<30||t.x>width-30)t.vx*=-1;if(t.y<30||t.y>height-30)t.vy*=-1;
         t.x=constrain(t.x,30,width-30);t.y=constrain(t.y,30,height-30);
         t.phase+=.08;
-        const maxActive=Math.min(2+Math.floor(currentLevel/3),5);
+        const maxActive=Math.min(2+Math.floor(getEffectiveLevel()/3),5);
         const currentActive=targets.filter(t=>t.active).length;
-        if(!t.active&&currentActive<maxActive&&frameCount%8===0&&Math.random()<(currentLevel>=9?.18:.12)){
+        if(!t.active&&currentActive<maxActive&&frameCount%8===0&&Math.random()<(getEffectiveLevel()>=9?.18:.12)){
             t.active=true;t.activeTime=0;
         }
         if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
@@ -3495,7 +3392,7 @@ function handleInput(tx,ty){
     }
     if(!hit&&shieldTime<=0){
         for(let ob of obstacles){
-            if(dist(tx,ty,ob.x,ob.y)<ob.size/3.2){
+            if(dist(tx,ty,ob.x,ob.y)<ob.size/2.4){
                 lives--;
                 combo=Math.max(1,Math.floor(combo/2));
                 if(currentStreak>5)currentStreak=Math.floor(currentStreak/2);
@@ -3666,6 +3563,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     runIntroLoader();
     setTimeout(()=>switchMusicTo('landing'),2800);
     showWelcomeGreeting();
+
+    // Preload real audio files — once you drop files in /sfx/, uncomment:
+    // loadSfx('hit','sfx/hit.mp3');
+    // loadSfx('miss','sfx/miss.mp3');
+    // loadSfx('obstacle','sfx/obstacle.mp3');
+    // loadSfx('powerup','sfx/powerup.mp3');
 });
 
 function replayLevel(lv){
@@ -3862,7 +3765,6 @@ function loadEndless(){
     document.getElementById('startPopup').style.display='none';
     document.getElementById('startBorderWrap').style.display='none';
     document.getElementById('losePopup').style.display='none';
-    const wo=document.getElementById('winOverlay');wo.style.display='none';
     const lc=document.getElementById('levelCompleteOverlay');if(lc)lc.style.display='none';
 
     if(p5Canvas)p5Canvas.style.pointerEvents='auto';
@@ -3971,7 +3873,6 @@ function loadLevel(lv){
     document.getElementById('startPopup').style.display='none';
     document.getElementById('startBorderWrap').style.display='none';
     document.getElementById('losePopup').style.display='none';
-    const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
     // Hide level complete screen if visible
     const lc=document.getElementById('levelCompleteOverlay');
     if(lc)lc.style.display='none';
@@ -4115,7 +4016,6 @@ function restartGame(){
     if(countdownInterval)clearInterval(countdownInterval);
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
 
-    const wo=document.getElementById('winOverlay');wo.style.display='none';wo.scrollTop=0;
     const lc=document.getElementById('levelCompleteOverlay');if(lc)lc.style.display='none';
     document.getElementById('losePopup').style.display='none';
     document.getElementById('startPopup').style.display='block';
@@ -4123,7 +4023,6 @@ function restartGame(){
     updateStartButton();
     renderLevelPills();
     showWelcomeGreeting();
-    try{localStorage.removeItem(LEADERBOARD_KEY);}catch{}
     document.getElementById('confettiCanvas').style.display='none';
     document.getElementById('gameContainer').classList.remove('panic');
     document.getElementById('streakToast').classList.remove('show');
@@ -4134,7 +4033,6 @@ function restartGame(){
 // ══════════════════════════════════════════
 //  MULTI-SCENE MUSIC ENGINE
 // ══════════════════════════════════════════
-let musicAC=null;
 let activeScene=null;
 let activeSceneStop=null;
 let activeMaster=null;
@@ -4144,12 +4042,7 @@ let musicBtn=null;
 let musicToggleLock=false;
 const XFADE=0.7; // crossfade duration seconds
 
-function getMusicAC(){
-    if(!musicAC||musicAC.state==='closed')
-        musicAC=new(window.AudioContext||window.webkitAudioContext)();
-    if(musicAC.state==='suspended')musicAC.resume();
-    return musicAC;
-}
+function getMusicAC(){ return getSharedAC(); }
 
 function makeReverb(ac,dur=2.0,decay=2.2){
     const rev=ac.createConvolver();
@@ -4831,7 +4724,7 @@ function stopMusic(){
         activeNodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch{}});
         activeNodes=[];
         activeMaster=null; activeSceneStop=null; activeScene=null;
-        try{if(musicAC){musicAC.close();musicAC=null;}}catch{}
+        // context is shared with SFX/haptics now — don't close it here
     },XFADE*1000+100);
     if(musicBtn)musicBtn.textContent='🎵 MUSIC: OFF';
 }
