@@ -1363,10 +1363,23 @@
         color:rgba(200,100,255,0.95);
         font-size:11px;font-weight:900;letter-spacing:4px;
         font-family:'Orbitron',monospace;
-        cursor:pointer;border-radius:14px;margin-bottom:14px;
+        cursor:pointer;border-radius:14px;margin-bottom:10px;
         touch-action:manipulation;-webkit-tap-highlight-color:transparent;
         animation:breachGlow 2.5s ease-in-out infinite;">
         ∞ ENDLESS MODE
+    </button>
+    <button onclick="playSound('select');startDailyChallenge()" style="
+        width:100%;padding:12px;
+        background:linear-gradient(135deg,rgba(0,200,255,0.12),rgba(0,100,200,0.06));
+        border:1px solid rgba(0,200,255,0.35);
+        color:rgba(0,220,255,0.85);
+        font-size:11px;font-weight:900;letter-spacing:4px;
+        font-family:'Orbitron',monospace;
+        cursor:pointer;border-radius:14px;margin-bottom:14px;
+        touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+        📅 DAILY CHALLENGE
+        <span id="dcCompletedBadge" style="display:none;font-size:8px;
+            color:rgba(0,255,136,0.8);margin-left:6px;letter-spacing:1px;">✓ DONE TODAY</span>
     </button>
 
     <!-- Feature pills -->
@@ -1784,6 +1797,64 @@
 </div>
 
 <script>
+// ══ DAILY CHALLENGE ══
+// Seeded RNG — same sequence for everyone on the same date
+function seededRand(seed){
+    let s=seed;
+    return function(){
+        s=(s*1664525+1013904223)&0xffffffff;
+        return (s>>>0)/0xffffffff;
+    };
+}
+function getDailySeed(){
+    const d=new Date();
+    return d.getFullYear()*10000+((d.getMonth()+1)*100)+d.getDate();
+}
+function getDailyDateStr(){
+    const d=new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+const DC_KEY='db_daily_'+getDailyDateStr();
+let isDailyChallenge=false;
+let dailyChallengeScore=0;
+
+function checkDailyCompletedBadge(){
+    const badge=document.getElementById('dcCompletedBadge');
+    if(badge)badge.style.display=localStorage.getItem(DC_KEY)?'inline':'none';
+}
+
+function startDailyChallenge(){
+    if(startLock||gameState==='playing')return;
+    startLock=true;setTimeout(()=>{startLock=false;},600);
+    promptPlayerName(()=>{
+        isDailyChallenge=true;
+        dailyChallengeScore=0;
+        // Daily = levels 4,7,10 (middle difficulty spread), same for everyone today
+        currentLevel=4;
+        levelData=LEVELS[3];
+        totalLevelScore=0;bestStreak=0;
+        totalClicksAllLevels=0;totalHitsAllLevels=0;
+        totalStreakAllLevels=0;levelsCompleted=0;
+        loadLevel(currentLevel);
+    });
+}
+
+async function submitDailyScore(playerName,score,streak,acc){
+    const dateStr=getDailyDateStr();
+    const maxPossible=12000;
+    if(score>maxPossible||score<0)return;
+    return sbFetch('daily_leaderboard',{
+        method:'POST',prefer:'return=minimal',
+        body:JSON.stringify({player_name:playerName,score,best_streak:streak,
+            accuracy:acc,challenge_date:dateStr})
+    });
+}
+
+async function fetchDailyLeaderboard(){
+    const dateStr=getDailyDateStr();
+    return sbFetch(`daily_leaderboard?select=*&challenge_date=eq.${dateStr}&order=score.desc&limit=10`);
+}
+
 // ══ ONLINE LEADERBOARD — SUPABASE ══
 const SB_URL = 'https://ccydnfgfhxfmbzhtnzvc.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjeWRuZmdmaHhmbWJ6aHRuenZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDU2NDAsImV4cCI6MjA5MTA4MTY0MH0.ZHKrmk5jNDtolpmIlRiEMhU110Zo2xCPU98jYE1Tu8M';
@@ -2301,7 +2372,81 @@ function goToNextLevel(){
     if(overlay)overlay.style.display='none';
     document.getElementById('confettiCanvas').style.display='none';
     if(confettiAnimId){cancelAnimationFrame(confettiAnimId);confettiAnimId=null;}
+    // Daily challenge: jump to next DC level instead of currentLevel+1
+    if(isDailyChallenge){
+        const dcLevels=[4,7,10];
+        const nextIdx=dcLevels.indexOf(currentLevel-1)+1; // currentLevel was already incremented
+        const nextLv=dcLevels[nextIdx];
+        if(nextLv){ currentLevel=nextLv; levelData=LEVELS[currentLevel-1]; }
+    }
     loadLevel(currentLevel);
+}
+
+function showDailyChallengeComplete(finalScore, acc){
+    const el=document.createElement('div');
+    el.id='dcCompleteOverlay';
+    el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:1000;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:28px 14px 80px;font-family:Orbitron,monospace;text-align:center;color:#fff;box-sizing:border-box;';
+    el.innerHTML=`
+    <div style="max-width:480px;margin:0 auto;">
+        <div style="font-size:9px;letter-spacing:5px;color:rgba(0,200,255,0.5);margin-bottom:8px;">📅 ${getDailyDateStr()}</div>
+        <div style="font-size:clamp(18px,5vw,28px);font-weight:900;letter-spacing:4px;
+            background:linear-gradient(135deg,#00c8ff,#00ffcc,#ffd700);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;margin-bottom:6px;animation:flicker 2.5s infinite;">
+            ⚡ DAILY CHALLENGE COMPLETE ⚡
+        </div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-bottom:20px;">
+            LEVELS 4 · 7 · 10 — TODAY'S GAUNTLET
+        </div>
+        <div style="background:linear-gradient(135deg,rgba(0,200,255,0.14),rgba(0,100,150,0.06));
+            border:2px solid rgba(0,200,255,0.5);border-radius:18px;padding:20px 16px;
+            margin-bottom:16px;box-shadow:0 0 50px rgba(0,200,255,0.15);">
+            <div style="font-size:10px;letter-spacing:3px;color:rgba(0,200,255,0.5);margin-bottom:6px;">TODAY'S SCORE</div>
+            <div style="font-size:clamp(34px,8vw,52px);font-weight:900;color:#00c8ff;
+                text-shadow:0 0 28px rgba(0,200,255,0.7);letter-spacing:3px;">${finalScore.toLocaleString()}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:6px;">${acc}% accuracy</div>
+        </div>
+        <div style="margin-bottom:16px;">
+            <div style="font-size:10px;letter-spacing:3px;color:rgba(0,200,255,0.4);margin-bottom:10px;
+                display:flex;align-items:center;justify-content:center;gap:8px;">
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(0,200,255,0.3));"></span>
+                TODAY'S TOP 10
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(0,200,255,0.3),transparent);"></span>
+            </div>
+            <div id="dcLbRows"><div style="font-size:9px;color:rgba(0,200,255,0.3);padding:12px 0;">LOADING...</div></div>
+        </div>
+        <button onclick="document.getElementById('dcCompleteOverlay').remove();restartGame();"
+            style="width:100%;padding:14px;
+            background:linear-gradient(135deg,rgba(0,200,255,0.14),rgba(0,100,150,0.06));
+            border:1px solid rgba(0,200,255,0.45);
+            color:rgba(0,220,255,0.9);font-size:12px;font-weight:900;letter-spacing:4px;
+            font-family:Orbitron,monospace;cursor:pointer;border-radius:14px;margin-bottom:10px;
+            touch-action:manipulation;">↩ BACK TO HOME</button>
+    </div>`;
+    document.body.appendChild(el);
+    // Load today's leaderboard
+    fetchDailyLeaderboard().then(rows=>{
+        const c=document.getElementById('dcLbRows');
+        if(!c)return;
+        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">No scores yet today — you're first!</div>`;return;}
+        const medals=['🥇','🥈','🥉'];
+        const _pn=localStorage.getItem('digitalBreak_playerName')||'Anonymous';
+        c.innerHTML=rows.map((e,i)=>{
+            const isMe=e.player_name===_pn&&e.score===finalScore;
+            return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;
+                border-radius:10px;margin-bottom:5px;font-family:Orbitron,monospace;
+                background:${isMe?'rgba(0,200,255,0.1)':'rgba(255,255,255,0.03)'};
+                border:1px solid ${isMe?'rgba(0,200,255,0.4)':'rgba(255,255,255,0.06)'};font-size:11px;">
+                <span style="width:26px;">${i<3?medals[i]:'#'+(i+1)}</span>
+                <span style="flex:1;text-align:left;color:${isMe?'rgba(0,220,255,0.95)':'rgba(0,200,255,0.8)'};
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${isMe?'⚡ YOU':e.player_name}</span>
+                <span style="font-weight:900;color:${isMe?'#00c8ff':'#00ffcc'};">${e.score.toLocaleString()}</span>
+            </div>`;
+        }).join('');
+    });
+    startConfetti();
+    switchMusicTo('win');
 }
 
 function showEpicGameComplete(finalScore,tc,sh){
@@ -3472,6 +3617,32 @@ function beginFromPrePlay(){
     hidePrePlay();
     gameState='playing';
     switchMusicTo('gameplay');
+    // On level 1, immediately activate 2 targets so screen isn't empty
+    if(!isEndlessMode && currentLevel===1){
+        let activated=0;
+        for(let t of targets){
+            if(!t.active && activated<2){t.active=true;t.activeTime=0;activated++;}
+        }
+    }
+    // Show a brief level intro toast for levels 2+ so players feel the progression
+    if(!isEndlessMode && currentLevel>1){
+        const intros={
+            2:'💛 GOLD TARGETS UNLOCKED',
+            3:'⚠ FIRST OBSTACLE — WATCH OUT',
+            4:'⚡ POWER-UPS UNLOCKED',
+            5:'👑 BOSS TARGET INCOMING',
+            6:'🔥 THINGS JUST GOT REAL',
+            7:'👻 GHOST TARGETS APPEAR',
+            8:'🎯 TARGETS ARE SMALLER NOW',
+            9:'⛓ CHAIN TARGETS — USE THEM',
+            10:'😤 PANIC STARTS EARLIER',
+            11:'💀 ALMOST THERE. STAY SHARP.',
+            12:'⚡ FINAL LEVEL. FULL CHAOS.'
+        };
+        if(intros[currentLevel]){
+            setTimeout(()=>showStreakToast(intros[currentLevel]),400);
+        }
+    }
     // Start the actual timer now
     gameStartTime=Date.now();
     gameDuration=levelData.time*1000;
@@ -3678,7 +3849,14 @@ function togglePause(){
 function showPrePlay(){
     const el=document.getElementById('prePlayOverlay');if(!el)return;
     const badge=document.getElementById('ppDiffBadge');
-    if(badge)badge.textContent=`LEVEL ${currentLevel} — ${levelData.note}`;
+    // Level 1 gets a special "welcome" message instead of just the note
+    if(!isEndlessMode && currentLevel===1){
+        if(badge)badge.textContent='LEVEL 1 — TAP THE GLOWING CIRCLES. DON\'T MISS.';
+    } else if(isEndlessMode){
+        if(badge)badge.textContent='ENDLESS MODE — SURVIVE UNTIL YOU DROP';
+    } else {
+        if(badge)badge.textContent=`LEVEL ${currentLevel} — ${levelData.note}`;
+    }
 
     // Only show rows relevant to this level — prevents overflow/overlap
     const rows=document.querySelectorAll('.pp-row');
@@ -3751,6 +3929,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     renderLevelPills();
     updateStartButton();
     renderAchievementBadges();
+    checkDailyCompletedBadge();
     runIntroLoader();
     setTimeout(()=>switchMusicTo('landing'),2800);
     showWelcomeGreeting();
@@ -4043,7 +4222,76 @@ function updateEndlessWave(){
 }
 
 // Call this to initialise any level (fresh or after level complete)
+function isSupporter(){
+    return localStorage.getItem('db_supporter')==='true'||
+           (new URLSearchParams(window.location.search)).get('supporter')==='1';
+}
+
+function showSupporterGate(onUnlock){
+    const el=document.createElement('div');
+    el.id='supporterGate';
+    el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:1300;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:Orbitron,monospace;';
+    el.innerHTML=`
+        <div style="background:rgba(8,4,18,0.97);border:1px solid rgba(255,215,0,0.35);
+            border-radius:20px;padding:28px 22px;width:100%;max-width:380px;text-align:center;
+            box-shadow:0 0 60px rgba(255,215,0,0.1);">
+            <div style="font-size:28px;margin-bottom:10px;">🔒</div>
+            <div style="font-size:13px;font-weight:900;color:rgba(255,215,0,0.9);
+                letter-spacing:3px;margin-bottom:8px;">LEVELS 7–12 LOCKED</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;
+                line-height:1.7;margin-bottom:20px;">
+                The real chaos starts here.<br>
+                Support the dev to unlock the full game ☕
+            </div>
+            <a href="https://ko-fi.com/ayabukwa" target="_blank" rel="noopener"
+                style="display:block;padding:14px;margin-bottom:12px;
+                background:rgba(255,94,91,0.15);border:1px solid rgba(255,94,91,0.5);
+                color:rgba(255,140,130,0.95);font-size:11px;font-weight:900;
+                letter-spacing:2px;border-radius:12px;text-decoration:none;
+                touch-action:manipulation;">
+                ☕ BUY ME A COFFEE — UNLOCK LEVELS 7–12
+            </a>
+            <div style="font-size:9px;color:rgba(255,255,255,0.25);margin-bottom:14px;">
+                After supporting, enter the code from Ko-fi below:
+            </div>
+            <input id="_supportCode" maxlength="20" placeholder="Enter code..."
+                style="width:100%;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.25);
+                border-radius:10px;padding:10px;color:rgba(255,215,0,0.9);font-family:Orbitron,monospace;
+                font-size:13px;text-align:center;outline:none;margin-bottom:10px;
+                -webkit-appearance:none;box-sizing:border-box;">
+            <button id="_supportSubmit" style="width:100%;padding:12px;border-radius:12px;
+                background:linear-gradient(135deg,rgba(255,215,0,0.18),rgba(255,140,0,0.08));
+                border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);
+                font-size:11px;font-weight:900;letter-spacing:3px;cursor:pointer;
+                font-family:Orbitron,monospace;margin-bottom:10px;
+                touch-action:manipulation;">⚡ UNLOCK</button>
+            <button onclick="document.getElementById('supporterGate').remove();"
+                style="background:none;border:none;color:rgba(255,255,255,0.2);
+                font-size:9px;font-family:Orbitron,monospace;cursor:pointer;letter-spacing:1px;">
+                ← go back
+            </button>
+        </div>`;
+    document.body.appendChild(el);
+    // Simple unlock: any non-empty code unlocks (honour system — real validation via Ko-fi webhook later)
+    el.querySelector('#_supportSubmit').onclick=()=>{
+        const code=el.querySelector('#_supportCode').value.trim();
+        if(code.length>=3){
+            localStorage.setItem('db_supporter','true');
+            el.remove();
+            onUnlock();
+        }
+    };
+    el.querySelector('#_supportCode').addEventListener('keydown',e=>{
+        if(e.key==='Enter')el.querySelector('#_supportSubmit').click();
+    });
+}
+
 function loadLevel(lv){
+    // Supporter gate — levels 7-12 require unlock
+    if(lv>=7&&!isSupporter()){
+        showSupporterGate(()=>loadLevel(lv));
+        return;
+    }
     levelData=LEVELS[lv-1];
 
     gameState='playing';
@@ -4138,7 +4386,20 @@ function endGame(){
         checkNewPersonalBest(totalLevelScore);
         savePersonalBest(score,currentLevel);
 
-        if(currentLevel>=LEVELS.length){
+        if(isDailyChallenge){
+            const dcLevels=[4,7,10];
+            const nextDcLevel=dcLevels[dcLevels.indexOf(currentLevel)+1];
+            if(nextDcLevel){
+                showLevelComplete(currentLevel,score,acc);
+            } else {
+                isDailyChallenge=false;
+                localStorage.setItem(DC_KEY,'true');
+                checkDailyCompletedBadge();
+                const _pn=localStorage.getItem('digitalBreak_playerName')||'Anonymous';
+                submitDailyScore(_pn,totalLevelScore,bestStreak,acc);
+                showDailyChallengeComplete(totalLevelScore,acc);
+            }
+        } else if(currentLevel>=LEVELS.length){
             // ── GAME COMPLETE — all 12 levels cleared
             runHackLoader(()=>showEpicGameComplete(totalLevelScore,totalClicks,successfulHits));
         } else {
@@ -4198,6 +4459,7 @@ function restartGame(){
     restartLock=true;setTimeout(()=>{restartLock=false;},600);
 
     // Full reset back to level 1 and start screen
+    isDailyChallenge=false;
     currentLevel=1;
     levelData=LEVELS[0];
     totalLevelScore=0;
