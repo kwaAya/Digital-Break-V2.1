@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <!-- Google tag (gtag.js) -->
@@ -351,10 +351,12 @@
             justify-content: space-between;
             padding: 0 14px;
             z-index: 100;
-            pointer-events: none;
+            pointer-events: auto;
             font-family: 'Orbitron', monospace;
         }
         #gameHUD.active { display: flex; }
+        /* HUD text elements should not intercept taps — only the pause button should */
+        .hud-score, .hud-time, .hud-lives { pointer-events: none; }
         #gameHUD.panic { border-bottom-color: rgba(255,60,60,0.25); }
         #progressBarWrap.panic #progressBar {
             background: linear-gradient(90deg,#ff4444,#ff8800);
@@ -1155,6 +1157,7 @@
         <span id="hudLevel" style="color:rgba(0,255,200,0.85);font-weight:900;">LV 1</span>
         <span id="hudCombo">x<span id="comboCount">1</span> COMBO</span>
         <span id="hudStreak">🔥 <span id="streakCount">0</span></span>
+        <span id="hudLvPB" style="color:rgba(255,215,0,0.5);font-size:7px;letter-spacing:1px;display:none;">PB: <span id="hudLvPBVal">0</span></span>
         <div id="hudPowerBadges"></div>
     </div>
     <div id="streakToast"></div>
@@ -1204,6 +1207,20 @@
                 </div>
             </div>
             <div class="pp-row" style="animation-delay:.70s">
+                <div class="pp-icon">👻</div>
+                <div class="pp-text">
+                    <strong>GHOST TARGETS</strong>
+                    <span>Purple targets flash briefly and vanish fast. Hit them early for 3x, late for 2x.</span>
+                </div>
+            </div>
+            <div class="pp-row" style="animation-delay:.83s">
+                <div class="pp-icon">⛓</div>
+                <div class="pp-text">
+                    <strong>CHAIN TARGETS</strong>
+                    <span>Teal targets activate all nearby targets at once — creates a burst window for combos.</span>
+                </div>
+            </div>
+            <div class="pp-row" style="animation-delay:.96s">
                 <div class="pp-icon">⚡</div>
                 <div class="pp-text">
                     <strong>POWER-UPS</strong>
@@ -1394,6 +1411,25 @@
             cursor:pointer;border-radius:12px;
             touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
             🏆 GLOBAL LEADERBOARD</button>
+    </div>
+    <!-- Achievement badges row -->
+    <div id="achBadges" style="display:none;justify-content:center;flex-wrap:wrap;gap:8px;
+        margin-bottom:14px;padding:8px 12px;
+        background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.12);
+        border-radius:10px;"></div>
+    <!-- Ko-fi support button -->
+    <div style="margin-bottom:14px;text-align:center;">
+        <a href="https://ko-fi.com/ayabukwa" target="_blank" rel="noopener"
+            style="display:inline-block;padding:10px 22px;
+            background:rgba(255,94,91,0.1);
+            border:1px solid rgba(255,94,91,0.35);
+            color:rgba(255,130,120,0.85);
+            font-size:9px;font-weight:900;letter-spacing:2px;
+            font-family:'Orbitron',monospace;
+            border-radius:12px;text-decoration:none;
+            touch-action:manipulation;">
+            ☕ BUY ME A COFFEE — support the dev
+        </a>
     </div>
 
     <!-- Music toggle -->
@@ -1778,6 +1814,9 @@ async function sbFetch(path, options={}){
 }
 
 async function submitOnlineScore(playerName, score, levelReached, streak, accuracy){
+    // Sanity gate — reject impossible scores before they hit Supabase
+    const maxPossible = levelReached * 3500;
+    if(score > maxPossible || score < 0 || streak > 200 || accuracy > 100) return;
     return sbFetch('leaderboard', {
         method: 'POST',
         prefer: 'return=minimal',
@@ -1792,6 +1831,9 @@ async function submitOnlineScore(playerName, score, levelReached, streak, accura
 }
 
 async function submitEndlessScore(playerName, score, waveReached, streak, accuracy){
+    // Sanity gate
+    const maxEndless = waveReached * 2000;
+    if(score > maxEndless || score < 0 || streak > 200 || accuracy > 100) return;
     return sbFetch('endless_leaderboard', {
         method: 'POST',
         prefer: 'return=minimal',
@@ -2013,8 +2055,56 @@ function checkNewPersonalBest(sc){
 }
 
 // ══════════════════════════════════════════
-//  ROASTS
+//  ACHIEVEMENT SYSTEM
 // ══════════════════════════════════════════
+const ACHIEVEMENTS = {
+    first_blood:   { id:'first_blood',   icon:'🩸', name:'First Blood',    desc:'Complete Level 1'                   },
+    untouchable:   { id:'untouchable',   icon:'🛡', name:'Untouchable',    desc:'Clear a level with zero obstacle hits'},
+    on_fire:       { id:'on_fire',       icon:'🔥', name:'On Fire',        desc:'Reach a 20-hit streak'               },
+    speedrun:      { id:'speedrun',      icon:'⚡', name:'Speedrun',       desc:'Clear Level 1 with 20+ seconds left' },
+    ghost_hunter:  { id:'ghost_hunter',  icon:'👻', name:'Ghost Hunter',   desc:'Hit 10 ghost targets'                },
+    chain_reaction:{ id:'chain_reaction',icon:'⛓', name:'Chain Reaction', desc:'Trigger 5 chain activations'         },
+    legend:        { id:'legend',        icon:'👑', name:'LEGEND',         desc:'Clear all 12 levels'                 },
+};
+const ACH_KEY = 'digitalBreakV21_ach';
+let ghostHitsTotal = 0;
+let chainTriggersTotal = 0;
+let obstacleHitsThisLevel = 0;
+
+function getUnlockedAchievements(){
+    try{ return new Set(JSON.parse(localStorage.getItem(ACH_KEY)||'[]')); }catch{ return new Set(); }
+}
+function unlockAchievement(id){
+    const unlocked = getUnlockedAchievements();
+    if(unlocked.has(id)) return;
+    unlocked.add(id);
+    try{ localStorage.setItem(ACH_KEY, JSON.stringify([...unlocked])); }catch{}
+    const ach = ACHIEVEMENTS[id];
+    if(!ach) return;
+    // Toast notification
+    showStreakToast(`${ach.icon} ACHIEVEMENT: ${ach.name}`);
+    playSound('newbest');
+}
+function checkAchievements(){
+    if(clearedLevels.has(1)) unlockAchievement('first_blood');
+    if(clearedLevels.size >= 12) unlockAchievement('legend');
+    if(bestStreak >= 20) unlockAchievement('on_fire');
+    if(obstacleHitsThisLevel === 0 && score >= levelData.target) unlockAchievement('untouchable');
+    if(currentLevel === 1 && score >= levelData.target && timeLeft >= 20) unlockAchievement('speedrun');
+    if(ghostHitsTotal >= 10) unlockAchievement('ghost_hunter');
+    if(chainTriggersTotal >= 5) unlockAchievement('chain_reaction');
+}
+function renderAchievementBadges(){
+    const el = document.getElementById('achBadges');
+    if(!el) return;
+    const unlocked = getUnlockedAchievements();
+    if(unlocked.size === 0){ el.style.display='none'; return; }
+    el.style.display='flex';
+    el.innerHTML = [...unlocked].map(id=>{
+        const a = ACHIEVEMENTS[id];
+        return a ? `<span title="${a.name}: ${a.desc}" style="font-size:18px;cursor:default;">${a.icon}</span>` : '';
+    }).join('');
+}
 const roasts=[
     "You died. The game is embarrassed for you. I'm embarrassed for you. Log off. 💀",
     "Respectfully? That was tragic. The cringe is immeasurable. Try again I guess.",
@@ -2206,6 +2296,7 @@ function _showLevelCompleteInner(lv,lvScore,acc){
 function goToNextLevel(){
     currentLevel++;
     levelData=LEVELS[currentLevel-1];
+    bestStreak=0; // reset per-level streak for accurate leaderboard submission
     const overlay=document.getElementById('levelCompleteOverlay');
     if(overlay)overlay.style.display='none';
     document.getElementById('confettiCanvas').style.display='none';
@@ -2317,6 +2408,14 @@ function showEpicGameComplete(finalScore,tc,sh){
             animation:breachGlow 2.5s ease-in-out infinite;touch-action:manipulation;">
             ⚡ PLAY AGAIN FROM START</button>
 
+        <a href="https://ko-fi.com/ayabukwa" target="_blank" rel="noopener"
+            style="display:block;text-align:center;padding:12px 22px;margin-bottom:14px;
+            background:rgba(255,94,91,0.1);border:1px solid rgba(255,94,91,0.35);
+            color:rgba(255,130,120,0.85);font-size:9px;font-weight:900;letter-spacing:2px;
+            font-family:Orbitron,monospace;border-radius:12px;text-decoration:none;
+            touch-action:manipulation;">
+            ☕ ENJOYED THE GAME? BUY ME A COFFEE
+        </a>
         <div style="font-size:8px;color:rgba(255,255,255,0.15);letter-spacing:1px;line-height:2;margin-top:10px;">
             Geniusly created by <span style="color:rgba(255,215,0,0.4);">Ayabukwa🌟</span><br>
             <a href="tel:0845067825" style="color:rgba(255,215,0,0.3);text-decoration:none;">084 506 7825</a>
@@ -3123,14 +3222,21 @@ function draw(){
     strokeWeight(1.5);
     line(0,(frameCount*1.3)%height,width,(frameCount*1.3)%height);
 
-    // ── COMBO VIGNETTE
+    // ── COMBO VIGNETTE — scales intensity with multiplier
     if(combo>=3){
-        let va=map(combo,3,8,10,42);
-        let vc=combo>=6?[255,100,0]:combo>=4?[255,20,147]:[255,160,0];
-        let g=drawingContext.createRadialGradient(width/2,height/2,height*.25,width/2,height/2,height*.82);
+        let va=map(combo,3,8,12,55);
+        let vc=combo>=6?[255,80,0]:combo>=4?[255,20,147]:[255,140,0];
+        let pulse=combo>=5?sin(frameCount*0.18)*8:0;
+        let g=drawingContext.createRadialGradient(width/2,height/2,height*.2,width/2,height/2,height*.85);
         g.addColorStop(0,'rgba(0,0,0,0)');
-        g.addColorStop(1,`rgba(${vc[0]},${vc[1]},${vc[2]},${va/255})`);
+        g.addColorStop(1,`rgba(${vc[0]},${vc[1]},${vc[2]},${(va+pulse)/255})`);
         drawingContext.fillStyle=g; noStroke(); drawingContext.fillRect(0,0,width,height);
+        // Extra: at max combo draw a bright pulsing ring around edges
+        if(combo>=7){
+            stroke(vc[0],vc[1],vc[2],120+sin(frameCount*0.3)*60);
+            strokeWeight(3+sin(frameCount*0.25)*2);noFill();
+            rect(6,6,width-12,height-12,10);
+        }
     }
 
     // ── SCREEN SHAKE
@@ -3182,13 +3288,25 @@ function createTarget(){
         for(let t of targets){if(dist(x,y,t.x,t.y)<70){valid=false;break;}}
         attempts++;
     }while(!valid&&attempts<30);
-    // Level 8+ targets are smaller — forces precision
     const lvl=getEffectiveLevel();
     const sizeMin=lvl>=8?32:45;
     const sizeMax=lvl>=8?55:75;
-    // Gold targets more common from level 2+
-    const bonusChance=lvl>=2?0.14:0.0;
-    targets.push({x,y,vx:random(-3,3),vy:random(-3,3),size:random(sizeMin,sizeMax),phase:0,active:false,activeTime:0,maxActiveTime:random(60,120),points:Math.floor(random(2,6)),type:Math.random()<bonusChance?'bonus':'normal'});
+    const bonusChance=lvl>=2?0.12:0.0;
+    // Ghost targets from level 4+: flash briefly, high reward
+    const ghostChance=lvl>=4?0.10:0.0;
+    // Chain targets from level 6+: hitting them briefly activates nearby targets
+    const chainChance=lvl>=6?0.08:0.0;
+    const roll=Math.random();
+    let type='normal';
+    if(roll<bonusChance) type='bonus';
+    else if(roll<bonusChance+ghostChance) type='ghost';
+    else if(roll<bonusChance+ghostChance+chainChance) type='chain';
+    // Ghost targets have very short active window
+    const maxActive = type==='ghost' ? random(18,28) : random(60,120);
+    targets.push({x,y,vx:random(-3,3),vy:random(-3,3),size:random(sizeMin,sizeMax),
+        phase:0,active:false,activeTime:0,maxActiveTime:maxActive,
+        points:type==='ghost'?6:type==='chain'?4:Math.floor(random(2,6)),
+        type});
 }
 function updateAndDisplayTargets(){
     const sp=slowTime>0?.3:getSpeedMultiplier();
@@ -3204,23 +3322,53 @@ function updateAndDisplayTargets(){
             t.active=true;t.activeTime=0;
         }
         if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
+
         push();translate(t.x,t.y);
         if(t.active){
-            for(let r=t.size*1.5;r>0;r-=10){let a=map(r,0,t.size*1.5,255,0);stroke(t.type==='bonus'?color(255,215,0,a*.5):color(0,255,255,a*.5));strokeWeight(2);noFill();ellipse(0,0,r);}
-            t.type==='bonus'?(fill(255,215,0,180),stroke(255,255,0,255)):(fill(0,255,255,150),stroke(0,255,255,255));
-            strokeWeight(3);ellipse(0,0,t.size+sin(t.phase)*8);
-            fill(255);textAlign(CENTER,CENTER);textSize(14);textStyle(BOLD);text(t.points,0,0);
-            if(t.activeTime>t.maxActiveTime*.75){stroke(255,20,147,200);strokeWeight(4);noFill();ellipse(0,0,t.size*1.3);}
-        }else{stroke(80,80,120,100);strokeWeight(2);fill(40,40,60,60);ellipse(0,0,t.size+sin(t.phase)*3);}
+            if(t.type==='ghost'){
+                // Ghost: flickers in/out, pale purple-white
+                const flicker=sin(t.phase*8)*0.5+0.5; // rapid flicker
+                const ghostA=map(t.activeTime,0,t.maxActiveTime,flicker,0)*220;
+                for(let r=t.size*1.3;r>0;r-=10){let a=map(r,0,t.size*1.3,ghostA,0);stroke(200,150,255,a*.5);strokeWeight(2);noFill();ellipse(0,0,r);}
+                fill(230,200,255,ghostA*0.8);stroke(255,255,255,ghostA);strokeWeight(3);
+                ellipse(0,0,t.size+sin(t.phase)*6);
+                fill(255,255,255,ghostA);textAlign(CENTER,CENTER);textSize(13);textStyle(BOLD);text(t.points,0,0);
+            } else if(t.type==='chain'){
+                // Chain: teal-green with link icon, pulses outward
+                for(let r=t.size*1.5;r>0;r-=10){let a=map(r,0,t.size*1.5,255,0);stroke(0,255,180,a*.5);strokeWeight(2);noFill();ellipse(0,0,r);}
+                fill(0,200,150,180);stroke(0,255,180,255);strokeWeight(3);
+                ellipse(0,0,t.size+sin(t.phase)*8);
+                fill(255);textAlign(CENTER,CENTER);textSize(16);textStyle(BOLD);text('⛓',0,1);
+                // Fading ring showing chain radius
+                stroke(0,255,180,60);strokeWeight(1.5);noFill();
+                ellipse(0,0,CHAIN_RADIUS*2);
+            } else {
+                // Normal / bonus
+                for(let r=t.size*1.5;r>0;r-=10){let a=map(r,0,t.size*1.5,255,0);stroke(t.type==='bonus'?color(255,215,0,a*.5):color(0,255,255,a*.5));strokeWeight(2);noFill();ellipse(0,0,r);}
+                t.type==='bonus'?(fill(255,215,0,180),stroke(255,255,0,255)):(fill(0,255,255,150),stroke(0,255,255,255));
+                strokeWeight(3);ellipse(0,0,t.size+sin(t.phase)*8);
+                fill(255);textAlign(CENTER,CENTER);textSize(14);textStyle(BOLD);text(t.points,0,0);
+                if(t.activeTime>t.maxActiveTime*.75){stroke(255,20,147,200);strokeWeight(4);noFill();ellipse(0,0,t.size*1.3);}
+            }
+        }else{
+            stroke(80,80,120,100);strokeWeight(2);fill(40,40,60,60);ellipse(0,0,t.size+sin(t.phase)*3);
+        }
         pop();
     }
 }
 
-// ══════════════════════════════════════════
-//  OBSTACLES
-// ══════════════════════════════════════════
+const CHAIN_RADIUS = 110; // px — chain targets activate nearby targets within this radius
+
 function createObstacle(){
-    obstacles.push({x:random(40,width-40),y:random(40,height-40),vx:random(-2.5,2.5),vy:random(-2.5,2.5),size:random(35,60),phase:0,rotationSpeed:random(-.1,.1),rotation:0,pulsePhase:random(TWO_PI)});
+    // Spawn away from existing targets to avoid unfair overlaps
+    let x,y,attempts=0,valid=false;
+    do{
+        x=random(40,width-40);y=random(40,height-40);
+        valid=true;
+        for(let t of targets){if(dist(x,y,t.x,t.y)<t.size/2+65){valid=false;break;}}
+        attempts++;
+    }while(!valid&&attempts<25);
+    obstacles.push({x,y,vx:random(-2.5,2.5)||1,vy:random(-2.5,2.5)||1,size:random(35,60),phase:0,rotationSpeed:random(-.1,.1),rotation:0,pulsePhase:random(TWO_PI)});
 }
 function updateAndDisplayObstacles(){
     const sp=slowTime>0?.3:getSpeedMultiplier();
@@ -3314,7 +3462,8 @@ function touchStarted(){
     if(gameState!=='playing')return;
     if(!p5Canvas)return;
     lastInputTS=performance.now();
-    handleInput(mouseX,mouseY);
+    if(touches&&touches.length>0){ handleInput(touches[0].x,touches[0].y); }
+    else{ handleInput(mouseX,mouseY); }
     return false;
 }
 
@@ -3358,7 +3507,7 @@ function beginFromPrePlay(){
 
 function handleInput(tx,ty){
     if(inputLock||isPaused)return;
-    inputLock=true;setTimeout(()=>{inputLock=false;},150);
+    inputLock=true;setTimeout(()=>{inputLock=false;},80);
     totalClicks++;let hit=false;
     if(hitBoss(tx,ty)){hit=true;}
     if(!hit){
@@ -3366,16 +3515,39 @@ function handleInput(tx,ty){
             let t=targets[i];
             if(dist(tx,ty,t.x,t.y)<t.size/2&&t.active){
                 let pts=t.points;
-                if(t.activeTime>t.maxActiveTime*.75){pts*=2;triggerVibration('perfect');}
-                else if(t.type==='bonus'){pts*=3;triggerVibration('bonus');}
-                else triggerVibration('hit');
+                if(t.type==='ghost'){
+                    // Ghost: full points always, bonus if hit in first half of window
+                    pts = t.activeTime < t.maxActiveTime*0.5 ? pts*3 : pts*2;
+                    ghostHitsTotal++;
+                    triggerVibration('perfect');
+                    createParticles(t.x,t.y,{r:200,g:150,b:255},20);
+                    playSound('perfect');
+                } else if(t.type==='chain'){
+                    // Chain: activate nearby inactive targets briefly
+                    targets.forEach(other=>{
+                        if(other!==t&&!other.active&&dist(t.x,t.y,other.x,other.y)<CHAIN_RADIUS){
+                            other.active=true;other.activeTime=0;
+                            other.maxActiveTime=40; // short chain window
+                        }
+                    });
+                    chainTriggersTotal++;
+                    triggerVibration('bonus');
+                    createParticles(t.x,t.y,{r:0,g:255,b:180},25);
+                    playSound('bonus');
+                    showStreakToast(`⛓ CHAIN! Activate nearby targets!`);
+                } else if(t.activeTime>t.maxActiveTime*.75){
+                    pts*=2;triggerVibration('perfect');playSound('perfect');
+                } else if(t.type==='bonus'){
+                    pts*=3;triggerVibration('bonus');playSound('bonus');
+                } else {
+                    triggerVibration('hit');playSound('hit');
+                }
                 if(multiTime>0)pts*=2;
                 score+=pts*combo;successfulHits++;onSuccessfulHit();
                 combo=(millis()-lastHitTime<1800)?Math.min(combo+1,8):1;
                 lastHitTime=millis();
-                createParticles(t.x,t.y,{r:0,g:255,b:255},15);
+                if(t.type!=='ghost'&&t.type!=='chain') createParticles(t.x,t.y,{r:0,g:255,b:255},15);
                 shakeDuration=2; hitFlashAlpha=40;
-                playSound(t.type==='bonus'?'bonus':t.activeTime>t.maxActiveTime*.75?'perfect':'hit');
                 updateDisplay();targets.splice(i,1);createTarget();hit=true;break;
             }
         }
@@ -3394,6 +3566,7 @@ function handleInput(tx,ty){
         for(let ob of obstacles){
             if(dist(tx,ty,ob.x,ob.y)<ob.size/2.4){
                 lives--;
+                obstacleHitsThisLevel++; // track for Untouchable achievement
                 combo=Math.max(1,Math.floor(combo/2));
                 if(currentStreak>5)currentStreak=Math.floor(currentStreak/2);
                 else breakStreak();
@@ -3408,7 +3581,7 @@ function handleInput(tx,ty){
     if(!hit){combo=1;breakStreak();playSound('miss');updateDisplay();}
 }
 function activatePowerup(type){
-    ({shield:()=>shieldTime=360,slow:()=>slowTime=300,multi:()=>multiTime=240,points:()=>score+=10}[type]||(() =>{}))();
+    ({shield:()=>shieldTime=480,slow:()=>slowTime=420,multi:()=>multiTime=360,points:()=>score+=15}[type]||(() =>{}))();
     updateDisplay();
 }
 function updateDisplay(){
@@ -3430,65 +3603,72 @@ function updateDisplay(){
         else pbw.classList.remove('panic');
     }
 
-    // Level badge
+    // Level badge — don't overwrite endless wave badge
     const lvBadge=document.getElementById('hudLevel');
-    if(lvBadge)lvBadge.textContent=`LV ${currentLevel}`;
+    if(lvBadge&&!isEndlessMode)lvBadge.textContent=`LV ${currentLevel}`;
+    // Live PB for current level
+    if(!isEndlessMode){
+        const pbEl=document.getElementById('hudLvPB');
+        const pbVal=document.getElementById('hudLvPBVal');
+        const pb=getPersonalBest(currentLevel);
+        if(pbEl&&pb>0){pbEl.style.display='inline';if(pbVal)pbVal.textContent=pb.toLocaleString();}
+        else if(pbEl)pbEl.style.display='none';
+    }
 }
 
 function togglePause(){
-    if(!isEndlessMode||gameState==='preplay')return;
+    if(gameState==='preplay')return;
+    if(gameState!=='playing'&&!isPaused)return;
     isPaused=!isPaused;
     const btn=document.getElementById('pauseBtn');
     if(isPaused){
         clearInterval(gameTimer);
         if(btn)btn.textContent='▶';
-        // Dim the canvas
         if(p5Canvas)p5Canvas.style.opacity='0.3';
-        // Show pause overlay
+        const modeLabel=isEndlessMode?`∞ WAVE ${endlessWave}`:`LEVEL ${currentLevel}`;
+        const modeColor=isEndlessMode?'rgba(200,100,255,0.95)':'rgba(0,255,200,0.95)';
         const po=document.createElement('div');
         po.id='pauseOverlay';
-        po.style.cssText='position:absolute;inset:0;z-index:160;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:Orbitron,monospace;background:rgba(4,1,14,0.75);backdrop-filter:blur(8px);border-radius:13px;';
-        po.innerHTML=`
-            <div style="font-size:8px;letter-spacing:5px;color:rgba(255,215,0,0.4);margin-bottom:6px;">PAUSED</div>
-            <div style="font-size:28px;font-weight:900;color:rgba(255,255,255,0.9);letter-spacing:3px;margin-bottom:4px;">∞ WAVE ${endlessWave}</div>
-            <div style="font-size:32px;font-weight:900;color:rgba(200,100,255,0.95);letter-spacing:2px;margin-bottom:20px;">${score.toLocaleString()} <span style="font-size:14px;opacity:0.6;">PTS</span></div>
-            <div style="width:80%;height:1px;background:rgba(180,0,255,0.2);margin-bottom:20px;"></div>
-            <button onclick="togglePause()" style="
-                width:200px;padding:13px 28px;border-radius:12px;
-                background:linear-gradient(135deg,rgba(180,0,255,0.25),rgba(100,0,200,0.12));
-                border:1px solid rgba(180,0,255,0.6);
-                color:rgba(200,100,255,0.95);
-                font-size:13px;font-weight:900;letter-spacing:3px;
-                font-family:Orbitron,monospace;cursor:pointer;margin-bottom:10px;
-                touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-                display:block;">▶ RESUME</button>
-            <button onclick="isPaused=false;if(p5Canvas)p5Canvas.style.opacity='1';const po=document.getElementById('pauseOverlay');if(po)po.remove();restartGame();" style="
-                width:200px;padding:10px;border-radius:12px;
-                background:rgba(255,255,255,0.04);
-                border:1px solid rgba(255,255,255,0.1);
-                color:rgba(255,255,255,0.3);
-                font-size:9px;font-weight:900;letter-spacing:2px;
-                font-family:Orbitron,monospace;cursor:pointer;
-                touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-                display:block;">↩ QUIT TO HOME</button>`;
-
+        po.style.cssText='position:absolute;inset:0;z-index:160;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:Orbitron,monospace;background:rgba(4,1,14,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:13px;touch-action:none;';
+        po.innerHTML=`<div style="font-size:8px;letter-spacing:5px;color:rgba(255,215,0,0.45);margin-bottom:4px;">PAUSED</div>
+            <div style="font-size:24px;font-weight:900;color:rgba(255,255,255,0.9);letter-spacing:3px;margin-bottom:2px;">${modeLabel}</div>
+            <div style="font-size:30px;font-weight:900;color:${modeColor};letter-spacing:2px;margin-bottom:18px;">${score.toLocaleString()} <span style="font-size:13px;opacity:0.55;">PTS</span></div>
+            <div style="width:80%;height:1px;background:rgba(255,255,255,0.1);margin-bottom:18px;"></div>
+            <button onclick="togglePause()" style="width:200px;padding:13px 28px;border-radius:12px;background:linear-gradient(135deg,rgba(255,215,0,0.18),rgba(255,140,0,0.08));border:1px solid rgba(255,215,0,0.5);color:rgba(255,215,0,0.96);font-size:13px;font-weight:900;letter-spacing:3px;font-family:Orbitron,monospace;cursor:pointer;margin-bottom:10px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:block;">▶ RESUME</button>
+            <button onclick="isPaused=false;clearInterval(gameTimer);if(p5Canvas)p5Canvas.style.opacity='1';const po=document.getElementById('pauseOverlay');if(po)po.remove();restartGame();" style="width:200px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.3);font-size:9px;font-weight:900;letter-spacing:2px;font-family:Orbitron,monospace;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:block;">↩ QUIT TO HOME</button>`;
         document.getElementById('gameContainer').appendChild(po);
-        switchMusicTo('landing'); // soft music while paused
+        switchMusicTo('landing');
     } else {
-        // Resume
         if(btn)btn.textContent='⏸';
         if(p5Canvas)p5Canvas.style.opacity='1';
         const po=document.getElementById('pauseOverlay');
         if(po)po.remove();
-        switchMusicTo(endlessWave>=10?'panic':'gameplay');
-        // Restart wave timer
-        gameStartTime=Date.now();
-        gameTimer=setInterval(()=>{
-            if(gameState!=='playing')return;
-            endlessWaveTime++;
-            updateEndlessWave();
-            document.getElementById('timeLeft').textContent=`W${endlessWave}`;
-        },1000);
+        switchMusicTo(isPanic?'panic':'gameplay');
+        clearInterval(gameTimer);
+        if(isEndlessMode){
+            gameTimer=setInterval(()=>{
+                if(gameState!=='playing'||isPaused)return;
+                endlessWaveTime++;
+                updateEndlessWave();
+                document.getElementById('timeLeft').textContent=`W${endlessWave}`;
+                const pct=Math.min((endlessWaveTime/ENDLESS_WAVE_TIME)*100,100);
+                const etf=document.getElementById('endlessTimerFill');
+                if(etf)etf.style.width=pct+'%';
+            },1000);
+        } else {
+            gameStartTime=Date.now()-(levelData.time-timeLeft)*1000;
+            gameDuration=levelData.time*1000;
+            let lastBeepSecond=-1;
+            gameTimer=setInterval(()=>{
+                if(gameState!=='playing'||isPaused)return;
+                const elapsed=Date.now()-gameStartTime;
+                timeLeft=Math.max(0,Math.ceil((gameDuration-elapsed)/1000));
+                document.getElementById('timeLeft').textContent=timeLeft;
+                updatePanicMode();
+                if(timeLeft<=5&&timeLeft>0&&timeLeft!==lastBeepSecond){lastBeepSecond=timeLeft;playSound('countdown');}
+                if(elapsed>=gameDuration)endGame();
+            },250);
+        }
     }
 }
 
@@ -3505,26 +3685,36 @@ function showPrePlay(){
 
     const hint=document.getElementById('ppTapHint');
     if(hint)hint.textContent=isEndlessMode?'speed increases every wave':'speed increases as time runs out';
-    // index: 0=targets, 1=gold, 2=hazards, 3=streak, 4=boss, 5=powerups
+    // index: 0=targets, 1=gold, 2=hazards, 3=streak, 4=boss, 5=ghost, 6=chain, 7=powerups
     const show= isEndlessMode ? [
-        true, true, true, true, true, true  // show everything in endless
+        true, true, true, true, true, true, true, true
     ] : [
         true,                        // targets — always
         currentLevel>=2,             // gold
         currentLevel>=3,             // hazards
         currentLevel>=3,             // streak
         currentLevel>=5,             // boss
+        currentLevel>=4,             // ghost
+        currentLevel>=6,             // chain
         currentLevel>=4,             // power-ups
     ];
     rows.forEach((r,i)=>{r.style.display=show[i]?'flex':'none';});
 
-    el.classList.add('show');    if(!el._patched){
+    el.classList.add('show');
+    if(!el._patched){
         el._patched=true;
         el.addEventListener('touchstart',function(e){
-            if(gameState==='preplay'){e.stopPropagation();beginFromPrePlay();}
+            if(gameState!=='preplay')return;
+            // Don't steal taps meant for the home button
+            if(e.target&&e.target.closest&&e.target.closest('button'))return;
+            e.stopPropagation();
+            beginFromPrePlay();
         },{passive:true,capture:true});
         el.addEventListener('click',function(e){
-            if(gameState==='preplay'){e.stopPropagation();beginFromPrePlay();}
+            if(gameState!=='preplay')return;
+            if(e.target&&e.target.closest&&e.target.closest('button'))return;
+            e.stopPropagation();
+            beginFromPrePlay();
         },{capture:true});
     }
 }
@@ -3560,6 +3750,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     updatePersonalBestDisplay();
     renderLevelPills();
     updateStartButton();
+    renderAchievementBadges();
     runIntroLoader();
     setTimeout(()=>switchMusicTo('landing'),2800);
     showWelcomeGreeting();
@@ -3861,6 +4052,7 @@ function loadLevel(lv){
     combo=1;lives=3;totalClicks=0;successfulHits=0;
     shieldTime=0;slowTime=0;multiTime=0;
     currentStreak=0;
+    obstacleHitsThisLevel=0; // reset for Untouchable achievement
     bossTarget=null;isPanic=false;
     targets=[];obstacles=[];powerups=[];particles=[];
 
@@ -3926,6 +4118,9 @@ function endGame(){
         return;
     }
     const passed=score>=levelData.target;
+
+    // Check achievements on every level end
+    if(passed) checkAchievements();
 
     gtag('event','level_end',{
         level:currentLevel,
@@ -4711,8 +4906,8 @@ function startMusic(){
 
 function stopMusic(){
     musicEnabled=false;
-    if(activeMaster&&musicAC){
-        const now=musicAC.currentTime;
+    if(activeMaster&&sharedAC){
+        const now=sharedAC.currentTime;
         try{
             activeMaster.gain.cancelScheduledValues(now);
             activeMaster.gain.setValueAtTime(activeMaster.gain.value,now);
@@ -4937,130 +5132,7 @@ function saveScoreCard(){
     setTimeout(()=>document.getElementById('igConfirm').textContent='',5000);
 }
 
-// ══ STRIKE & ZOOM INTRO ══
-(function(){
-    const loader   = document.getElementById('introLoader');
-    const flash    = document.getElementById('introFlash');
-    const bolt     = document.getElementById('introBolt');
-    const title    = document.getElementById('introTitle');
-    const sub      = document.getElementById('introSub');
-    const bar      = document.getElementById('introBar');
-    const strike   = document.getElementById('introStrike1');
 
-    function ease(el,props,dur,delay){
-        return new Promise(res=>{
-            setTimeout(()=>{
-                Object.assign(el.style, {transition:`all ${dur}ms cubic-bezier(0.34,1.56,0.64,1)`,...props});
-                setTimeout(res, dur);
-            }, delay||0);
-        });
-    }
-    function set(el,props){ Object.assign(el.style,props); }
-
-    async function runIntro(){
-        // Force a paint before animating
-        loader.style.opacity='1';
-        bolt.style.opacity='0';
-        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-        await new Promise(r=>setTimeout(r,200));
-        set(strike,{transition:'height 0.18s ease-in, opacity 0s',opacity:'1',height:'45%'});
-        await new Promise(r=>setTimeout(r,180));
-
-        // Phase 2 — flash + lightning sound
-        set(flash,{transition:'opacity 0.06s ease',opacity:'0.85'});
-
-        // Lightning strike sound
-        try{
-            const ac=new(window.AudioContext||window.webkitAudioContext)();
-            const t=ac.currentTime;
-
-            // Crack
-            const crack=ac.createBufferSource();
-            const cb=ac.createBuffer(1,ac.sampleRate*0.12,ac.sampleRate);
-            const cd=cb.getChannelData(0);
-            for(let i=0;i<cd.length;i++)cd[i]=(Math.random()*2-1);
-            crack.buffer=cb;
-            const cf=ac.createBiquadFilter();
-            cf.type='highpass';cf.frequency.value=1800;
-            const cg=ac.createGain();
-            cg.gain.setValueAtTime(1.1,t);
-            cg.gain.exponentialRampToValueAtTime(0.0001,t+0.1);
-            crack.connect(cf);cf.connect(cg);cg.connect(ac.destination);
-            crack.start(t);
-
-            // Zap drop
-            const zap=ac.createOscillator();
-            const zg=ac.createGain();
-            zap.type='sawtooth';
-            zap.frequency.setValueAtTime(260,t);
-            zap.frequency.exponentialRampToValueAtTime(26,t+0.32);
-            zg.gain.setValueAtTime(0.5,t);
-            zg.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
-            zap.connect(zg);zg.connect(ac.destination);
-            zap.start(t);zap.stop(t+0.38);
-
-            // Thunder rumble
-            const rumble=ac.createBufferSource();
-            const rb=ac.createBuffer(1,ac.sampleRate*1.6,ac.sampleRate);
-            const rd=rb.getChannelData(0);
-            for(let i=0;i<rd.length;i++)rd[i]=(Math.random()*2-1);
-            rumble.buffer=rb;
-            const rf=ac.createBiquadFilter();
-            rf.type='lowpass';rf.frequency.value=160;rf.Q.value=2;
-            const rg=ac.createGain();
-            rg.gain.setValueAtTime(0.6,t+0.05);
-            rg.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
-            rumble.connect(rf);rf.connect(rg);rg.connect(ac.destination);
-            rumble.start(t+0.05);
-        }catch{}
-
-        await new Promise(r=>setTimeout(r,60));
-        set(flash,{transition:'opacity 0.22s ease',opacity:'0'});
-        set(strike,{opacity:'0',height:'0'});
-
-        // Phase 3 — bolt slams down
-        bolt.style.transition='none';
-        bolt.style.transform='translateY(-120px) scale(0.4)';
-        bolt.style.opacity='0';
-        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-        await new Promise(r=>setTimeout(r,10));
-        bolt.style.transition='opacity 0.12s ease, transform 0.22s cubic-bezier(0.22,1,0.36,1)';
-        bolt.style.opacity='1';
-        bolt.style.transform='translateY(0) scale(1.2)';
-        await new Promise(r=>setTimeout(r,200));
-        set(bolt,{
-            transition:'transform 0.18s ease',
-            transform:'translateY(0) scale(1)'
-        });
-        await new Promise(r=>setTimeout(r,180));
-
-        // Phase 4 — title zooms in
-        set(title,{transition:'opacity 0.28s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1)'});
-        await new Promise(r=>setTimeout(r,10));
-        set(title,{opacity:'1',transform:'scale(1)'});
-
-        // Phase 5 — subtitle fades in
-        await new Promise(r=>setTimeout(r,180));
-        set(sub,{transition:'opacity 0.4s ease, transform 0.4s ease',opacity:'1',transform:'translateY(0)'});
-
-        // Phase 6 — progress bar sweeps
-        await new Promise(r=>setTimeout(r,80));
-        bar.style.width='100%';
-
-        // Phase 7 — hold briefly then fade out
-        await new Promise(r=>setTimeout(r,900));
-        set(loader,{transition:'opacity 0.45s ease',opacity:'0'});
-        await new Promise(r=>setTimeout(r,460));
-        loader.style.display='none';
-    }
-
-    // Run after fonts load
-    if(document.fonts && document.fonts.ready){
-        document.fonts.ready.then(runIntro);
-    } else {
-        window.addEventListener('load', runIntro);
-    }
-})();
 
 function showStandaloneLeaderboard(defaultTab='levels'){
     const el=document.createElement('div');
