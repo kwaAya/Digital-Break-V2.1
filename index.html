@@ -13,6 +13,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Digital Break V2.1 - by Aya</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
     <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
@@ -36,7 +38,8 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html { overflow-y: scroll; }
+        html { overflow-y: scroll; overscroll-behavior: none; }
+        body { overscroll-behavior-y: none; }
 
         body {
             background: linear-gradient(160deg, #07000f, #0d0820, #0a0512);
@@ -94,7 +97,7 @@
            bug where fixed+overflow wrappers swallow touch events. ══ */
         .popup {
             position: fixed;
-            top: 10px;
+            top: calc(10px + env(safe-area-inset-top, 0px));
             left: 50%;
             background: rgba(6,2,14,0.55);
             backdrop-filter: blur(18px);
@@ -110,6 +113,7 @@
             width: 92vw;
             max-width: 480px;
             height: calc(100vh - 20px);
+            height: calc(100dvh - 20px - env(safe-area-inset-bottom, 0px));
             overflow-y: scroll;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior-y: contain;
@@ -3263,38 +3267,106 @@ function getCanvasSize(){
 function applyCanvasStyle(){
     if(!p5Canvas)return;
     p5Canvas.style.touchAction='none';
-    p5Canvas.style.pointerEvents='none';
+    // p5 binds touchstart to the canvas, so the canvas MUST accept pointers while
+    // a run is live. This used to be forced to 'none' here and it is called on
+    // every viewport resize — on a phone the address bar collapsing mid-run made
+    // the game untappable while the timer kept counting down.
+    p5Canvas.style.pointerEvents=(gameState==='playing')?'auto':'none';
     p5Canvas.style.borderRadius='13px';
     p5Canvas.style.display='block';
 }
 
+// Cached canvas gradients — rebuilding these every frame was the single most
+// expensive thing on the draw path (1 vignette + 4 panic corners per frame).
+let vignetteCache={},panicCache={};
+function invalidateGradientCache(){vignetteCache={};panicCache={};}
+function getVignetteGradient(rgb){
+    const key=rgb+'@'+width+'x'+height;
+    let g=vignetteCache[key];
+    if(!g){
+        g=drawingContext.createRadialGradient(width/2,height/2,height*.2,width/2,height/2,height*.85);
+        g.addColorStop(0,'rgba(0,0,0,0)');
+        g.addColorStop(1,`rgba(${rgb},1)`);
+        vignetteCache[key]=g;
+    }
+    return g;
+}
+function getPanicGradient(i,cx,cy){
+    const key=i+'@'+width+'x'+height;
+    let g=panicCache[key];
+    if(!g){
+        g=drawingContext.createRadialGradient(cx,cy,0,cx,cy,200);
+        g.addColorStop(0,'rgba(255,30,30,1)');
+        g.addColorStop(1,'rgba(0,0,0,0)');
+        panicCache[key]=g;
+    }
+    return g;
+}
+
+// Everything that is not live play can run at half rate — the menu screen was
+// burning a full 60fps of halos and gradients behind a blurred popup.
+function setFrameRateForState(){
+    frameRate((gameState==='playing'&&!isPaused)?60:30);
+}
+
+function handleVisibility(){
+    document.addEventListener('visibilitychange',()=>{
+        if(document.hidden){
+            noLoop();
+            // Don't let a backgrounded tab cost the player their run.
+            if(gameState==='playing'&&!isPaused)togglePause();
+        } else {
+            loop();
+            setFrameRateForState();
+        }
+    },{passive:true});
+}
+
 function setup(){
     const{w,h}=getCanvasSize();
+    // Phones report DPR 3: every star, halo ring and gradient was being painted
+    // into 3x the pixels for no visible gain at this scale. Cap the backing store.
+    pixelDensity(Math.min(window.devicePixelRatio||1,2));
     let canvas=createCanvas(w,h);
     canvas.parent('gameContainer');
     p5Canvas=canvas.elt;
     applyCanvasStyle();
-    // Dreamy subtle stars — always moving, never fade
-    for(let i=0;i<130;i++)stars.push({
-        x:random(width),y:random(height),
-        size:random(.12,1.1),speed:random(.012,.08),
-        opacity:random(.1,.38),gold:random()<.28,
-        drift:random(-.025,.025)
-    });
+    // Dreamy subtle stars — colours are baked once so the draw loop never
+    // allocates 130 p5.Color objects every frame.
+    for(let i=0;i<130;i++){
+        const s={x:random(width),y:random(height),
+            size:random(.12,1.1),speed:random(.012,.08),
+            opacity:random(.1,.38),gold:random()<.28,
+            drift:random(-.025,.025)};
+        s.idleCol=color(s.gold?255:190,s.gold?200:215,s.gold?80:255,s.opacity*130);
+        s.playCol=color(s.gold?255:190,s.gold?200:215,s.gold?80:255,s.opacity*190);
+        s.panicCol=color(255,200,80,s.opacity*80);
+        stars.push(s);
+    }
     fixScrolling();
-    // Visual viewport resize (handles browser chrome show/hide on mobile)
+    setFrameRateForState();
+    handleVisibility();
+    // Visual viewport resize (handles browser chrome show/hide on mobile).
+    // Debounced: every resizeCanvas reallocates the full backing store.
     if(window.visualViewport){
+        let rzTimer=null;
         window.visualViewport.addEventListener('resize',()=>{
-            const{w:nw,h:nh}=getCanvasSize();
-            resizeCanvas(nw,nh);
-            applyCanvasStyle();
-        });
+            if(rzTimer)clearTimeout(rzTimer);
+            rzTimer=setTimeout(()=>{
+                const{w:nw,h:nh}=getCanvasSize();
+                if(nw===width&&nh===height)return;
+                resizeCanvas(nw,nh);
+                invalidateGradientCache();
+                applyCanvasStyle();
+            },120);
+        },{passive:true});
     }
 }
 
 function windowResized(){
     const{w,h}=getCanvasSize();
     resizeCanvas(w,h);
+    invalidateGradientCache();
     applyCanvasStyle();
 }
 
@@ -3308,7 +3380,7 @@ function draw(){
             s.y+=s.speed*.35; s.x+=s.drift*.4;
             if(s.y>height){s.y=0;s.x=random(width);}
             if(s.x<0||s.x>width)s.drift*=-1;
-            fill(s.gold?color(255,200,80,s.opacity*130):color(190,215,255,s.opacity*130));
+            fill(s.idleCol);
             ellipse(s.x,s.y,s.size);
         }
         // Subtle diagonal holographic grid
@@ -3345,9 +3417,7 @@ function draw(){
         s.y+=s.speed; s.x+=s.drift;
         if(s.y>height){s.y=0;s.x=random(width);}
         if(s.x<0||s.x>width)s.drift*=-1;
-        fill(s.gold?
-            color(255,200,80,isPanic?s.opacity*80:s.opacity*190):
-            color(190,215,255,s.opacity*190));
+        fill((s.gold&&isPanic)?s.panicCol:s.playCol);
         ellipse(s.x,s.y,s.size);
     }
 
@@ -3372,10 +3442,11 @@ function draw(){
         let va=map(combo,3,8,12,55);
         let vc=combo>=6?[255,80,0]:combo>=4?[255,20,147]:[255,140,0];
         let pulse=combo>=5?sin(frameCount*0.18)*8:0;
-        let g=drawingContext.createRadialGradient(width/2,height/2,height*.2,width/2,height/2,height*.85);
-        g.addColorStop(0,'rgba(0,0,0,0)');
-        g.addColorStop(1,`rgba(${vc[0]},${vc[1]},${vc[2]},${(va+pulse)/255})`);
-        drawingContext.fillStyle=g; noStroke(); drawingContext.fillRect(0,0,width,height);
+        // Reuse the cached gradient and ride the intensity on globalAlpha.
+        drawingContext.globalAlpha=constrain((va+pulse)/255,0,1);
+        drawingContext.fillStyle=getVignetteGradient(`${vc[0]},${vc[1]},${vc[2]}`);
+        noStroke(); drawingContext.fillRect(0,0,width,height);
+        drawingContext.globalAlpha=1;
         // Extra: at max combo draw a bright pulsing ring around edges
         if(combo>=7){
             stroke(vc[0],vc[1],vc[2],120+sin(frameCount*0.3)*60);
@@ -3392,11 +3463,12 @@ function draw(){
     // ── PANIC CORNERS
     if(isPanic){
         let va=16+sin(frameCount*.15)*6; noStroke();
-        [[0,0],[width,0],[0,height],[width,height]].forEach(([cx,cy])=>{
-            let g=drawingContext.createRadialGradient(cx,cy,0,cx,cy,200);
-            g.addColorStop(0,`rgba(255,30,30,${va/255})`); g.addColorStop(1,'rgba(0,0,0,0)');
-            drawingContext.fillStyle=g; drawingContext.fillRect(0,0,width,height);
+        [[0,0],[width,0],[0,height],[width,height]].forEach(([cx,cy],ci)=>{
+            drawingContext.globalAlpha=constrain(va/255,0,1);
+            drawingContext.fillStyle=getPanicGradient(ci,cx,cy);
+            drawingContext.fillRect(0,0,width,height);
         });
+        drawingContext.globalAlpha=1;
     }
 
     //i miss my ex so much dawg yoh
@@ -3455,16 +3527,19 @@ function createTarget(){
 }
 function updateAndDisplayTargets(){
     const sp=slowTime>0?.3:getSpeedMultiplier();
+    // Count active targets once per frame instead of once per target: this was
+    // O(n²) with a fresh array allocation for every target, every frame.
+    const maxActive=Math.min(2+Math.floor(getEffectiveLevel()/3),5);
+    let currentActive=0;
+    for(let k=0;k<targets.length;k++)if(targets[k].active)currentActive++;
     for(let i=targets.length-1;i>=0;i--){
         let t=targets[i];
         t.x+=t.vx*sp;t.y+=t.vy*sp;
         if(t.x<30||t.x>width-30)t.vx*=-1;if(t.y<30||t.y>height-30)t.vy*=-1;
         t.x=constrain(t.x,30,width-30);t.y=constrain(t.y,30,height-30);
         t.phase+=.08;
-        const maxActive=Math.min(2+Math.floor(getEffectiveLevel()/3),5);
-        const currentActive=targets.filter(t=>t.active).length;
         if(!t.active&&currentActive<maxActive&&frameCount%8===0&&Math.random()<(getEffectiveLevel()>=9?.18:.12)){
-            t.active=true;t.activeTime=0;
+            t.active=true;t.activeTime=0;currentActive++;
         }
         if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
 
@@ -3586,7 +3661,8 @@ function updatePowerUps(){
     if(shieldTime>0)html+=`<span class="power-badge">🛡${Math.ceil(shieldTime/60)}s</span>`;
     if(slowTime>0)html+=`<span class="power-badge">⏰${Math.ceil(slowTime/60)}s</span>`;
     if(multiTime>0)html+=`<span class="power-badge">✖${Math.ceil(multiTime/60)}s</span>`;
-    badges.innerHTML=html;
+    // Called every frame: only touch the DOM when the badges actually change.
+    if(badges._lastHtml!==html){badges.innerHTML=html;badges._lastHtml=html;}
 }
 
 // ══════════════════════════════════════════
@@ -3616,6 +3692,7 @@ function beginFromPrePlay(){
     if(gameState!=='preplay')return;
     hidePrePlay();
     gameState='playing';
+    setFrameRateForState();
     switchMusicTo('gameplay');
     // On level 1, immediately activate 2 targets so screen isn't empty
     if(!isEndlessMode && currentLevel===1){
@@ -3791,6 +3868,7 @@ function togglePause(){
     if(gameState==='preplay')return;
     if(gameState!=='playing'&&!isPaused)return;
     isPaused=!isPaused;
+    setFrameRateForState();
     const btn=document.getElementById('pauseBtn');
     if(isPaused){
         clearInterval(gameTimer);
@@ -3906,6 +3984,7 @@ function hidePrePlay(){
 function handlePrePlayHome(){
     hidePrePlay();
     gameState='start';
+    setFrameRateForState();
     isEndlessMode=false;
     clearInterval(gameTimer);
     targets=[];obstacles=[];powerups=[];particles=[];
@@ -4123,6 +4202,7 @@ function loadEndless(){
     };
 
     gameState='playing';
+    setFrameRateForState();
     score=0; combo=1; lives=3; totalClicks=0; successfulHits=0;
     shieldTime=0; slowTime=0; multiTime=0;
     currentStreak=0; bestStreak=0;
@@ -4156,6 +4236,7 @@ function loadEndless(){
 
     // Show pre-play with endless instructions
     gameState='preplay';
+    setFrameRateForState();
     showPrePlay();
     // Override the badge text for endless
     const badge=document.getElementById('ppDiffBadge');
@@ -4295,6 +4376,7 @@ function loadLevel(lv){
     levelData=LEVELS[lv-1];
 
     gameState='playing';
+    setFrameRateForState();
     score=0;
     timeLeft=levelData.time;
     combo=1;lives=3;totalClicks=0;successfulHits=0;
@@ -4333,6 +4415,7 @@ function loadLevel(lv){
     if(lvBadge)lvBadge.textContent=`LV ${lv}`;
     
     gameState='preplay';
+    setFrameRateForState();
     showPrePlay();
 
     switchMusicTo('preplay');
@@ -4344,6 +4427,7 @@ function loadLevel(lv){
 
 function endGame(){
     gameState='end';
+    setFrameRateForState();
     clearInterval(gameTimer);
     shakeDuration=8;
     hitFlashAlpha=120;
@@ -4464,6 +4548,7 @@ function restartGame(){
     levelData=LEVELS[0];
     totalLevelScore=0;
     gameState='start';
+    setFrameRateForState();
     hidePrePlay();
     switchMusicTo('landing');
     targets=[];obstacles=[];powerups=[];particles=[];
@@ -5202,9 +5287,10 @@ function fixScrolling(){
     document.getElementById('startPopup'),
     document.getElementById('losePopup'),
     document.getElementById('levelCompleteOverlay'),
-    document.getElementById('winOverlay'),
 ];
 
+    // Deduplicate: winOverlay was listed twice, so it got two sets of handlers
+    // and scrolled/momentumed at double speed.
     scrollables.forEach(el=>{
         if(!el)return;
         let startY=0,startScroll=0,isScrolling=false,velY=0,lastY=0,rafId=null;
@@ -5586,7 +5672,7 @@ function runIntroLoader(){
         flash.style.transition='opacity 0.05s ease-in';
         flash.style.opacity='1';
         strike.style.opacity='0';
-        if(sfxCtx&&sfxCtx.state==='running'){playSound('lightning');playSound('thunder');}
+        if(sharedAC&&sharedAC.state==='running'){playSound('lightning');playSound('thunder');}
 
         // Bolt slams in with bounce
         bolt.style.transition='transform 0.28s cubic-bezier(0.34,1.8,0.64,1), opacity 0.1s ease';
@@ -5650,7 +5736,7 @@ function runIntroLoader(){
     setTimeout(()=>{
         flash.style.transition='opacity 0.04s ease-in';
         flash.style.opacity='0.35';
-        if(sfxCtx&&sfxCtx.state==='running'){playSound('lightning');playSound('thunder');}
+        if(sharedAC&&sharedAC.state==='running'){playSound('lightning');playSound('thunder');}
     },1900);
     setTimeout(()=>{
         flash.style.transition='opacity 0.2s ease-out';
@@ -5711,7 +5797,12 @@ function runIntroLoader(){
         }
 
         function drawFrame(){
-            if(!W||!H||!perim) return;
+            // This loop used to keep painting 160 arcs + a gradient at 60fps while
+            // the start screen was hidden behind the game. Stay idle when invisible.
+            if(!wrap||wrap.style.display==='none'){
+                requestAnimationFrame(drawFrame);return;
+            }
+            if(!W||!H||!perim){resize();if(!W||!H||!perim){requestAnimationFrame(drawFrame);return;}}
             ctx.clearRect(0,0,W,H);
             pos=(pos+SPEED)%perim;
 
