@@ -2712,7 +2712,7 @@ let totalClicksAllLevels=0;
 let totalHitsAllLevels=0;
 let totalStreakAllLevels=0;
 let levelsCompleted=0; // cumulative score across all levels for display
-let bossTarget=null,bossAlertTimer=null;
+let bossTarget=null,bossAlertTimer=null,bossPending=false;
 let isPanic=false;
 let p5Canvas=null;
 let lastInputTS=0;
@@ -3178,12 +3178,18 @@ function showStreakToast(msg){
 function trySpawnBoss(){
     if(!levelData.boss)return;
     const maxBosses=currentLevel>=7?2:1;
-    if((bossTarget?1:0)>=maxBosses||timeLeft<=15||Math.random()>=.012)return;
+    // bossPending stops a second alert being scheduled during the 1.2s warning —
+    // that could spawn two bosses at once or overwrite one mid-fight.
+    if(bossPending||(bossTarget?1:0)>=maxBosses||timeLeft<=15||Math.random()>=.012)return;
+    bossPending=true;
     document.getElementById('bossAlert').classList.add('show');
     triggerVibration('boss');
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
     bossAlertTimer=setTimeout(()=>{
+        bossPending=false;
         document.getElementById('bossAlert').classList.remove('show');
+        // The level may have ended or been quit while the alert was on screen.
+        if(gameState!=='playing')return;
         bossTarget={x:width/2,y:height/2,vx:(Math.random()<.5?1:-1)*1.5,vy:(Math.random()<.5?1:-1)*1.5,size:90,phase:0,activeTime:0,maxActiveTime:300,points:50,armour:3,hitFlash:0};
     },1200);
 }
@@ -3194,7 +3200,7 @@ function updateAndDisplayBoss(){
     if(b.x<50||b.x>width-50)b.vx*=-1;
     if(b.y<50||b.y>height-50)b.vy*=-1;
     b.x=constrain(b.x,50,width-50);b.y=constrain(b.y,50,height-50);
-    b.phase+=.1;b.activeTime++;if(b.hitFlash>0)b.hitFlash--;
+    b.phase+=.1;b.activeTime+=frameDelta();if(b.hitFlash>0)b.hitFlash--;
     if(b.activeTime>b.maxActiveTime){bossTarget=null;return;}
     push();translate(b.x,b.y);
     for(let r=b.size*1.6;r>0;r-=15){let a=map(r,0,b.size*1.6,200,0);stroke(b.hitFlash>0?color(255,80,80,a):color(255,215,0,a));strokeWeight(2.5);noFill();ellipse(0,0,r);}
@@ -3213,10 +3219,13 @@ function hitBoss(tx,ty){
     if(!bossTarget)return false;
     let b=bossTarget;
     if(dist(tx,ty,b.x,b.y)>=b.size/2)return false;
+    // Every landed boss tap is a hit; only the killing blow used to count, so the
+    // first two of three taps dragged accuracy down.
+    successfulHits++;
     b.armour--;b.hitFlash=12;triggerVibration('boss');
     createParticles(b.x,b.y,{r:255,g:215,b:0},20);
     if(b.armour<=0){
-        let pts=b.points*(multiTime>0?2:1)*combo;score+=pts;successfulHits++;
+        let pts=b.points*(multiTime>0?2:1)*combo;score+=pts;
         onSuccessfulHit();showStreakToast(`👑 BOSS SLAIN! +${pts}pts`);
         createParticles(b.x,b.y,{r:255,g:215,b:0},40);bossTarget=null;
     }
@@ -3664,10 +3673,17 @@ function createParticles(x,y,c,count=10){
 // ══════════════════════════════════════════
 //  POWER-UP TIMERS
 // ══════════════════════════════════════════
+// Gameplay timers are tuned in 60fps frames. Scale by real frame time so a phone
+// running at 30fps doesn't hand out double-length power-ups.
+function frameDelta(){
+    const d=(typeof deltaTime==='number'&&deltaTime>0)?deltaTime:16.667;
+    return Math.min(3,d/16.667);
+}
 function updatePowerUps(){
-    if(shieldTime>0)shieldTime--;
-    if(slowTime>0)slowTime--;
-    if(multiTime>0)multiTime--;
+    const dt=frameDelta();
+    if(shieldTime>0)shieldTime=Math.max(0,shieldTime-dt);
+    if(slowTime>0)slowTime=Math.max(0,slowTime-dt);
+    if(multiTime>0)multiTime=Math.max(0,multiTime-dt);
     const badges=document.getElementById('hudPowerBadges');
     if(!badges)return;
     let html='';
@@ -3821,6 +3837,9 @@ function handleInput(tx,ty){
             if(dist(tx,ty,pw.x,pw.y)<pw.size/2){
                 activatePowerup(pw.type);triggerVibration('powerup');playSound('powerup');
                 createParticles(pw.x,pw.y,{r:0,g:255,b:0},12);
+                // Picking up a power-up is a well-aimed tap, but it was counted as
+                // a miss in the accuracy stat (clicks without a hit).
+                successfulHits++;
                 powerups.splice(i,1);hit=true;break;
             }
         }
@@ -4003,7 +4022,7 @@ function handlePrePlayHome(){
     isEndlessMode=false;
     clearInterval(gameTimer);
     targets=[];obstacles=[];powerups=[];particles=[];
-    bossTarget=null;isPanic=false;
+    bossTarget=null;isPanic=false;bossPending=false;
     document.getElementById('gameHUD').classList.remove('active');
     document.getElementById('gameSubHUD').classList.remove('active');
     const pbw=document.getElementById('progressBarWrap');if(pbw)pbw.style.display='none';
@@ -4221,7 +4240,7 @@ function loadEndless(){
     score=0; combo=1; lives=3; totalClicks=0; successfulHits=0;
     shieldTime=0; slowTime=0; multiTime=0;
     currentStreak=0; bestStreak=0;
-    bossTarget=null; isPanic=false;
+    bossTarget=null; isPanic=false; bossPending=false;
     targets=[]; obstacles=[]; powerups=[]; particles=[];
 
     for(let i=0;i<5;i++)createTarget();
@@ -4398,7 +4417,7 @@ function loadLevel(lv){
     shieldTime=0;slowTime=0;multiTime=0;
     currentStreak=0;
     obstacleHitsThisLevel=0; // reset for Untouchable achievement
-    bossTarget=null;isPanic=false;
+    bossTarget=null;isPanic=false;bossPending=false;
     targets=[];obstacles=[];powerups=[];particles=[];
 
     // Spawn initial targets
@@ -4448,6 +4467,7 @@ function endGame(){
     hitFlashAlpha=120;
     if(countdownInterval)clearInterval(countdownInterval);
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
+    bossPending=false;
 
     isPanic=false;
     document.getElementById('gameContainer').classList.remove('panic');
@@ -4567,11 +4587,12 @@ function restartGame(){
     hidePrePlay();
     switchMusicTo('landing');
     targets=[];obstacles=[];powerups=[];particles=[];
-    bossTarget=null;isPanic=false;currentStreak=0;bestStreak=0;isEndlessMode=false;endlessWave=1;
+    bossTarget=null;isPanic=false;bossPending=false;currentStreak=0;bestStreak=0;isEndlessMode=false;endlessWave=1;
     const pb3=document.getElementById('pauseBtn');if(pb3)pb3.style.display='none';
     const etb2=document.getElementById('endlessTimerBar');if(etb2)etb2.style.display='none';
     if(countdownInterval)clearInterval(countdownInterval);
     if(bossAlertTimer)clearTimeout(bossAlertTimer);
+    bossPending=false;
 
     const lc=document.getElementById('levelCompleteOverlay');if(lc)lc.style.display='none';
     document.getElementById('losePopup').style.display='none';
