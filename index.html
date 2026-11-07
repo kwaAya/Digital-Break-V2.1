@@ -2316,8 +2316,12 @@ function runHackLoader(callback){
 }
 
 function showLevelComplete(lv,lvScore,acc){
-    clearedLevels.add(lv);
-    saveProgress();
+    // Daily runs are their own track: recording them as campaign clears advanced
+    // the start screen's CONTINUE target past levels the player hasn't unlocked.
+    if(!isDailyChallenge){
+        clearedLevels.add(lv);
+        saveProgress();
+    }
     renderLevelPills();
     updateStartButton();
 
