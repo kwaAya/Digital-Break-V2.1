@@ -4218,6 +4218,7 @@ function startGame(){
     startLock=true;setTimeout(()=>{startLock=false;},600);
     promptPlayerName(()=>{
         randomSeed(); noiseSeed();   // leave any daily-challenge seed behind
+        isDailyChallenge=false;      // a stale flag would bypass the level 7 gate
         const highest=Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length);
         currentLevel=highest;
         totalLevelScore=0;
@@ -4235,7 +4236,7 @@ function startGame(){
 function startEndless(){
     if(startLock||gameState==='playing')return;
     startLock=true;setTimeout(()=>{startLock=false;},600);
-    promptPlayerName(()=>{ randomSeed(); noiseSeed(); loadEndless(); });
+    promptPlayerName(()=>{ randomSeed(); noiseSeed(); isDailyChallenge=false; loadEndless(); });
 }
 
 function loadEndless(){
@@ -4419,8 +4420,10 @@ function showSupporterGate(onUnlock){
 }
 
 function loadLevel(lv){
-    // Supporter gate — levels 7-12 require unlock
-    if(lv>=7&&!isSupporter()){
+    // Supporter gate — levels 7-12 require unlock.
+    // The daily challenge runs levels 4, 7 and 10, so a non-supporter used to hit
+    // the paywall halfway through an event they were free to start.
+    if(lv>=7&&!isSupporter()&&!isDailyChallenge){
         showSupporterGate(()=>loadLevel(lv));
         return;
     }
