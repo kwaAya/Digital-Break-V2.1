@@ -3154,6 +3154,9 @@ function playSound(type){
 function onSuccessfulHit(){
     currentStreak++;
     if(currentStreak>bestStreak)bestStreak=currentStreak;
+    // Streak/ghost/chain badges were only ever checked when a level was WON, so
+    // earning a 20-hit streak in a failed run unlocked nothing.
+    if(bestStreak===20)unlockAchievement('on_fire');
     document.getElementById('streakCount').textContent=currentStreak;
     if(currentStreak>0&&currentStreak%10===0){
         const bonus=currentStreak*5;score+=bonus;
@@ -3486,7 +3489,9 @@ function draw(){
             createTarget();
         }
         if(frameCount%200===0&&obstacles.length<levelData.obstacles)createObstacle();
-        if(levelData.powerups&&frameCount%240===0&&Math.random()<.7)createPowerup();
+        // Uncollected power-ups never expired, so a long level slowly filled up
+        // with floating greens. Cap how many can be live at once.
+        if(levelData.powerups&&powerups.length<3&&frameCount%240===0&&Math.random()<.7)createPowerup();
         trySpawnBoss();
         if(shieldTime>0){stroke(0,255,100,80);strokeWeight(6);noFill();rect(10,10,width-20,height-20,13);}
         if(slowTime>0){fill(0,80,200,20);noStroke();rect(0,0,width,height);}
@@ -3520,6 +3525,14 @@ function createTarget(){
     else if(roll<bonusChance+ghostChance+chainChance) type='chain';
     // Ghost targets have very short active window
     const maxActive = type==='ghost' ? random(18,28) : random(60,120);
+    // Only ACTIVE targets are capped elsewhere, so inactive ones used to pile up
+    // forever (~1/sec) — grey circles littering the screen and a longer hit-test
+    // on every tap. Keep the pool bounded instead.
+    const poolCap=Math.max(10,Math.min(3+Math.floor(lvl/2),8)*2);
+    if(targets.length>=poolCap){
+        const stale=targets.findIndex(t=>!t.active);
+        if(stale>=0)targets.splice(stale,1);
+    }
     targets.push({x,y,vx:random(-3,3),vy:random(-3,3),size:random(sizeMin,sizeMax),
         phase:0,active:false,activeTime:0,maxActiveTime:maxActive,
         points:type==='ghost'?6:type==='chain'?4:Math.floor(random(2,6)),
@@ -3767,6 +3780,7 @@ function handleInput(tx,ty){
                     // Ghost: full points always, bonus if hit in first half of window
                     pts = t.activeTime < t.maxActiveTime*0.5 ? pts*3 : pts*2;
                     ghostHitsTotal++;
+                    if(ghostHitsTotal===10)unlockAchievement('ghost_hunter');
                     triggerVibration('perfect');
                     createParticles(t.x,t.y,{r:200,g:150,b:255},20);
                     playSound('perfect');
@@ -3779,6 +3793,7 @@ function handleInput(tx,ty){
                         }
                     });
                     chainTriggersTotal++;
+                    if(chainTriggersTotal===5)unlockAchievement('chain_reaction');
                     triggerVibration('bonus');
                     createParticles(t.x,t.y,{r:0,g:255,b:180},25);
                     playSound('bonus');
