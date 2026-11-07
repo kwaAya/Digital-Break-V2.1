@@ -1935,7 +1935,14 @@ async function renderOnlineLeaderboard(containerId, playerScore){
     if(!container) return;
     container.innerHTML = `<div style="font-size:9px;color:rgba(255,215,0,0.4);letter-spacing:2px;margin-bottom:8px;">LOADING ONLINE SCORES...</div>`;
     const rows = await fetchOnlineLeaderboard();
-    if(!rows || !rows.length){
+    // sbFetch returns null when the backend is unreachable — that is not the same
+    // as "nobody has played yet", and telling players the board is empty hides
+    // a real outage from them (and from you).
+    if(!Array.isArray(rows)){
+        container.innerHTML = `<div style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">Leaderboard unavailable right now.</div>`;
+        return;
+    }
+    if(!rows.length){
         container.innerHTML = `<div style="font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:1px;">No scores yet — be the first!</div>`;
         return;
     }
@@ -2432,7 +2439,8 @@ function showDailyChallengeComplete(finalScore, acc){
     fetchDailyLeaderboard().then(rows=>{
         const c=document.getElementById('dcLbRows');
         if(!c)return;
-        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">No scores yet today — you're first!</div>`;return;}
+        if(!Array.isArray(rows)){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">Daily leaderboard unavailable right now.</div>`;return;}
+        if(!rows.length){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">No scores yet today — you're first!</div>`;return;}
         const medals=['🥇','🥈','🥉'];
         const _pn=localStorage.getItem('digitalBreak_playerName')||'Anonymous';
         c.innerHTML=rows.map((e,i)=>{
@@ -2671,7 +2679,8 @@ function showEndlessResults(finalScore, wave, acc){
     fetchEndlessLeaderboard().then(rows=>{
         const c=document.getElementById('endlessLbRows');
         if(!c)return;
-        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">No endless scores yet — you're the first!</div>`;return;}
+        if(!Array.isArray(rows)){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">Endless leaderboard unavailable right now.</div>`;return;}
+        if(!rows.length){c.innerHTML=`<div style="font-size:9px;color:rgba(255,255,255,0.2);padding:12px 0;">No endless scores yet — you're the first!</div>`;return;}
         const medals=['🥇','🥈','🥉'];
         c.innerHTML=rows.map((e,i)=>{
             const isMe=e.player_name===_pn&&e.score===finalScore;
@@ -5592,7 +5601,8 @@ function showStandaloneLeaderboard(defaultTab='levels'){
     fetchOnlineLeaderboard().then(rows=>{
         const c=document.getElementById('standaloneLbRows');
         if(!c)return;
-        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No scores yet — be the first to breach!</div>`;return;}
+        if(!Array.isArray(rows)){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">Leaderboard unavailable right now.</div>`;return;}
+        if(!rows.length){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No scores yet — be the first to breach!</div>`;return;}
         const medals=['🥇','🥈','🥉'];
         c.innerHTML=rows.map((e,i)=>`
             <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
@@ -5613,7 +5623,8 @@ function showStandaloneLeaderboard(defaultTab='levels'){
     fetchEndlessLeaderboard().then(rows=>{
         const c=document.getElementById('standaloneLbEndlessRows');
         if(!c)return;
-        if(!rows||!rows.length){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No endless scores yet — be the first!</div>`;return;}
+        if(!Array.isArray(rows)){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">Endless leaderboard unavailable right now.</div>`;return;}
+        if(!rows.length){c.innerHTML=`<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:20px 0;letter-spacing:1px;">No endless scores yet — be the first!</div>`;return;}
         const medals=['🥇','🥈','🥉'];
         c.innerHTML=rows.map((e,i)=>`
             <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
