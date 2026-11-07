@@ -1818,13 +1818,15 @@ function getDailyDateStr(){
     const d=new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-const DC_KEY='db_daily_'+getDailyDateStr();
+// Computed per call: as a top-level const this froze to the date the page was
+// opened, so finishing after midnight stamped yesterday's key.
+function dailyKey(){return 'db_daily_'+getDailyDateStr();}
 let isDailyChallenge=false;
 let dailyChallengeScore=0;
 
 function checkDailyCompletedBadge(){
     const badge=document.getElementById('dcCompletedBadge');
-    if(badge)badge.style.display=localStorage.getItem(DC_KEY)?'inline':'none';
+    if(badge)badge.style.display=localStorage.getItem(dailyKey())?'inline':'none';
 }
 
 function startDailyChallenge(){
@@ -1833,6 +1835,11 @@ function startDailyChallenge(){
     promptPlayerName(()=>{
         isDailyChallenge=true;
         dailyChallengeScore=0;
+        // seededRand()/getDailySeed() existed but were never wired up, so every
+        // player got a different layout and the daily board compared unlike runs.
+        const seed=getDailySeed();
+        randomSeed(seed);
+        noiseSeed(seed);
         // Daily = levels 4,7,10 (middle difficulty spread), same for everyone today
         currentLevel=4;
         levelData=LEVELS[3];
@@ -2537,7 +2544,7 @@ function showEpicGameComplete(finalScore,tc,sh){
                 padding:13px 22px;border-radius:30px;font-family:Orbitron,monospace;
                 font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
                 min-height:46px;touch-action:manipulation;">📤 SHARE YOUR WIN</button>
-            <button onclick="saveScoreCard()" style="
+            <button onclick="saveScoreCard('shareConfirmEpic')" style="
                 background:linear-gradient(45deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border:none;
                 padding:13px 22px;border-radius:30px;font-family:Orbitron,monospace;
                 font-weight:bold;font-size:11px;cursor:pointer;letter-spacing:1px;
@@ -3536,7 +3543,7 @@ function createTarget(){
     const ghostChance=lvl>=4?0.10:0.0;
     // Chain targets from level 6+: hitting them briefly activates nearby targets
     const chainChance=lvl>=6?0.08:0.0;
-    const roll=Math.random();
+    const roll=random();
     let type='normal';
     if(roll<bonusChance) type='bonus';
     else if(roll<bonusChance+ghostChance) type='ghost';
@@ -3569,7 +3576,7 @@ function updateAndDisplayTargets(){
         if(t.x<30||t.x>width-30)t.vx*=-1;if(t.y<30||t.y>height-30)t.vy*=-1;
         t.x=constrain(t.x,30,width-30);t.y=constrain(t.y,30,height-30);
         t.phase+=.08;
-        if(!t.active&&currentActive<maxActive&&frameCount%8===0&&Math.random()<(getEffectiveLevel()>=9?.18:.12)){
+        if(!t.active&&currentActive<maxActive&&frameCount%8===0&&random()<(getEffectiveLevel()>=9?.18:.12)){
             t.active=true;t.activeTime=0;currentActive++;
         }
         if(t.active){t.activeTime++;if(t.activeTime>t.maxActiveTime)t.active=false;}
@@ -3646,7 +3653,7 @@ function updateAndDisplayObstacles(){
 // ══════════════════════════════════════════
 function createPowerup(){
     const types=['shield','slow','multi','points'];
-    powerups.push({x:random(50,width-50),y:random(50,height-50),vx:random(-1.5,1.5),vy:random(-1.5,1.5),size:40,phase:0,type:types[Math.floor(Math.random()*types.length)],collected:false});
+    powerups.push({x:random(50,width-50),y:random(50,height-50),vx:random(-1.5,1.5),vy:random(-1.5,1.5),size:40,phase:0,type:types[Math.floor(random()*types.length)],collected:false});
 }
 function updateAndDisplayPowerups(){
     for(let i=powerups.length-1;i>=0;i--){
@@ -4210,6 +4217,7 @@ function startGame(){
     if(startLock||gameState==='playing')return;
     startLock=true;setTimeout(()=>{startLock=false;},600);
     promptPlayerName(()=>{
+        randomSeed(); noiseSeed();   // leave any daily-challenge seed behind
         const highest=Math.min(Math.max(...[...clearedLevels,0])+1,LEVELS.length);
         currentLevel=highest;
         totalLevelScore=0;
@@ -4227,7 +4235,7 @@ function startGame(){
 function startEndless(){
     if(startLock||gameState==='playing')return;
     startLock=true;setTimeout(()=>{startLock=false;},600);
-    promptPlayerName(()=>{ loadEndless(); });
+    promptPlayerName(()=>{ randomSeed(); noiseSeed(); loadEndless(); });
 }
 
 function loadEndless(){
@@ -4521,7 +4529,7 @@ function endGame(){
                 showLevelComplete(currentLevel,score,acc);
             } else {
                 isDailyChallenge=false;
-                localStorage.setItem(DC_KEY,'true');
+                localStorage.setItem(dailyKey(),'true');
                 checkDailyCompletedBadge();
                 const _pn=localStorage.getItem('digitalBreak_playerName')||'Anonymous';
                 submitDailyScore(_pn,totalLevelScore,bestStreak,acc);
@@ -4588,6 +4596,7 @@ function restartGame(){
 
     // Full reset back to level 1 and start screen
     isDailyChallenge=false;
+    randomSeed(); noiseSeed();
     currentLevel=1;
     levelData=LEVELS[0];
     totalLevelScore=0;
@@ -5510,7 +5519,7 @@ function generateScoreCard(finalScore, streakVal, acc, diff, secretMsg){
     return cv;
 }
 
-function saveScoreCard(){
+function saveScoreCard(confirmId='igConfirm'){
     const secretEl = document.getElementById('secretText');
     const secretMsg = (secretEl&&secretEl.textContent)||SECRET_MESSAGES[Math.floor(Math.random()*SECRET_MESSAGES.length)];
     const acc = totalClicks>0?Math.round((successfulHits/totalClicks)*100):0;
@@ -5519,10 +5528,18 @@ function saveScoreCard(){
     const link=document.createElement('a');
     link.download='digitalbreak-score.png';
     link.href=cv.toDataURL('image/png');
+    // iOS Safari ignores .click() on an anchor that isn't in the document.
+    document.body.appendChild(link);
     link.click();
-    document.getElementById('igConfirm').innerHTML=
-        '✅ Saved! Open Instagram → Stories → add photo 📸';
-    setTimeout(()=>document.getElementById('igConfirm').textContent='',5000);
+    link.remove();
+    // Each screen passes its own confirmation slot: the win overlay's #igConfirm
+    // is still laid out behind the epic-complete screen, so "Saved!" used to land
+    // out of sight there.
+    const confirmEl=document.getElementById(confirmId)||document.getElementById('igConfirm');
+    if(confirmEl){
+        confirmEl.textContent='✅ Saved! Open Instagram → Stories → add photo 📸';
+        setTimeout(()=>{confirmEl.textContent='';},5000);
+    }
 }
 
 
